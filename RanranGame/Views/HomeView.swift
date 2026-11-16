@@ -3,6 +3,7 @@ import SwiftUI
 /// 合集里的游戏。以后新游戏加在这里。
 enum GameEntry: String, Hashable, CaseIterable {
     case gomoku
+    case story
 }
 
 /// 主页上能去的地方
@@ -31,17 +32,20 @@ struct HomeView: View {
                                 .foregroundStyle(Palette.inkSoft)
                                 .padding(.top, 12)
 
-                            let hero = GameHeroCard { open(.gomoku) }
+                            let gomoku = GameHeroCard(game: .gomoku) { open(.gomoku) }
+                            let story = GameHeroCard(game: .story) { open(.story) }
                             if wide {
                                 HStack(spacing: 28) {
-                                    hero.frame(maxWidth: .infinity)
-                                    ComingSoonCard().frame(width: geo.size.width * 0.26)
+                                    gomoku.frame(maxWidth: .infinity)
+                                    story.frame(maxWidth: .infinity)
                                 }
-                                .frame(height: 400)
+                                .frame(height: 420)
+                                ComingSoonCard().frame(height: 120)
                             } else {
                                 VStack(spacing: 28) {
-                                    hero.frame(height: 400)
-                                    ComingSoonCard().frame(height: 180)
+                                    gomoku.frame(height: 400)
+                                    story.frame(height: 400)
+                                    ComingSoonCard().frame(height: 140)
                                 }
                             }
                         }
@@ -60,6 +64,8 @@ struct HomeView: View {
                 switch route {
                 case .game(.gomoku):
                     GomokuSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.story):
+                    StorySetupView().toolbar(.hidden, for: .navigationBar)
                 case .profile:
                     ProfileView().toolbar(.hidden, for: .navigationBar)
                 }
@@ -120,37 +126,45 @@ struct HomeView: View {
     }
 }
 
-/// 五子棋的大卡片。
+/// 主页上一个游戏的大卡片：左边是名字，右边是插画。
 private struct GameHeroCard: View {
+    let game: GameEntry
     let action: () -> Void
+
+    private var title: String { game == .gomoku ? "五子棋" : "小伙伴的故事" }
+    private var subtitle: String { game == .gomoku ? "十档难度，从小兔打到龙宝宝" : "听故事、演一演，读懂应用题" }
+    private var art: String { game == .gomoku ? "card_gomoku" : "card_story" }
+    private var base: Color { game == .gomoku ? Color(hex: 0xF8DCCB) : Color(hex: 0xDDEEDF) }
+    private var fade: Color { game == .gomoku ? Color(hex: 0xFBE9DD) : Color(hex: 0xEAF4EA) }
+    private var button: Color { game == .gomoku ? Palette.coral : Color(hex: 0x6FA67C) }
 
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .leading) {
-                Color(hex: 0xF8DCCB)
+                base
                     .overlay(alignment: .trailing) {
-                        ArtImage(name: "card_gomoku", fallback: "⚫️⚪️", contentMode: .fill)
+                        ArtImage(name: art, fallback: game == .gomoku ? "⚫️⚪️" : "🍎", contentMode: .fill)
                     }
                     .clipped()
 
-                LinearGradient(stops: [.init(color: Color(hex: 0xFBE9DD), location: 0),
-                                       .init(color: Color(hex: 0xFBE9DD).opacity(0.85), location: 0.35),
+                LinearGradient(stops: [.init(color: fade, location: 0),
+                                       .init(color: fade.opacity(0.85), location: 0.35),
                                        .init(color: .clear, location: 0.62)],
                                startPoint: .leading, endPoint: .trailing)
 
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("五子棋")
-                        .font(.kid(68, weight: .heavy))
+                    Text(title)
+                        .font(.kid(60, weight: .heavy))
                         .foregroundStyle(Palette.ink)
-                    Text("十档难度，从小兔一路打到龙宝宝")
-                        .font(.kid(24, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(subtitle)
+                        .font(.kid(22, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
-                    HStack(spacing: -14) {
-                        ForEach(Opponent.allCases) { o in
-                            Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 58)
-                        }
-                    }
-                    .padding(.top, 6)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    accessory
+                        .padding(.top, 6)
                     Spacer().frame(height: 10)
                     HStack(spacing: 10) {
                         Image(systemName: "play.fill")
@@ -160,27 +174,47 @@ private struct GameHeroCard: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 30)
                     .padding(.vertical, 15)
-                    .background(Palette.coral, in: Capsule())
-                    .shadow(color: Palette.coral.opacity(0.45), radius: 14, y: 8)
+                    .background(button, in: Capsule())
+                    .shadow(color: button.opacity(0.45), radius: 14, y: 8)
                 }
-                .padding(.horizontal, 48)
+                .padding(.horizontal, 40)
+                .frame(maxWidth: 400, alignment: .leading)
             }
             .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
             .softCard(radius: 44, fill: .clear)
         }
         .buttonStyle(PressableStyle(scale: 0.97))
     }
+
+    @ViewBuilder private var accessory: some View {
+        if game == .gomoku {
+            HStack(spacing: -14) {
+                ForEach(Opponent.allCases) { o in
+                    Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 54)
+                }
+            }
+        } else {
+            HStack(spacing: 6) {
+                ForEach(StoryItem.allCases, id: \.self) { item in
+                    ArtImage(name: item.image, fallback: item.emoji)
+                        .frame(width: 46, height: 46)
+                        .frame(width: 58, height: 58)
+                        .background(Palette.paper.opacity(0.8), in: Circle())
+                }
+            }
+        }
+    }
 }
 
 /// 留给以后的新游戏。
 private struct ComingSoonCard: View {
     var body: some View {
-        VStack(spacing: 14) {
+        HStack(spacing: 16) {
             Image(systemName: "sparkles")
-                .font(.system(size: 44, weight: .semibold))
+                .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(Palette.lilac)
-            Text("新游戏")
-                .font(.kid(30, weight: .heavy))
+            Text("更多游戏")
+                .font(.kid(28, weight: .heavy))
                 .foregroundStyle(Palette.ink.opacity(0.7))
             Text("正在精心制作中…")
                 .font(.kid(20, weight: .semibold))

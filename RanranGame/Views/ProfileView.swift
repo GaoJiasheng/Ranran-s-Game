@@ -7,6 +7,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selected: GameRecord?
+    @State private var practicing: StoryMistake?
     @State private var exporting = false
     @State private var exportDocument: SaveDocument?
     @State private var importing = false
@@ -30,10 +31,14 @@ struct ProfileView: View {
                                     saveCard
                                 }
                                 .frame(width: 420)
-                                recordsCard
+                                VStack(spacing: 28) {
+                                    StoryReportCard { practicing = $0 }
+                                    recordsCard
+                                }
                             }
                         } else {
                             ProfileCard()
+                            StoryReportCard { practicing = $0 }
                             recordsCard
                             saveCard
                         }
@@ -62,6 +67,10 @@ struct ProfileView: View {
             GomokuReplayView(record: record)
                 .toolbar(.hidden, for: .navigationBar)
         }
+        .navigationDestination(item: $practicing) { mistake in
+            StoryPlayView(mistake: mistake)
+                .toolbar(.hidden, for: .navigationBar)
+        }
         .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json,
                       defaultFilename: exportFileName) { result in
             if case .success = result { show("存档已经导出") }
@@ -77,7 +86,7 @@ struct ProfileView: View {
                 show("存档已经导入")
             }
         } message: { archive in
-            Text("存档里是「\(archive.playerName)」的 \(archive.records.count) 盘棋和 \(archive.totalStars) 颗星星。导入后会替换这台 iPad 上现在的存档。")
+            Text("存档里是「\(archive.playerName)」的 \(archive.records.count) 盘棋、\(archive.storyMistakes?.count ?? 0) 道错题和 \(archive.totalStars) 颗星星。导入后会替换这台 iPad 上现在的存档。")
         }
         .alert("删除这盘棋？", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
                presenting: pendingDelete) { record in
@@ -174,7 +183,7 @@ struct ProfileView: View {
             Text("存档")
                 .font(.kid(28, weight: .heavy))
                 .foregroundStyle(Palette.ink)
-            Text("名字、星星、进度和棋谱都只保存在这台 iPad 上，不需要登录。换 iPad 或者想备份的时候，可以导出成一个文件。")
+            Text("名字、星星、进度、棋谱和错题都只保存在这台 iPad 上，不需要登录。换 iPad 或者想备份的时候，可以导出成一个文件。")
                 .font(.kid(17, weight: .semibold))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -449,5 +458,199 @@ private struct RecordRow: View {
         guard let w = record.winner else { return ("平局", Palette.sky) }
         guard let me = record.playerColor else { return (w == 1 ? "黑棋赢" : "白棋赢", Palette.lilac) }
         return w == me ? ("赢了", Palette.sage) : ("输了", Palette.blush)
+    }
+}
+
+// MARK: - 应用题：按题型统计 + 错题本
+
+private struct StoryReportCard: View {
+    @Environment(PlayerStore.self) private var store
+    let practice: (StoryMistake) -> Void
+    @State private var showAll = false
+
+    var body: some View {
+        let stats = StorySchema.allCases.map { ($0, store.storyStats($0)) }.filter { $0.1.right + $0.1.wrong > 0 }
+        let mistakes = store.storyMistakes.sorted { !$0.fixed && $1.fixed }
+        let shown = showAll ? mistakes : Array(mistakes.prefix(5))
+        return VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("应用题")
+                    .font(.kid(28, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                if let summary = summary(stats) {
+                    Text(summary)
+                        .font(.kid(18, weight: .bold))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                Spacer()
+            }
+
+            if stats.isEmpty {
+                Text("做过「小伙伴的故事」以后，这里会按题型显示做对、做错了多少，做错的题也会收进错题本。")
+                    .font(.kid(18, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 10)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 12)], spacing: 12) {
+                    ForEach(stats, id: \.0) { schema, s in
+                        SchemaTile(schema: schema, right: s.right, wrong: s.wrong,
+                                   weakest: schema == weakest(stats))
+                    }
+                }
+            }
+
+            if !mistakes.isEmpty {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("错题本")
+                        .font(.kid(22, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    let open = mistakes.filter { !$0.fixed }.count
+                    if open > 0 {
+                        Text("\(open) 道待练")
+                            .font(.kid(16, weight: .bold))
+                            .foregroundStyle(Palette.coral)
+                    }
+                    Spacer()
+                    Text("点一道题，再演一遍")
+                        .font(.kid(16, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft.opacity(0.85))
+                }
+                .padding(.top, 4)
+                LazyVStack(spacing: 10) {
+                    ForEach(shown) { m in
+                        MistakeRow(mistake: m, player: store.name) {
+                            Sound.tap()
+                            practice(m)
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                withAnimation(.spring(duration: 0.35)) { store.deleteMistake(m.id) }
+                            } label: {
+                                Label("从错题本删除", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                if mistakes.count > 5 {
+                    Button {
+                        Sound.tap()
+                        withAnimation(.spring(duration: 0.4)) { showAll.toggle() }
+                    } label: {
+                        Text(showAll ? "收起" : "看全部 \(mistakes.count) 道")
+                            .font(.kid(17, weight: .bold))
+                            .foregroundStyle(Palette.inkSoft)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .softCard(radius: 40)
+    }
+
+    private func summary(_ stats: [(StorySchema, (right: Int, wrong: Int))]) -> String? {
+        let right = stats.reduce(0) { $0 + $1.1.right }, total = stats.reduce(0) { $0 + $1.1.right + $1.1.wrong }
+        guard total > 0 else { return nil }
+        return "答了 \(total) 题 · 一次就对 \(Int((Double(right) / Double(total) * 100).rounded()))%"
+    }
+
+    /// 错得最多（且至少做过 3 题）的题型，提示家长重点练
+    private func weakest(_ stats: [(StorySchema, (right: Int, wrong: Int))]) -> StorySchema? {
+        stats.filter { $0.1.right + $0.1.wrong >= 3 && $0.1.wrong > 0 }
+            .min { Double($0.1.right) / Double($0.1.right + $0.1.wrong) < Double($1.1.right) / Double($1.1.right + $1.1.wrong) }?.0
+    }
+}
+
+private struct SchemaTile: View {
+    let schema: StorySchema
+    let right: Int
+    let wrong: Int
+    let weakest: Bool
+
+    var body: some View {
+        let total = max(right + wrong, 1)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(schema.title)
+                    .font(.kid(19, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if weakest {
+                    Text("多练练")
+                        .font(.kid(13, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Palette.coral, in: Capsule())
+                }
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.blush.opacity(0.55))
+                    Capsule().fill(Palette.sage)
+                        .frame(width: g.size.width * CGFloat(right) / CGFloat(total))
+                }
+            }
+            .frame(height: 10)
+            Text("对 \(right) 题 · 错 \(wrong) 题")
+                .font(.kid(15, weight: .semibold))
+                .foregroundStyle(Palette.inkSoft)
+        }
+        .padding(14)
+        .background(schema.tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct MistakeRow: View {
+    let mistake: StoryMistake
+    let player: String
+    let action: () -> Void
+
+    var body: some View {
+        let p = mistake.problem
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(p.schema.title)
+                            .font(.kid(14, weight: .heavy))
+                            .foregroundStyle(Palette.ink.opacity(0.8))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(p.schema.tint.opacity(0.35), in: Capsule())
+                        Text(mistake.date.shortChinese)
+                            .font(.kid(14, weight: .semibold))
+                            .foregroundStyle(Palette.inkSoft)
+                    }
+                    Text(p.sentences.map { StoryText.plain($0.text, p, player: player) }.joined())
+                        .font(.kid(18, weight: .bold))
+                        .foregroundStyle(Palette.ink)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                    Text("当时答 \(mistake.answer) · 正确答案 \(p.answer)")
+                        .font(.kid(15, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                Spacer(minLength: 8)
+                if mistake.fixed {
+                    Label("练会了", systemImage: "checkmark.circle.fill")
+                        .font(.kid(15, weight: .heavy))
+                        .foregroundStyle(Color(hex: 0x4E8A5C))
+                } else {
+                    Image(systemName: "hand.draw.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Palette.coral)
+                        .frame(width: 44, height: 44)
+                        .background(Palette.coral.opacity(0.14), in: Circle())
+                }
+            }
+            .padding(14)
+            .background(Palette.cream.opacity(0.7), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .opacity(mistake.fixed ? 0.7 : 1)
+        }
+        .buttonStyle(PressableStyle(scale: 0.98))
     }
 }

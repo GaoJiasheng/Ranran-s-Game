@@ -39,6 +39,8 @@ struct SaveArchive: Codable {
     var counts: [String: Int]
     var settings: [String: Int]
     var records: [GameRecord]
+    /// 应用题的错题本（旧存档里没有）
+    var storyMistakes: [StoryMistake]? = nil
 }
 
 /// 玩家的全部本地数据：名字、星星、各种进度、棋谱。不需要登录，只存在这台 iPad 上。
@@ -47,27 +49,33 @@ final class PlayerStore {
     static let defaultName = "然然"
     static let maxNameLength = 8
     /// 跟着存档一起导出的设置项
-    private static let settingKeys = ["gomoku.level", "gomoku.humanFirst"]
+    private static let settingKeys = ["gomoku.level", "gomoku.humanFirst", "story.voice"]
+    private static let maxMistakes = 300
 
     private let defaults: UserDefaults
     private let recordsURL: URL
+    private let mistakesURL: URL
 
     private(set) var name: String
     private(set) var totalStars: Int
     private(set) var counts: [String: Int]
     /// 最新的在前
     private(set) var records: [GameRecord]
+    /// 应用题做错过的题，最新的在前
+    private(set) var storyMistakes: [StoryMistake]
 
     init(defaults: UserDefaults = .standard, directory: URL? = nil) {
         self.defaults = defaults
         let dir = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         recordsURL = dir.appendingPathComponent("records.json")
+        mistakesURL = dir.appendingPathComponent("story_mistakes.json")
 
         name = defaults.string(forKey: "playerName") ?? Self.defaultName
         totalStars = defaults.integer(forKey: "totalStars")
         counts = (defaults.dictionary(forKey: "counts") as? [String: Int]) ?? [:]
         records = (try? Self.decoder.decode([GameRecord].self, from: Data(contentsOf: recordsURL))) ?? []
+        storyMistakes = (try? Self.decoder.decode([StoryMistake].self, from: Data(contentsOf: mistakesURL))) ?? []
     }
 
     // MARK: 名字
@@ -120,6 +128,30 @@ final class PlayerStore {
         try? data.write(to: recordsURL, options: .atomic)
     }
 
+    // MARK: 错题本
+
+    func saveMistake(_ mistake: StoryMistake) {
+        storyMistakes.insert(mistake, at: 0)
+        if storyMistakes.count > Self.maxMistakes { storyMistakes.removeLast(storyMistakes.count - Self.maxMistakes) }
+        persistMistakes()
+    }
+
+    func markMistakeFixed(_ id: UUID) {
+        guard let i = storyMistakes.firstIndex(where: { $0.id == id }) else { return }
+        storyMistakes[i].fixed = true
+        persistMistakes()
+    }
+
+    func deleteMistake(_ id: UUID) {
+        storyMistakes.removeAll { $0.id == id }
+        persistMistakes()
+    }
+
+    private func persistMistakes() {
+        guard let data = try? Self.encoder.encode(storyMistakes) else { return }
+        try? data.write(to: mistakesURL, options: .atomic)
+    }
+
     // MARK: 存档导出 / 导入
 
     func makeArchive() -> SaveArchive {
@@ -128,7 +160,7 @@ final class PlayerStore {
             settings[key] = defaults.integer(forKey: key)
         }
         return SaveArchive(playerName: name, totalStars: totalStars, counts: counts,
-                           settings: settings, records: records)
+                           settings: settings, records: records, storyMistakes: storyMistakes)
     }
 
     /// 用存档整个替换当前数据
@@ -137,6 +169,7 @@ final class PlayerStore {
         totalStars = archive.totalStars
         counts = archive.counts
         records = archive.records.sorted { $0.date > $1.date }
+        storyMistakes = (archive.storyMistakes ?? []).sorted { $0.date > $1.date }
         defaults.set(name, forKey: "playerName")
         defaults.set(totalStars, forKey: "totalStars")
         defaults.set(counts, forKey: "counts")
@@ -144,6 +177,7 @@ final class PlayerStore {
             if let v = archive.settings[key] { defaults.set(v, forKey: key) } else { defaults.removeObject(forKey: key) }
         }
         persistRecords()
+        persistMistakes()
     }
 
     static let encoder: JSONEncoder = {

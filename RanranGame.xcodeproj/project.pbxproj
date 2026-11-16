@@ -12,12 +12,15 @@
 		0ED8AF8FA77ED8D5BE4394B8 /* GomokuReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499898D70F9E46AD6ECBC25F /* GomokuReplayView.swift */; };
 		272397941027DFC98A90815A /* tap.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7694015A9D2278C10D70ED9B /* tap.wav */; };
 		2E6DDE62513136FFBCED9EA2 /* step_10.wav in Resources */ = {isa = PBXBuildFile; fileRef = 268D0C1762025FCE7F497413 /* step_10.wav */; };
+		31D5BE93E0C56A1549EA0D81 /* StoryPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81993930F60A7D81A48D403 /* StoryPlayView.swift */; };
 		48DF0204EC5E9E006E1A7101 /* step_3.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7F387C03A40A6710FB09B654 /* step_3.wav */; };
 		4B02217691EC6311F263486E /* GomokuModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */; };
 		5199B084B0B23A2BA848701E /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D50DB146670D83739CDEDB /* BoardView.swift */; };
 		5457507DDA0ACF2582238501 /* GomokuGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */; };
 		5C0A870DFD036B2202CBFCF3 /* step_7.wav in Resources */ = {isa = PBXBuildFile; fileRef = 59B56A6715CE46DC1209D6BA /* step_7.wav */; };
 		5DFA838E610E975D9E9F2E25 /* win.wav in Resources */ = {isa = PBXBuildFile; fileRef = 0B9D39E5F32E40257B23736B /* win.wav */; };
+		6C75DCF329794FAAC5DABEA2 /* StoryStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F643E00312FF7221EF87C402 /* StoryStage.swift */; };
+		777FBD9C02560242F0840DCE /* StorySetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68EA91D4BCDA99796BBD706 /* StorySetupView.swift */; };
 		85C226D6318B9164404FCA1E /* step_4.wav in Resources */ = {isa = PBXBuildFile; fileRef = E7F3FAB6FE0900A2F4B8E280 /* step_4.wav */; };
 		85F3246969BCF0BD326A6307 /* step_5.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3F30890F9C0FF7F7722D63C5 /* step_5.wav */; };
 		996D8A09BD46A53849A89C4C /* Sound.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8441BA196C544D718BB4B00 /* Sound.swift */; };
@@ -29,10 +32,13 @@
 		A6E8A5C93F8ADD66D297C738 /* step_9.wav in Resources */ = {isa = PBXBuildFile; fileRef = D1E9D7E5EFE7BACE49A0AA10 /* step_9.wav */; };
 		AA5E5054809BAAB2F9A5E47D /* stone_a.wav in Resources */ = {isa = PBXBuildFile; fileRef = 888E19A84BAC8E565267F837 /* stone_a.wav */; };
 		AB2BA4948196F6EDD371C271 /* GomokuGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */; };
+		BA6CA7A0AA43B64E7A0C99EB /* StoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0A5B5570FB838DC4CA0241 /* StoryModel.swift */; };
+		BE3EC2F2D1E35C4E5E65F7CA /* StorySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C7C6244C65C1B370FB0A3F /* StorySession.swift */; };
 		BEA21BDD1156721A2574D591 /* stone_b.wav in Resources */ = {isa = PBXBuildFile; fileRef = 028BD6213159383BBAE05700 /* stone_b.wav */; };
 		BEAF6A4B0077D0FFFCA56BFB /* undo.wav in Resources */ = {isa = PBXBuildFile; fileRef = F6E41A2CBFC1C14AB3DECA2D /* undo.wav */; };
 		C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */; };
 		CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881A2EA73FDA448F301AA465 /* RanranGameApp.swift */; };
+		CC6EB62409C958CEF7CA601B /* Narrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FC94C10F76847D332986F3 /* Narrator.swift */; };
 		D1642325B5E40495BE2930B9 /* hint.wav in Resources */ = {isa = PBXBuildFile; fileRef = 782B34F4DEA605C9A5F77D60 /* hint.wav */; };
 		D4F6975F7AF3714C04385A76 /* step_1.wav in Resources */ = {isa = PBXBuildFile; fileRef = D7739AB3DD20B7A7DAC47582 /* step_1.wav */; };
 		DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9F0045309D79A734DDEACF31 /* lose.wav */; };
@@ -47,6 +53,7 @@
 		09E9A5AA040824E120E65D0F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		0B9D39E5F32E40257B23736B /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
 		0C3070A7F73C5CF2A965A414 /* GomokuAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuAI.swift; sourceTree = "<group>"; };
+		11C7C6244C65C1B370FB0A3F /* StorySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorySession.swift; sourceTree = "<group>"; };
 		268D0C1762025FCE7F497413 /* step_10.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_10.wav; sourceTree = "<group>"; };
 		2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuSetupView.swift; sourceTree = "<group>"; };
 		28DC2BC6F06E97F9E71E3ABD /* step_6.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_6.wav; sourceTree = "<group>"; };
@@ -61,7 +68,9 @@
 		888E19A84BAC8E565267F837 /* stone_a.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = stone_a.wav; sourceTree = "<group>"; };
 		8C125A17EE14B3D65211BE8E /* step_2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_2.wav; sourceTree = "<group>"; };
 		8F76568CDD2C01133EAE6717 /* RanranGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RanranGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		91FC94C10F76847D332986F3 /* Narrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Narrator.swift; sourceTree = "<group>"; };
 		9F0045309D79A734DDEACF31 /* lose.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = lose.wav; sourceTree = "<group>"; };
+		A68EA91D4BCDA99796BBD706 /* StorySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorySetupView.swift; sourceTree = "<group>"; };
 		B56D62DD9F644E2658DCB991 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B6AD0603BC0A34B3939DA824 /* PlayerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStore.swift; sourceTree = "<group>"; };
 		BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuModel.swift; sourceTree = "<group>"; };
@@ -72,18 +81,35 @@
 		CF12512F67DF887E1D3F56A5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D1E9D7E5EFE7BACE49A0AA10 /* step_9.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_9.wav; sourceTree = "<group>"; };
 		D7739AB3DD20B7A7DAC47582 /* step_1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_1.wav; sourceTree = "<group>"; };
+		D81993930F60A7D81A48D403 /* StoryPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryPlayView.swift; sourceTree = "<group>"; };
 		D8441BA196C544D718BB4B00 /* Sound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sound.swift; sourceTree = "<group>"; };
 		E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		E7F3FAB6FE0900A2F4B8E280 /* step_4.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_4.wav; sourceTree = "<group>"; };
+		EF0A5B5570FB838DC4CA0241 /* StoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryModel.swift; sourceTree = "<group>"; };
 		F292C43F56383884A886E391 /* step_8.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_8.wav; sourceTree = "<group>"; };
+		F643E00312FF7221EF87C402 /* StoryStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryStage.swift; sourceTree = "<group>"; };
 		F6E41A2CBFC1C14AB3DECA2D /* undo.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = undo.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		0865ED8C448454389316F02F /* Story */ = {
+			isa = PBXGroup;
+			children = (
+				91FC94C10F76847D332986F3 /* Narrator.swift */,
+				EF0A5B5570FB838DC4CA0241 /* StoryModel.swift */,
+				D81993930F60A7D81A48D403 /* StoryPlayView.swift */,
+				11C7C6244C65C1B370FB0A3F /* StorySession.swift */,
+				A68EA91D4BCDA99796BBD706 /* StorySetupView.swift */,
+				F643E00312FF7221EF87C402 /* StoryStage.swift */,
+			);
+			path = Story;
+			sourceTree = "<group>";
+		};
 		58D5D690EB2AFE4A2E19C10D /* Games */ = {
 			isa = PBXGroup;
 			children = (
 				9CF4C137680D3F724202D00C /* Gomoku */,
+				0865ED8C448454389316F02F /* Story */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -272,12 +298,18 @@
 				0ED8AF8FA77ED8D5BE4394B8 /* GomokuReplayView.swift in Sources */,
 				A470713ED0BF10C0B7D16FF8 /* GomokuSetupView.swift in Sources */,
 				9DDE8B64C94A63763FDB56B2 /* HomeView.swift in Sources */,
+				CC6EB62409C958CEF7CA601B /* Narrator.swift in Sources */,
 				E5591277B2D33576E97E1992 /* Opponent.swift in Sources */,
 				A58F99EEF1BF1EC6DFA00A75 /* PlayerStore.swift in Sources */,
 				9FE6CBF9BE3FFB045840881E /* ProfileView.swift in Sources */,
 				CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */,
 				996D8A09BD46A53849A89C4C /* Sound.swift in Sources */,
 				DEFFAE82916723F1D7465DF8 /* StoneView.swift in Sources */,
+				BA6CA7A0AA43B64E7A0C99EB /* StoryModel.swift in Sources */,
+				31D5BE93E0C56A1549EA0D81 /* StoryPlayView.swift in Sources */,
+				BE3EC2F2D1E35C4E5E65F7CA /* StorySession.swift in Sources */,
+				777FBD9C02560242F0840DCE /* StorySetupView.swift in Sources */,
+				6C75DCF329794FAAC5DABEA2 /* StoryStage.swift in Sources */,
 				C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
