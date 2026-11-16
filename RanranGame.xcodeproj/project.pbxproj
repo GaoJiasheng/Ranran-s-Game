@@ -1,0 +1,435 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		272397941027DFC98A90815A /* tap.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7694015A9D2278C10D70ED9B /* tap.wav */; };
+		4B02217691EC6311F263486E /* GomokuModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */; };
+		5199B084B0B23A2BA848701E /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D50DB146670D83739CDEDB /* BoardView.swift */; };
+		5457507DDA0ACF2582238501 /* GomokuGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */; };
+		5DFA838E610E975D9E9F2E25 /* win.wav in Resources */ = {isa = PBXBuildFile; fileRef = 0B9D39E5F32E40257B23736B /* win.wav */; };
+		97DC066ECBC0AC93170F5FBE /* StarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A011A25AF5226017887614B8 /* StarStore.swift */; };
+		996D8A09BD46A53849A89C4C /* Sound.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8441BA196C544D718BB4B00 /* Sound.swift */; };
+		9DDE8B64C94A63763FDB56B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF12512F67DF887E1D3F56A5 /* HomeView.swift */; };
+		A470713ED0BF10C0B7D16FF8 /* GomokuSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */; };
+		AA5E5054809BAAB2F9A5E47D /* stone_a.wav in Resources */ = {isa = PBXBuildFile; fileRef = 888E19A84BAC8E565267F837 /* stone_a.wav */; };
+		AB2BA4948196F6EDD371C271 /* GomokuGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */; };
+		BEA21BDD1156721A2574D591 /* stone_b.wav in Resources */ = {isa = PBXBuildFile; fileRef = 028BD6213159383BBAE05700 /* stone_b.wav */; };
+		BEAF6A4B0077D0FFFCA56BFB /* undo.wav in Resources */ = {isa = PBXBuildFile; fileRef = F6E41A2CBFC1C14AB3DECA2D /* undo.wav */; };
+		C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */; };
+		CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881A2EA73FDA448F301AA465 /* RanranGameApp.swift */; };
+		D1642325B5E40495BE2930B9 /* hint.wav in Resources */ = {isa = PBXBuildFile; fileRef = 782B34F4DEA605C9A5F77D60 /* hint.wav */; };
+		DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9F0045309D79A734DDEACF31 /* lose.wav */; };
+		DEFFAE82916723F1D7465DF8 /* StoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEF6DAC90E51745720DC96AA /* StoneView.swift */; };
+		E5591277B2D33576E97E1992 /* Opponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA288C26FD829ADC754B59C1 /* Opponent.swift */; };
+		E6B498DE2ADBC447213B2316 /* GomokuAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3070A7F73C5CF2A965A414 /* GomokuAI.swift */; };
+		ED2F8F3BA89CAC82079BB8A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B56D62DD9F644E2658DCB991 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		028BD6213159383BBAE05700 /* stone_b.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = stone_b.wav; sourceTree = "<group>"; };
+		0B9D39E5F32E40257B23736B /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
+		0C3070A7F73C5CF2A965A414 /* GomokuAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuAI.swift; sourceTree = "<group>"; };
+		2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuSetupView.swift; sourceTree = "<group>"; };
+		3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuGameView.swift; sourceTree = "<group>"; };
+		7694015A9D2278C10D70ED9B /* tap.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = tap.wav; sourceTree = "<group>"; };
+		782B34F4DEA605C9A5F77D60 /* hint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hint.wav; sourceTree = "<group>"; };
+		881A2EA73FDA448F301AA465 /* RanranGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RanranGameApp.swift; sourceTree = "<group>"; };
+		888E19A84BAC8E565267F837 /* stone_a.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = stone_a.wav; sourceTree = "<group>"; };
+		8F76568CDD2C01133EAE6717 /* RanranGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RanranGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F0045309D79A734DDEACF31 /* lose.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = lose.wav; sourceTree = "<group>"; };
+		A011A25AF5226017887614B8 /* StarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarStore.swift; sourceTree = "<group>"; };
+		B56D62DD9F644E2658DCB991 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuModel.swift; sourceTree = "<group>"; };
+		BEF6DAC90E51745720DC96AA /* StoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoneView.swift; sourceTree = "<group>"; };
+		C7D50DB146670D83739CDEDB /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
+		C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuGame.swift; sourceTree = "<group>"; };
+		CA288C26FD829ADC754B59C1 /* Opponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opponent.swift; sourceTree = "<group>"; };
+		CF12512F67DF887E1D3F56A5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D8441BA196C544D718BB4B00 /* Sound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sound.swift; sourceTree = "<group>"; };
+		E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F6E41A2CBFC1C14AB3DECA2D /* undo.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = undo.wav; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		58D5D690EB2AFE4A2E19C10D /* Games */ = {
+			isa = PBXGroup;
+			children = (
+				9CF4C137680D3F724202D00C /* Gomoku */,
+			);
+			path = Games;
+			sourceTree = "<group>";
+		};
+		75EF7BBB5086A2C36E230734 = {
+			isa = PBXGroup;
+			children = (
+				CB27FC54E396FBF1218D6CF2 /* RanranGame */,
+				9FA4E449F629693640560DCB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		87FD1630C388BB6A73CD4E42 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CF12512F67DF887E1D3F56A5 /* HomeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		96A25DCECB4B58623DA6060F /* Sounds */ = {
+			isa = PBXGroup;
+			children = (
+				782B34F4DEA605C9A5F77D60 /* hint.wav */,
+				9F0045309D79A734DDEACF31 /* lose.wav */,
+				888E19A84BAC8E565267F837 /* stone_a.wav */,
+				028BD6213159383BBAE05700 /* stone_b.wav */,
+				7694015A9D2278C10D70ED9B /* tap.wav */,
+				F6E41A2CBFC1C14AB3DECA2D /* undo.wav */,
+				0B9D39E5F32E40257B23736B /* win.wav */,
+			);
+			path = Sounds;
+			sourceTree = "<group>";
+		};
+		9CF4C137680D3F724202D00C /* Gomoku */ = {
+			isa = PBXGroup;
+			children = (
+				C7D50DB146670D83739CDEDB /* BoardView.swift */,
+				0C3070A7F73C5CF2A965A414 /* GomokuAI.swift */,
+				C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */,
+				3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */,
+				BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */,
+				2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */,
+				CA288C26FD829ADC754B59C1 /* Opponent.swift */,
+				BEF6DAC90E51745720DC96AA /* StoneView.swift */,
+			);
+			path = Gomoku;
+			sourceTree = "<group>";
+		};
+		9FA4E449F629693640560DCB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8F76568CDD2C01133EAE6717 /* RanranGame.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BC9B32C39931FB5A5287B5DC /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				D8441BA196C544D718BB4B00 /* Sound.swift */,
+				A011A25AF5226017887614B8 /* StarStore.swift */,
+				E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		CB27FC54E396FBF1218D6CF2 /* RanranGame */ = {
+			isa = PBXGroup;
+			children = (
+				B56D62DD9F644E2658DCB991 /* Assets.xcassets */,
+				881A2EA73FDA448F301AA465 /* RanranGameApp.swift */,
+				BC9B32C39931FB5A5287B5DC /* Core */,
+				58D5D690EB2AFE4A2E19C10D /* Games */,
+				96A25DCECB4B58623DA6060F /* Sounds */,
+				87FD1630C388BB6A73CD4E42 /* Views */,
+			);
+			path = RanranGame;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4C278EF023200E454CB7235C /* RanranGame */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ED6F1771685F9BFDB2EB7319 /* Build configuration list for PBXNativeTarget "RanranGame" */;
+			buildPhases = (
+				2A61C84FDD2A0012F724A63C /* Sources */,
+				B5995055575276EBA1925A58 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RanranGame;
+			packageProductDependencies = (
+			);
+			productName = RanranGame;
+			productReference = 8F76568CDD2C01133EAE6717 /* RanranGame.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CC8F74BB8DFE7C798937C627 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					4C278EF023200E454CB7235C = {
+						DevelopmentTeam = D33974QQTD;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2CF3CCDC1FC2574856DC0791 /* Build configuration list for PBXProject "RanranGame" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 75EF7BBB5086A2C36E230734;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9FA4E449F629693640560DCB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4C278EF023200E454CB7235C /* RanranGame */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B5995055575276EBA1925A58 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED2F8F3BA89CAC82079BB8A1 /* Assets.xcassets in Resources */,
+				D1642325B5E40495BE2930B9 /* hint.wav in Resources */,
+				DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */,
+				AA5E5054809BAAB2F9A5E47D /* stone_a.wav in Resources */,
+				BEA21BDD1156721A2574D591 /* stone_b.wav in Resources */,
+				272397941027DFC98A90815A /* tap.wav in Resources */,
+				BEAF6A4B0077D0FFFCA56BFB /* undo.wav in Resources */,
+				5DFA838E610E975D9E9F2E25 /* win.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2A61C84FDD2A0012F724A63C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5199B084B0B23A2BA848701E /* BoardView.swift in Sources */,
+				E6B498DE2ADBC447213B2316 /* GomokuAI.swift in Sources */,
+				AB2BA4948196F6EDD371C271 /* GomokuGame.swift in Sources */,
+				5457507DDA0ACF2582238501 /* GomokuGameView.swift in Sources */,
+				4B02217691EC6311F263486E /* GomokuModel.swift in Sources */,
+				A470713ED0BF10C0B7D16FF8 /* GomokuSetupView.swift in Sources */,
+				9DDE8B64C94A63763FDB56B2 /* HomeView.swift in Sources */,
+				E5591277B2D33576E97E1992 /* Opponent.swift in Sources */,
+				CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */,
+				996D8A09BD46A53849A89C4C /* Sound.swift in Sources */,
+				97DC066ECBC0AC93170F5FBE /* StarStore.swift in Sources */,
+				DEFFAE82916723F1D7465DF8 /* StoneView.swift in Sources */,
+				C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		352AB51859830C0F9BA7AD2C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "然然乐园";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gavingao.ranrangame;
+				PRODUCT_NAME = RanranGame;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		74133155DC1DE72BFE61E15C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "然然乐园";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gavingao.ranrangame;
+				PRODUCT_NAME = RanranGame;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		8005901E2138FA830B426412 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = D33974QQTD;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E1CC7537E1512CAC9156F50F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = D33974QQTD;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2CF3CCDC1FC2574856DC0791 /* Build configuration list for PBXProject "RanranGame" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1CC7537E1512CAC9156F50F /* Debug */,
+				8005901E2138FA830B426412 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		ED6F1771685F9BFDB2EB7319 /* Build configuration list for PBXNativeTarget "RanranGame" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				352AB51859830C0F9BA7AD2C /* Debug */,
+				74133155DC1DE72BFE61E15C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CC8F74BB8DFE7C798937C627 /* Project object */;
+}
