@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct RanranGameApp: App {
-    @State private var store = StarStore()
+    @State private var store = PlayerStore()
 
     init() {
         Sound.prepare()

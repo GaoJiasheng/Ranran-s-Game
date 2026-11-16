@@ -7,15 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0590ABCD9AD7F6810DAAC65B /* step_6.wav in Resources */ = {isa = PBXBuildFile; fileRef = 28DC2BC6F06E97F9E71E3ABD /* step_6.wav */; };
+		0B62E85E8F7E4D1D632C7276 /* step_2.wav in Resources */ = {isa = PBXBuildFile; fileRef = 8C125A17EE14B3D65211BE8E /* step_2.wav */; };
+		0ED8AF8FA77ED8D5BE4394B8 /* GomokuReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499898D70F9E46AD6ECBC25F /* GomokuReplayView.swift */; };
 		272397941027DFC98A90815A /* tap.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7694015A9D2278C10D70ED9B /* tap.wav */; };
+		2E6DDE62513136FFBCED9EA2 /* step_10.wav in Resources */ = {isa = PBXBuildFile; fileRef = 268D0C1762025FCE7F497413 /* step_10.wav */; };
+		48DF0204EC5E9E006E1A7101 /* step_3.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7F387C03A40A6710FB09B654 /* step_3.wav */; };
 		4B02217691EC6311F263486E /* GomokuModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */; };
 		5199B084B0B23A2BA848701E /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D50DB146670D83739CDEDB /* BoardView.swift */; };
 		5457507DDA0ACF2582238501 /* GomokuGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */; };
+		5C0A870DFD036B2202CBFCF3 /* step_7.wav in Resources */ = {isa = PBXBuildFile; fileRef = 59B56A6715CE46DC1209D6BA /* step_7.wav */; };
 		5DFA838E610E975D9E9F2E25 /* win.wav in Resources */ = {isa = PBXBuildFile; fileRef = 0B9D39E5F32E40257B23736B /* win.wav */; };
-		97DC066ECBC0AC93170F5FBE /* StarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A011A25AF5226017887614B8 /* StarStore.swift */; };
+		85C226D6318B9164404FCA1E /* step_4.wav in Resources */ = {isa = PBXBuildFile; fileRef = E7F3FAB6FE0900A2F4B8E280 /* step_4.wav */; };
+		85F3246969BCF0BD326A6307 /* step_5.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3F30890F9C0FF7F7722D63C5 /* step_5.wav */; };
 		996D8A09BD46A53849A89C4C /* Sound.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8441BA196C544D718BB4B00 /* Sound.swift */; };
 		9DDE8B64C94A63763FDB56B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF12512F67DF887E1D3F56A5 /* HomeView.swift */; };
+		9E2957A96E3EC76324ED7732 /* step_8.wav in Resources */ = {isa = PBXBuildFile; fileRef = F292C43F56383884A886E391 /* step_8.wav */; };
+		9FE6CBF9BE3FFB045840881E /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E9A5AA040824E120E65D0F /* ProfileView.swift */; };
 		A470713ED0BF10C0B7D16FF8 /* GomokuSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */; };
+		A58F99EEF1BF1EC6DFA00A75 /* PlayerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AD0603BC0A34B3939DA824 /* PlayerStore.swift */; };
+		A6E8A5C93F8ADD66D297C738 /* step_9.wav in Resources */ = {isa = PBXBuildFile; fileRef = D1E9D7E5EFE7BACE49A0AA10 /* step_9.wav */; };
 		AA5E5054809BAAB2F9A5E47D /* stone_a.wav in Resources */ = {isa = PBXBuildFile; fileRef = 888E19A84BAC8E565267F837 /* stone_a.wav */; };
 		AB2BA4948196F6EDD371C271 /* GomokuGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */; };
 		BEA21BDD1156721A2574D591 /* stone_b.wav in Resources */ = {isa = PBXBuildFile; fileRef = 028BD6213159383BBAE05700 /* stone_b.wav */; };
@@ -23,6 +34,7 @@
 		C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */; };
 		CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881A2EA73FDA448F301AA465 /* RanranGameApp.swift */; };
 		D1642325B5E40495BE2930B9 /* hint.wav in Resources */ = {isa = PBXBuildFile; fileRef = 782B34F4DEA605C9A5F77D60 /* hint.wav */; };
+		D4F6975F7AF3714C04385A76 /* step_1.wav in Resources */ = {isa = PBXBuildFile; fileRef = D7739AB3DD20B7A7DAC47582 /* step_1.wav */; };
 		DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9F0045309D79A734DDEACF31 /* lose.wav */; };
 		DEFFAE82916723F1D7465DF8 /* StoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEF6DAC90E51745720DC96AA /* StoneView.swift */; };
 		E5591277B2D33576E97E1992 /* Opponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA288C26FD829ADC754B59C1 /* Opponent.swift */; };
@@ -32,26 +44,38 @@
 
 /* Begin PBXFileReference section */
 		028BD6213159383BBAE05700 /* stone_b.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = stone_b.wav; sourceTree = "<group>"; };
+		09E9A5AA040824E120E65D0F /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		0B9D39E5F32E40257B23736B /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
 		0C3070A7F73C5CF2A965A414 /* GomokuAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuAI.swift; sourceTree = "<group>"; };
+		268D0C1762025FCE7F497413 /* step_10.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_10.wav; sourceTree = "<group>"; };
 		2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuSetupView.swift; sourceTree = "<group>"; };
+		28DC2BC6F06E97F9E71E3ABD /* step_6.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_6.wav; sourceTree = "<group>"; };
 		3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuGameView.swift; sourceTree = "<group>"; };
+		3F30890F9C0FF7F7722D63C5 /* step_5.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_5.wav; sourceTree = "<group>"; };
+		499898D70F9E46AD6ECBC25F /* GomokuReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuReplayView.swift; sourceTree = "<group>"; };
+		59B56A6715CE46DC1209D6BA /* step_7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_7.wav; sourceTree = "<group>"; };
 		7694015A9D2278C10D70ED9B /* tap.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = tap.wav; sourceTree = "<group>"; };
 		782B34F4DEA605C9A5F77D60 /* hint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hint.wav; sourceTree = "<group>"; };
+		7F387C03A40A6710FB09B654 /* step_3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_3.wav; sourceTree = "<group>"; };
 		881A2EA73FDA448F301AA465 /* RanranGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RanranGameApp.swift; sourceTree = "<group>"; };
 		888E19A84BAC8E565267F837 /* stone_a.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = stone_a.wav; sourceTree = "<group>"; };
+		8C125A17EE14B3D65211BE8E /* step_2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_2.wav; sourceTree = "<group>"; };
 		8F76568CDD2C01133EAE6717 /* RanranGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RanranGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F0045309D79A734DDEACF31 /* lose.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = lose.wav; sourceTree = "<group>"; };
-		A011A25AF5226017887614B8 /* StarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarStore.swift; sourceTree = "<group>"; };
 		B56D62DD9F644E2658DCB991 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B6AD0603BC0A34B3939DA824 /* PlayerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStore.swift; sourceTree = "<group>"; };
 		BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuModel.swift; sourceTree = "<group>"; };
 		BEF6DAC90E51745720DC96AA /* StoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoneView.swift; sourceTree = "<group>"; };
 		C7D50DB146670D83739CDEDB /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
 		C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GomokuGame.swift; sourceTree = "<group>"; };
 		CA288C26FD829ADC754B59C1 /* Opponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Opponent.swift; sourceTree = "<group>"; };
 		CF12512F67DF887E1D3F56A5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D1E9D7E5EFE7BACE49A0AA10 /* step_9.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_9.wav; sourceTree = "<group>"; };
+		D7739AB3DD20B7A7DAC47582 /* step_1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_1.wav; sourceTree = "<group>"; };
 		D8441BA196C544D718BB4B00 /* Sound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sound.swift; sourceTree = "<group>"; };
 		E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		E7F3FAB6FE0900A2F4B8E280 /* step_4.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_4.wav; sourceTree = "<group>"; };
+		F292C43F56383884A886E391 /* step_8.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = step_8.wav; sourceTree = "<group>"; };
 		F6E41A2CBFC1C14AB3DECA2D /* undo.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = undo.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -76,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				CF12512F67DF887E1D3F56A5 /* HomeView.swift */,
+				09E9A5AA040824E120E65D0F /* ProfileView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -85,6 +110,16 @@
 			children = (
 				782B34F4DEA605C9A5F77D60 /* hint.wav */,
 				9F0045309D79A734DDEACF31 /* lose.wav */,
+				D7739AB3DD20B7A7DAC47582 /* step_1.wav */,
+				8C125A17EE14B3D65211BE8E /* step_2.wav */,
+				7F387C03A40A6710FB09B654 /* step_3.wav */,
+				E7F3FAB6FE0900A2F4B8E280 /* step_4.wav */,
+				3F30890F9C0FF7F7722D63C5 /* step_5.wav */,
+				28DC2BC6F06E97F9E71E3ABD /* step_6.wav */,
+				59B56A6715CE46DC1209D6BA /* step_7.wav */,
+				F292C43F56383884A886E391 /* step_8.wav */,
+				D1E9D7E5EFE7BACE49A0AA10 /* step_9.wav */,
+				268D0C1762025FCE7F497413 /* step_10.wav */,
 				888E19A84BAC8E565267F837 /* stone_a.wav */,
 				028BD6213159383BBAE05700 /* stone_b.wav */,
 				7694015A9D2278C10D70ED9B /* tap.wav */,
@@ -102,6 +137,7 @@
 				C9D330289BBAAAAFAD4F8518 /* GomokuGame.swift */,
 				3D89E38E44B91EF0725EB474 /* GomokuGameView.swift */,
 				BD5EAA7C721C2E92324FAECC /* GomokuModel.swift */,
+				499898D70F9E46AD6ECBC25F /* GomokuReplayView.swift */,
 				2811D3DCBAD7959EE650E302 /* GomokuSetupView.swift */,
 				CA288C26FD829ADC754B59C1 /* Opponent.swift */,
 				BEF6DAC90E51745720DC96AA /* StoneView.swift */,
@@ -120,8 +156,8 @@
 		BC9B32C39931FB5A5287B5DC /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				B6AD0603BC0A34B3939DA824 /* PlayerStore.swift */,
 				D8441BA196C544D718BB4B00 /* Sound.swift */,
-				A011A25AF5226017887614B8 /* StarStore.swift */,
 				E4DDEB2EF5A28DF9FC4644BA /* Theme.swift */,
 			);
 			path = Core;
@@ -177,11 +213,11 @@
 				};
 			};
 			buildConfigurationList = 2CF3CCDC1FC2574856DC0791 /* Build configuration list for PBXProject "RanranGame" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
-				en,
+				"zh-Hans",
 			);
 			mainGroup = 75EF7BBB5086A2C36E230734;
 			minimizedProjectReferenceProxies = 1;
@@ -203,6 +239,16 @@
 				ED2F8F3BA89CAC82079BB8A1 /* Assets.xcassets in Resources */,
 				D1642325B5E40495BE2930B9 /* hint.wav in Resources */,
 				DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */,
+				D4F6975F7AF3714C04385A76 /* step_1.wav in Resources */,
+				2E6DDE62513136FFBCED9EA2 /* step_10.wav in Resources */,
+				0B62E85E8F7E4D1D632C7276 /* step_2.wav in Resources */,
+				48DF0204EC5E9E006E1A7101 /* step_3.wav in Resources */,
+				85C226D6318B9164404FCA1E /* step_4.wav in Resources */,
+				85F3246969BCF0BD326A6307 /* step_5.wav in Resources */,
+				0590ABCD9AD7F6810DAAC65B /* step_6.wav in Resources */,
+				5C0A870DFD036B2202CBFCF3 /* step_7.wav in Resources */,
+				9E2957A96E3EC76324ED7732 /* step_8.wav in Resources */,
+				A6E8A5C93F8ADD66D297C738 /* step_9.wav in Resources */,
 				AA5E5054809BAAB2F9A5E47D /* stone_a.wav in Resources */,
 				BEA21BDD1156721A2574D591 /* stone_b.wav in Resources */,
 				272397941027DFC98A90815A /* tap.wav in Resources */,
@@ -223,12 +269,14 @@
 				AB2BA4948196F6EDD371C271 /* GomokuGame.swift in Sources */,
 				5457507DDA0ACF2582238501 /* GomokuGameView.swift in Sources */,
 				4B02217691EC6311F263486E /* GomokuModel.swift in Sources */,
+				0ED8AF8FA77ED8D5BE4394B8 /* GomokuReplayView.swift in Sources */,
 				A470713ED0BF10C0B7D16FF8 /* GomokuSetupView.swift in Sources */,
 				9DDE8B64C94A63763FDB56B2 /* HomeView.swift in Sources */,
 				E5591277B2D33576E97E1992 /* Opponent.swift in Sources */,
+				A58F99EEF1BF1EC6DFA00A75 /* PlayerStore.swift in Sources */,
+				9FE6CBF9BE3FFB045840881E /* ProfileView.swift in Sources */,
 				CB5D4C1D5C9E8B6FE3F4C7E9 /* RanranGameApp.swift in Sources */,
 				996D8A09BD46A53849A89C4C /* Sound.swift in Sources */,
-				97DC066ECBC0AC93170F5FBE /* StarStore.swift in Sources */,
 				DEFFAE82916723F1D7465DF8 /* StoneView.swift in Sources */,
 				C81A3BE4FABC5B166CECAA6B /* Theme.swift in Sources */,
 			);

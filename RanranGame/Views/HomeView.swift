@@ -5,9 +5,16 @@ enum GameEntry: String, Hashable, CaseIterable {
     case gomoku
 }
 
-/// 主页：然然的游戏屋。
+/// 主页上能去的地方
+enum Route: Hashable {
+    case game(GameEntry)
+    case profile
+}
+
+/// 主页：游戏屋。
 struct HomeView: View {
-    @State private var path: [GameEntry] = []
+    @Environment(PlayerStore.self) private var store
+    @State private var path: [Route] = []
     @State private var appeared = false
 
     var body: some View {
@@ -49,10 +56,12 @@ struct HomeView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: GameEntry.self) { entry in
-                switch entry {
-                case .gomoku:
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .game(.gomoku):
                     GomokuSetupView().toolbar(.hidden, for: .navigationBar)
+                case .profile:
+                    ProfileView().toolbar(.hidden, for: .navigationBar)
                 }
             }
         }
@@ -63,18 +72,36 @@ struct HomeView: View {
 
     private func open(_ entry: GameEntry) {
         Sound.tap()
-        path.append(entry)
+        path.append(.game(entry))
     }
 
     private var header: some View {
         HStack(spacing: 22) {
-            Avatar(image: "avatar_ranran", fallback: "👧", tint: Palette.blush, size: 104)
-                .shadow(color: Palette.coral.opacity(0.25), radius: 16, y: 8)
+            Button {
+                Sound.tap()
+                path.append(.profile)
+            } label: {
+                Avatar(image: "avatar_ranran", fallback: "👧", tint: Palette.blush, size: 104)
+                    .shadow(color: Palette.coral.opacity(0.25), radius: 16, y: 8)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .black))
+                            .foregroundStyle(Palette.inkSoft)
+                            .frame(width: 34, height: 34)
+                            .background(Palette.paper, in: Circle())
+                            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                            .offset(x: 2, y: 2)
+                    }
+            }
+            .buttonStyle(PressableStyle(scale: 0.92))
+            .accessibilityLabel("我的")
             VStack(alignment: .leading, spacing: 4) {
                 Text(greeting)
                     .font(.kid(22, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
-                Text("然然的游戏屋")
+                Text("\(store.name)的游戏屋")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .font(.kid(56, weight: .heavy))
                     .foregroundStyle(Palette.ink)
             }
@@ -85,10 +112,10 @@ struct HomeView: View {
 
     private var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
-        case 5..<11:  "早上好，然然"
-        case 11..<14: "中午好，然然"
-        case 14..<18: "下午好，然然"
-        default:      "晚上好，然然"
+        case 5..<11:  "早上好，\(store.name)"
+        case 11..<14: "中午好，\(store.name)"
+        case 14..<18: "下午好，\(store.name)"
+        default:      "晚上好，\(store.name)"
         }
     }
 }
@@ -115,7 +142,7 @@ private struct GameHeroCard: View {
                     Text("五子棋")
                         .font(.kid(68, weight: .heavy))
                         .foregroundStyle(Palette.ink)
-                    Text("和小兔、熊猫、猫头鹰比一比")
+                    Text("十档难度，从小兔一路打到龙宝宝")
                         .font(.kid(24, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
                     HStack(spacing: -14) {
@@ -172,7 +199,7 @@ private struct ComingSoonCard: View {
 struct StarCounter: View {
     enum Size { case regular, large }
     var size: Size = .regular
-    @Environment(StarStore.self) private var store
+    @Environment(PlayerStore.self) private var store
 
     var body: some View {
         let big = size == .large
@@ -194,5 +221,5 @@ struct StarCounter: View {
 }
 
 #Preview {
-    HomeView().environment(StarStore())
+    HomeView().environment(PlayerStore())
 }

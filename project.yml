@@ -1,6 +1,7 @@
 name: RanranGame
 options:
   bundleIdPrefix: com.gavingao
+  developmentLanguage: zh-Hans
   deploymentTarget:
     iOS: "17.0"
 settings:

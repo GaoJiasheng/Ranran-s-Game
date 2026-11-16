@@ -1,163 +1,463 @@
 import SwiftUI
 
-/// 五子棋首页：选对手、选谁先下。
+/// 五子棋首页：在"难度阶梯"上选一档难度、选谁先下，或者和家人下。
 struct GomokuSetupView: View {
-    @Environment(StarStore.self) private var store
+    @Environment(PlayerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @AppStorage("gomoku.humanFirst") private var humanFirst = true
+    /// 上次选的档位；0 表示还没选过，用推荐档
+    @AppStorage("gomoku.level") private var savedLevel = 0
     @State private var config: GomokuConfig?
     @State private var appeared = false
 
+    private var level: GomokuLevel {
+        savedLevel == 0 ? store.gomokuRecommended : GomokuLevel(savedLevel)
+    }
+
+    private var selection: Binding<Int> {
+        Binding(get: { level.number }, set: { savedLevel = $0 })
+    }
+
     var body: some View {
-        ZStack {
-            CreamBackground(accent: Palette.honey)
+        GeometryReader { geo in
+            let wide = geo.size.width > geo.size.height
+            ZStack {
+                CreamBackground(accent: level.character.tint)
+                    .animation(.easeInOut(duration: 0.6), value: level.character)
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    HStack {
-                        RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
-                        Spacer()
-                        StarCounter()
-                    }
-
-                    VStack(spacing: 12) {
-                        Text("五子棋")
-                            .font(.kid(80, weight: .heavy))
-                            .foregroundStyle(Palette.ink)
-                        Text("横着、竖着、斜着，谁先连成五颗谁就赢")
-                            .font(.kid(24, weight: .semibold))
-                            .foregroundStyle(Palette.inkSoft)
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
-
-                    Text("选一位小伙伴来比赛")
-                        .font(.kid(26, weight: .bold))
-                        .foregroundStyle(Palette.ink)
-                        .padding(.bottom, 64)
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: 24)], spacing: 80) {
-                        ForEach(Array(Opponent.allCases.enumerated()), id: \.element) { i, o in
-                            OpponentCard(opponent: o, wins: store.count("gomoku.win.\(o.rawValue)")) {
-                                config = GomokuConfig(mode: .vsAI(o), humanFirst: humanFirst)
-                            }
-                            .offset(y: appeared ? 0 : 40)
+                ScrollView {
+                    VStack(spacing: wide ? 24 : 32) {
+                        header
+                        challengePanel(wide: wide)
+                            .offset(y: appeared ? 0 : 50)
                             .opacity(appeared ? 1 : 0)
-                            .animation(.spring(duration: 0.6, bounce: 0.35).delay(Double(i) * 0.07), value: appeared)
-                        }
-                        FamilyCard {
-                            config = GomokuConfig(mode: .twoPlayer, humanFirst: true)
-                        }
-                        .offset(y: appeared ? 0 : 40)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(.spring(duration: 0.6, bounce: 0.35).delay(0.21), value: appeared)
+                        bottomRow
+                            .offset(y: appeared ? 0 : 50)
+                            .opacity(appeared ? 1 : 0)
+                            .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.08), value: appeared)
                     }
-
-                    FirstMovePicker(humanFirst: $humanFirst)
-                        .padding(.top, 48)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 28)
+                    .frame(maxWidth: 1240)
+                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
                 }
-                .padding(.horizontal, 40)
-                .padding(.vertical, 28)
-                .frame(maxWidth: 1240)
-                .frame(maxWidth: .infinity)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
         }
-        .onAppear { appeared = true }
+        .onAppear {
+            withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
+        }
         .navigationDestination(item: $config) { c in
             GomokuGameView(config: c)
                 .toolbar(.hidden, for: .navigationBar)
         }
     }
-}
 
-private struct OpponentCard: View {
-    let opponent: Opponent
-    let wins: Int
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Sound.tap()
-            action()
-        } label: {
-            VStack(spacing: 10) {
-                Avatar(image: opponent.image, fallback: opponent.emoji, tint: opponent.tint, size: 150)
-                    .padding(.top, -64)
-                Text(opponent.name)
-                    .font(.kid(32, weight: .heavy))
+    private var header: some View {
+        ZStack {
+            VStack(spacing: 6) {
+                Text("五子棋")
+                    .font(.kid(54, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                Text(opponent.levelTag)
-                    .font(.kid(18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .background(opponent.tint.opacity(0.95), in: Capsule())
-                HStack(spacing: 4) {
-                    Text("赢了得")
-                    ForEach(0..<opponent.stars, id: \.self) { _ in
-                        Image(systemName: "star.fill").foregroundStyle(Palette.honey)
-                    }
-                }
-                .font(.kid(17, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
-                .padding(.top, 4)
-                Text(wins > 0 ? "已经赢过 \(wins) 次" : "还没赢过哦")
-                    .font(.kid(16, weight: .medium))
-                    .foregroundStyle(Palette.inkSoft.opacity(0.8))
+                Text("横着、竖着、斜着，谁先连成五颗谁就赢")
+                    .font(.kid(20, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
             }
-            .padding(.bottom, 24)
-            .frame(maxWidth: .infinity)
-            .background(
-                LinearGradient(colors: [Palette.paper, opponent.tint.opacity(0.22)], startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: 36, style: .continuous)
-            )
-            .softCard(radius: 36, fill: .clear)
+            HStack {
+                RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
+                Spacer()
+                StarCounter()
+            }
         }
-        .buttonStyle(PressableStyle())
+    }
+
+    private func challengePanel(wide: Bool) -> some View {
+        let showcase = LevelShowcase(level: level,
+                                     best: store.gomokuBest(level),
+                                     wins: store.gomokuWins(level),
+                                     recommended: level == store.gomokuRecommended,
+                                     step: { step($0) },
+                                     start: start)
+        let ladder = VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("选择难度")
+                    .font(.kid(26, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Label("按住左右滑动", systemImage: "hand.draw.fill")
+                    .font(.kid(17, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft.opacity(0.85))
+            }
+            LevelLadder(selection: selection,
+                        recommended: store.gomokuRecommended.number,
+                        best: { store.gomokuBest(GomokuLevel($0)) })
+        }
+
+        return Group {
+            if wide {
+                HStack(alignment: .center, spacing: 44) {
+                    showcase.frame(width: 360)
+                    ladder
+                }
+            } else {
+                VStack(spacing: 24) {
+                    showcase
+                    ladder
+                }
+            }
+        }
+        .padding(wide ? 40 : 32)
+        .background(
+            LinearGradient(colors: [level.character.tint.opacity(0.20), Palette.paper.opacity(0)],
+                           startPoint: .topLeading, endPoint: .center),
+            in: RoundedRectangle(cornerRadius: 44, style: .continuous)
+        )
+        .softCard(radius: 44)
+    }
+
+    private var bottomRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                FirstMovePicker(humanFirst: $humanFirst)
+                Spacer(minLength: 0)
+                FamilyButton { start(twoPlayer: true) }
+            }
+            VStack(spacing: 20) {
+                FirstMovePicker(humanFirst: $humanFirst)
+                FamilyButton { start(twoPlayer: true) }
+            }
+        }
+    }
+
+    private func step(_ delta: Int) {
+        let n = GomokuLevel(level.number + delta).number
+        guard n != level.number else { return }
+        Sound.step(n)
+        withAnimation(.spring(duration: 0.4, bounce: 0.35)) { savedLevel = n }
+    }
+
+    private func start() { start(twoPlayer: false) }
+
+    private func start(twoPlayer: Bool) {
+        Sound.tap()
+        config = twoPlayer
+            ? GomokuConfig(mode: .twoPlayer, humanFirst: true)
+            : GomokuConfig(mode: .vsAI(level), humanFirst: humanFirst)
     }
 }
 
-private struct FamilyCard: View {
+// MARK: - 左边：当前这一档的对手
+
+private struct LevelShowcase: View {
+    let level: GomokuLevel
+    let best: Int
+    let wins: Int
+    let recommended: Bool
+    let step: (Int) -> Void
+    let start: () -> Void
+
+    private var o: Opponent { level.character }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [o.tint.opacity(0.55), o.tint.opacity(0)],
+                                         center: .center, startRadius: 40, endRadius: 150))
+                    .frame(width: 300, height: 300)
+                Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 190)
+                    .id(o)
+                    .transition(.asymmetric(insertion: .scale(scale: 0.5).combined(with: .opacity),
+                                            removal: .scale(scale: 1.2).combined(with: .opacity)))
+                    .keyframeAnimator(initialValue: 1.0, trigger: level.number) { v, s in
+                        v.scaleEffect(s)
+                    } keyframes: { _ in
+                        SpringKeyframe(1.07, duration: 0.12)
+                        SpringKeyframe(1.0, duration: 0.35, spring: .bouncy)
+                    }
+                if recommended {
+                    Text("推荐")
+                        .font(.kid(17, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Palette.coral, in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white, lineWidth: 3))
+                        .rotationEffect(.degrees(-8))
+                        .offset(x: 82, y: -78)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .frame(height: 220)
+
+            HStack(spacing: 14) {
+                StepButton(systemName: "minus", enabled: level.previous != nil) { step(-1) }
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("第")
+                        .font(.kid(26, weight: .bold))
+                    Text("\(level.number)")
+                        .font(.system(size: 58, weight: .heavy, design: .rounded))
+                        .contentTransition(.numericText(value: Double(level.number)))
+                        .frame(minWidth: 72)
+                    Text("档")
+                        .font(.kid(26, weight: .bold))
+                }
+                .foregroundStyle(Palette.ink)
+                .monospacedDigit()
+                StepButton(systemName: "plus", enabled: level.next != nil) { step(1) }
+            }
+
+            HStack(spacing: 10) {
+                Text(o.tierName)
+                    .font(.kid(17, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(o.tint.opacity(0.95), in: Capsule())
+                Text(o.name)
+                    .font(.kid(26, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+            }
+
+            Text(level.blurb)
+                .font(.kid(19, weight: .semibold))
+                .foregroundStyle(Palette.inkSoft)
+                .contentTransition(.opacity)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            HStack(spacing: 6) {
+                if best > 0 {
+                    ForEach(0..<3, id: \.self) { i in
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(i < best ? Palette.honey : Palette.ink.opacity(0.12))
+                    }
+                    Text("赢过 \(wins) 次")
+                        .padding(.leading, 6)
+                } else {
+                    Text("还没有赢过这一档")
+                }
+            }
+            .font(.kid(17, weight: .semibold))
+            .foregroundStyle(Palette.inkSoft.opacity(0.9))
+            .frame(height: 24)
+
+            Button(action: start) {
+                Label("开始挑战", systemImage: "play.fill")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(PillButtonStyle(color: Palette.coral, size: 28))
+            .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct StepButton: View {
+    let systemName: String
+    let enabled: Bool
     let action: () -> Void
 
     var body: some View {
-        Button {
-            Sound.tap()
-            action()
-        } label: {
-            VStack(spacing: 10) {
-                ZStack {
-                    StoneView(stone: .black, diameter: 74).offset(x: -24, y: 6)
-                    StoneView(stone: .white, diameter: 74).offset(x: 24, y: -6)
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 22, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .frame(width: 54, height: 54)
+                .background(Palette.cream, in: Circle())
+                .overlay(Circle().strokeBorder(Palette.ink.opacity(0.08), lineWidth: 2))
+        }
+        .buttonStyle(PressableStyle(scale: 0.88))
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.3)
+        .accessibilityLabel(systemName == "plus" ? "难一点" : "简单一点")
+    }
+}
+
+// MARK: - 右边：难度阶梯
+
+/// 十根越来越高的柱子。按住左右滑动或者点一下来选档位，每换一档响一个越来越高的音。
+private struct LevelLadder: View {
+    @Binding var selection: Int
+    let recommended: Int
+    let best: (Int) -> Int
+
+    private let count = 10
+    private let spacing: CGFloat = 10
+    private let markerZone: CGFloat = 84
+    private let barsHeight: CGFloat = 250
+    private let footer: CGFloat = 76
+
+    var body: some View {
+        GeometryReader { geo in
+            let barW = (geo.size.width - spacing * CGFloat(count - 1)) / CGFloat(count)
+            ZStack(alignment: .topLeading) {
+                ForEach(1...count, id: \.self) { n in
+                    bar(n, width: barW)
+                        .position(x: x(n, barW), y: markerZone + barsHeight / 2)
+                    stars(n)
+                        .position(x: x(n, barW), y: markerZone + barsHeight + 18)
+                    if n == recommended && n != selection {
+                        Text("推荐")
+                            .font(.kid(14, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(Palette.coral, in: Capsule())
+                            .position(x: x(n, barW), y: markerZone + barsHeight - height(n) - 18)
+                            .transition(.scale.combined(with: .opacity))
+                    }
                 }
-                .frame(width: 150, height: 150)
-                .background(Circle().fill(RadialGradient(colors: [Palette.sky.opacity(0.35), Palette.sky.opacity(0.7)],
-                                                         center: .init(x: 0.4, y: 0.3), startRadius: 0, endRadius: 105)))
-                .overlay(Circle().strokeBorder(.white, lineWidth: 7))
-                .padding(.top, -64)
-                Text("和家人下")
-                    .font(.kid(32, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
-                Text("双人")
-                    .font(.kid(18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .background(Palette.sky, in: Capsule())
-                Text("在同一台 iPad 上\n轮流下棋")
-                    .font(.kid(17, weight: .semibold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 4)
+                tierBrackets(barW: barW)
+                    .offset(y: markerZone + barsHeight + 38)
+                marker
+                    .position(x: x(selection, barW), y: markerZone + barsHeight - height(selection) - 50)
             }
-            .padding(.bottom, 24)
-            .frame(maxWidth: .infinity)
-            .background(
-                LinearGradient(colors: [Palette.paper, Palette.sky.opacity(0.22)], startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: 36, style: .continuous)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { v in
+                        let n = Int(v.location.x / (barW + spacing)) + 1
+                        select(min(max(n, 1), count))
+                    }
             )
-            .softCard(radius: 36, fill: .clear)
+        }
+        .frame(height: markerZone + barsHeight + footer)
+        .accessibilityElement()
+        .accessibilityLabel("难度")
+        .accessibilityValue("第 \(selection) 档")
+        .accessibilityAdjustableAction { dir in
+            switch dir {
+            case .increment: select(min(selection + 1, count))
+            case .decrement: select(max(selection - 1, 1))
+            @unknown default: break
+            }
+        }
+    }
+
+    private func x(_ n: Int, _ barW: CGFloat) -> CGFloat {
+        CGFloat(n - 1) * (barW + spacing) + barW / 2
+    }
+
+    private func height(_ n: Int) -> CGFloat {
+        barsHeight * (0.26 + 0.74 * CGFloat(n - 1) / CGFloat(count - 1))
+    }
+
+    private func select(_ n: Int) {
+        guard n != selection else { return }
+        Sound.step(n)
+        withAnimation(.spring(duration: 0.4, bounce: 0.35)) { selection = n }
+    }
+
+    private func bar(_ n: Int, width: CGFloat) -> some View {
+        let tint = GomokuLevel(n).character.tint
+        let lit = n <= selection
+        let selected = n == selection
+        return VStack {
+            Spacer(minLength: 0)
+            RoundedRectangle(cornerRadius: min(18, width / 3), style: .continuous)
+                .fill(
+                    lit ? AnyShapeStyle(LinearGradient(colors: [tint, tint.opacity(0.78)], startPoint: .top, endPoint: .bottom))
+                        : AnyShapeStyle(tint.opacity(0.3))
+                )
+                .overlay(alignment: .bottom) {
+                    Text("\(n)")
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        .foregroundStyle(lit ? .white : Palette.inkSoft.opacity(0.75))
+                        .padding(.bottom, 10)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: min(18, width / 3), style: .continuous)
+                        .strokeBorder(.white, lineWidth: selected ? 4 : 0)
+                )
+                .shadow(color: selected ? tint.opacity(0.7) : .clear, radius: 12, y: 4)
+                .frame(height: height(n))
+                .scaleEffect(selected ? 1.06 : 1, anchor: .bottom)
+        }
+        .frame(width: width, height: barsHeight)
+    }
+
+    private func stars(_ n: Int) -> some View {
+        let b = best(n)
+        return HStack(spacing: 2) {
+            ForEach(0..<3, id: \.self) { i in
+                Image(systemName: "star.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(i < b ? Palette.honey : Palette.ink.opacity(0.1))
+            }
+        }
+    }
+
+    /// 柱子下面按组标出"入门 / 进阶 / 高手 / 棋王"
+    private func tierBrackets(barW: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Opponent.allCases) { o in
+                let lo = o.levels.lowerBound, hi = o.levels.upperBound
+                let left = x(lo, barW) - barW / 2
+                let w = x(hi, barW) + barW / 2 - left
+                let active = o.levels.contains(selection)
+                VStack(spacing: 6) {
+                    Capsule()
+                        .fill(o.tint.opacity(active ? 1 : 0.45))
+                        .frame(height: 5)
+                    Text(o.tierName)
+                        .font(.kid(16, weight: active ? .heavy : .semibold))
+                        .foregroundStyle(active ? Palette.ink : Palette.inkSoft.opacity(0.75))
+                }
+                .frame(width: w)
+                .offset(x: left)
+            }
+        }
+    }
+
+    /// 站在选中柱子顶上的小伙伴头像
+    private var marker: some View {
+        let o = GomokuLevel(selection).character
+        return VStack(spacing: -2) {
+            Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 66)
+                .id(o)
+                .transition(.scale(scale: 0.4).combined(with: .opacity))
+            Image(systemName: "arrowtriangle.down.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.12), radius: 2, y: 2)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - 和家人下
+
+private struct FamilyButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 18) {
+                ZStack {
+                    StoneView(stone: .black, diameter: 34).offset(x: -11, y: 3)
+                    StoneView(stone: .white, diameter: 34).offset(x: 11, y: -3)
+                }
+                .frame(width: 64, height: 64)
+                .background(Circle().fill(Palette.sky.opacity(0.45)))
+                .overlay(Circle().strokeBorder(.white, lineWidth: 4))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("和家人下")
+                        .font(.kid(24, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    Text("同一台 iPad 轮流下")
+                        .font(.kid(16, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 18, weight: .heavy))
+                    .foregroundStyle(Palette.inkSoft.opacity(0.6))
+                    .padding(.leading, 8)
+            }
+            .padding(.vertical, 12)
+            .padding(.leading, 12)
+            .padding(.trailing, 26)
+            .softCard(radius: 44)
         }
         .buttonStyle(PressableStyle())
     }

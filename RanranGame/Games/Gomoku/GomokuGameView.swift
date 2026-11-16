@@ -1,13 +1,18 @@
 import SwiftUI
 
 struct GomokuGameView: View {
-    @Environment(StarStore.self) private var store
+    @Environment(PlayerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
     @State private var game: GomokuGame
     @State private var showResult = false
     @State private var awardedRounds: Set<Int> = []
+    @State private var countedLosses: Set<Int> = []
     @State private var resultTask: Task<Void, Never>?
+    @State private var lastResult = RoundResult()
+    /// 在当前档位连续输了几局（用来建议降一档）
+    @State private var lossStreak = 0
+    @AppStorage("gomoku.level") private var savedLevel = 0
 
     init(config: GomokuConfig) {
         _game = State(initialValue: GomokuGame(config: config))
@@ -44,8 +49,10 @@ struct GomokuGameView: View {
 
                 if showResult {
                     ResultOverlay(game: game,
-                                  starsEarned: game.humanWon ? (game.opponent?.stars ?? 0) : 0,
+                                  result: lastResult,
+                                  lossStreak: lossStreak,
                                   onAgain: { restart() },
+                                  onLevel: { changeLevel($0) },
                                   onReview: { withAnimation(.spring(duration: 0.35)) { showResult = false } },
                                   onLeave: { leave() })
                         .transition(.opacity)
@@ -93,10 +100,10 @@ struct GomokuGameView: View {
     private var topCard: some View {
         let stone = game.isTwoPlayer ? Stone.white : game.humanColor.opponent
         return Group {
-            if let o = game.opponent {
+            if let o = game.opponent, let level = game.level {
                 PlayerCard(avatar: .art(o.image, o.emoji, o.tint), name: o.name, stone: stone,
                            active: game.turn == stone && !game.isOver, thinking: game.aiThinking,
-                           speech: game.speech)
+                           speech: game.speech, badge: ("第 \(level.number) 档", o.tint))
             } else {
                 PlayerCard(avatar: .stone(.white), name: "白棋", stone: .white,
                            active: game.turn == .white && !game.isOver, thinking: false, speech: nil)
@@ -111,7 +118,7 @@ struct GomokuGameView: View {
                 PlayerCard(avatar: .stone(.black), name: "黑棋", stone: .black,
                            active: game.turn == .black && !game.isOver, thinking: false, speech: nil)
             } else {
-                PlayerCard(avatar: .art("avatar_ranran", "👧", Palette.blush), name: "然然", stone: game.humanColor,
+                PlayerCard(avatar: .art("avatar_ranran", "👧", Palette.blush), name: store.name, stone: game.humanColor,
                            active: game.turn == game.humanColor && !game.isOver, thinking: false, speech: nil)
             }
         }
@@ -131,7 +138,7 @@ struct GomokuGameView: View {
         if game.isDraw { return "棋盘下满啦，平局！" }
         if let w = game.winner {
             if game.isTwoPlayer { return "\(w.name)赢啦！" }
-            return game.humanWon ? "然然赢啦！🎉" : "\(game.opponent!.name)赢了这一局"
+            return game.humanWon ? "\(store.name)赢啦！🎉" : "\(game.opponent!.name)赢了这一局"
         }
         if game.aiThinking { return "\(game.opponent!.name)正在想下哪里…" }
         if game.isTwoPlayer { return "轮到\(game.turn.name)" }
@@ -155,6 +162,13 @@ struct GomokuGameView: View {
         game.restart()
     }
 
+    private func changeLevel(_ level: GomokuLevel) {
+        savedLevel = level.number
+        lossStreak = 0
+        withAnimation(.spring(duration: 0.35)) { showResult = false }
+        game.changeLevel(level)
+    }
+
     private func leave() {
         game.stop()
         dismiss()
@@ -162,10 +176,20 @@ struct GomokuGameView: View {
 
     private func handleGameOver() {
         let round = game.round
-        if game.humanWon, let o = game.opponent, !awardedRounds.contains(round) {
-            awardedRounds.insert(round)
-            store.addStars(o.stars)
-            store.increment("gomoku.win.\(o.rawValue)")
+        store.saveRecord(game.makeRecord(stars: game.humanWon && !game.isTwoPlayer ? game.winStars : 0))
+        if let level = game.level {
+            if game.humanWon, !awardedRounds.contains(round) {
+                awardedRounds.insert(round)
+                let stars = game.winStars
+                let record = store.recordGomokuWin(level, stars: stars)
+                store.addStars(stars)
+                lastResult = RoundResult(stars: stars, usedUndo: game.usedUndo, usedHint: game.usedHint, isRecord: record)
+                lossStreak = 0
+            } else if !game.humanWon, game.winner != nil, !countedLosses.contains(round) {
+                countedLosses.insert(round)
+                lastResult = RoundResult()
+                lossStreak += 1
+            }
         }
         resultTask = Task {
             try? await Task.sleep(for: .milliseconds(game.winner != nil ? 1300 : 500))
@@ -190,14 +214,26 @@ struct PlayerCard: View {
     let active: Bool
     let thinking: Bool
     let speech: String?
+    var badge: (String, Color)? = nil
 
     var body: some View {
         HStack(spacing: 16) {
             avatarView
             VStack(alignment: .leading, spacing: 6) {
-                Text(name)
-                    .font(.kid(28, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
+                HStack(spacing: 8) {
+                    Text(name)
+                        .font(.kid(28, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    if let (text, tint) = badge {
+                        Text(text)
+                            .font(.kid(15, weight: .heavy))
+                            .foregroundStyle(Palette.ink.opacity(0.8))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(tint.opacity(0.45), in: Capsule())
+                            .fixedSize()
+                    }
+                }
                 HStack(spacing: 8) {
                     StoneView(stone: stone, diameter: 20)
                     Text(stone.name)
@@ -331,15 +367,34 @@ struct ControlButton: View {
 
 // MARK: - 结果
 
+/// 一局人机对战赢下来的成绩
+struct RoundResult {
+    var stars = 0
+    var usedUndo = false
+    var usedHint = false
+    var isRecord = false
+}
+
 struct ResultOverlay: View {
     let game: GomokuGame
-    let starsEarned: Int
+    let result: RoundResult
+    let lossStreak: Int
     let onAgain: () -> Void
+    let onLevel: (GomokuLevel) -> Void
     let onReview: () -> Void
     let onLeave: () -> Void
 
     @State private var appeared = false
     @State private var litStars = 0
+    @State private var showRecord = false
+
+    private var vsAI: Bool { !game.isTwoPlayer }
+    private var aiWin: Bool { vsAI && game.humanWon }
+    /// 输了两局以上，建议降一档
+    private var easier: GomokuLevel? {
+        guard vsAI, !game.humanWon, !game.isDraw, lossStreak >= 2 else { return nil }
+        return game.level?.previous
+    }
 
     var body: some View {
         ZStack {
@@ -347,59 +402,147 @@ struct ResultOverlay: View {
             Color.black.opacity(0.12).ignoresSafeArea()
             if game.humanWon || game.isTwoPlayer && game.winner != nil { ConfettiView() }
 
-            VStack(spacing: 20) {
+            VStack(spacing: 18) {
                 avatar
                     .padding(.top, -110)
 
                 Text(title)
-                    .font(.kid(52, weight: .heavy))
+                    .font(.kid(50, weight: .heavy))
                     .foregroundStyle(Palette.ink)
                 Text(subtitle)
-                    .font(.kid(24, weight: .semibold))
+                    .font(.kid(23, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
+                    .multilineTextAlignment(.center)
 
-                if starsEarned > 0 {
-                    HStack(spacing: 14) {
-                        ForEach(0..<starsEarned, id: \.self) { i in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 54, weight: .bold))
-                                .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
-                                                                startPoint: .top, endPoint: .bottom))
-                                .shadow(color: Palette.honey.opacity(0.6), radius: 10)
-                                .scaleEffect(i < litStars ? 1 : 0.2)
-                                .opacity(i < litStars ? 1 : 0)
-                        }
+                if aiWin { starMedals }
+
+                if let easier {
+                    suggestion(easier)
+                }
+
+                HStack(spacing: 18) {
+                    primaryButton
+                    secondaryButton
+                }
+                .padding(.top, 6)
+
+                HStack(spacing: 36) {
+                    Button { Sound.tap(); onReview() } label: {
+                        Label("看看棋盘", systemImage: "eye")
                     }
-                    .frame(height: 64)
+                    Button { Sound.tap(); onLeave() } label: {
+                        Label(vsAI ? "换个难度" : "返回", systemImage: vsAI ? "slider.horizontal.3" : "chevron.left")
+                    }
                 }
-
-                HStack(spacing: 20) {
-                    Button("再来一局") { Sound.tap(); onAgain() }
-                        .buttonStyle(PillButtonStyle(color: Palette.coral))
-                    Button("看看棋盘") { Sound.tap(); onReview() }
-                        .buttonStyle(PillButtonStyle(color: Palette.paper, foreground: Palette.ink, size: 22))
-                }
-                .padding(.top, 8)
-
-                Button("换个对手") { Sound.tap(); onLeave() }
-                    .font(.kid(20, weight: .bold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .padding(.top, 4)
+                .font(.kid(19, weight: .bold))
+                .foregroundStyle(Palette.inkSoft)
+                .padding(.top, 2)
             }
-            .padding(.horizontal, 64)
-            .padding(.bottom, 40)
+            .padding(.horizontal, 60)
+            .padding(.bottom, 36)
             .padding(.top, 20)
-            .frame(minWidth: 520)
+            .frame(minWidth: 560)
             .softCard(radius: 44)
+            .overlay(alignment: .topTrailing) {
+                if showRecord {
+                    Text("新纪录！")
+                        .font(.kid(22, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(Palette.coral, in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white, lineWidth: 4))
+                        .rotationEffect(.degrees(10))
+                        .offset(x: 26, y: -10)
+                        .transition(.scale(scale: 2.2).combined(with: .opacity))
+                }
+            }
             .scaleEffect(appeared ? 1 : 0.7)
             .opacity(appeared ? 1 : 0)
         }
         .task {
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { appeared = true }
-            for i in 0..<starsEarned {
-                try? await Task.sleep(for: .milliseconds(i == 0 ? 450 : 260))
+            guard aiWin else { return }
+            for i in 0..<result.stars {
+                try? await Task.sleep(for: .milliseconds(i == 0 ? 500 : 300))
+                Sound.step(6 + i * 2)
                 withAnimation(.spring(duration: 0.45, bounce: 0.6)) { litStars = i + 1 }
             }
+            if result.isRecord {
+                try? await Task.sleep(for: .milliseconds(350))
+                withAnimation(.spring(duration: 0.5, bounce: 0.5)) { showRecord = true }
+            }
+        }
+    }
+
+    // MARK: 三颗星：赢了 / 没悔棋 / 没用提示
+
+    private var starMedals: some View {
+        let earned = [true, !result.usedUndo, !result.usedHint]
+        let captions = ["赢下比赛", "没有悔棋", "没用提示"]
+        // 拿到的星排在前面依次点亮
+        let order = earned.indices.sorted { earned[$0] && !earned[$1] }
+        return HStack(spacing: 26) {
+            ForEach(0..<3, id: \.self) { i in
+                let got = earned[i]
+                let lit = got && (order.firstIndex(of: i) ?? 0) < litStars
+                VStack(spacing: 8) {
+                    ZStack {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 52, weight: .bold))
+                            .foregroundStyle(Palette.ink.opacity(0.08))
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 52, weight: .bold))
+                            .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
+                                                            startPoint: .top, endPoint: .bottom))
+                            .shadow(color: Palette.honey.opacity(0.6), radius: 10)
+                            .scaleEffect(lit ? 1 : 0.2)
+                            .opacity(lit ? 1 : 0)
+                    }
+                    .offset(y: i == 1 ? -10 : 0)
+                    Text(captions[i])
+                        .font(.kid(15, weight: .bold))
+                        .foregroundStyle(got ? Palette.inkSoft : Palette.inkSoft.opacity(0.4))
+                        .strikethrough(!got, color: Palette.inkSoft.opacity(0.4))
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func suggestion(_ easier: GomokuLevel) -> some View {
+        HStack(spacing: 14) {
+            Avatar(image: easier.character.image, fallback: easier.character.emoji, tint: easier.character.tint, size: 54)
+            Text("连着输了 \(lossStreak) 局，先去第 \(easier.number) 档练练手？")
+                .font(.kid(19, weight: .bold))
+                .foregroundStyle(Palette.ink)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(easier.character.tint.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    @ViewBuilder private var primaryButton: some View {
+        if aiWin, let next = game.level?.next {
+            Button { Sound.tap(); onLevel(next) } label: {
+                Label("挑战第 \(next.number) 档", systemImage: "arrow.up.right")
+            }
+            .buttonStyle(PillButtonStyle(color: Palette.coral))
+        } else if let easier {
+            Button { Sound.tap(); onLevel(easier) } label: {
+                Label("去第 \(easier.number) 档", systemImage: "arrow.down.right")
+            }
+            .buttonStyle(PillButtonStyle(color: easier.character.tint))
+        } else {
+            Button("再来一局") { Sound.tap(); onAgain() }
+                .buttonStyle(PillButtonStyle(color: Palette.coral))
+        }
+    }
+
+    @ViewBuilder private var secondaryButton: some View {
+        if (aiWin && game.level?.next != nil) || easier != nil {
+            Button("再来一局") { Sound.tap(); onAgain() }
+                .buttonStyle(PillButtonStyle(color: Palette.paper, foreground: Palette.ink, size: 22))
         }
     }
 
@@ -419,13 +562,17 @@ struct ResultOverlay: View {
     private var title: String {
         if game.isDraw { return "平局！" }
         if game.isTwoPlayer { return "\(game.winner?.name ?? "")赢啦！" }
-        return game.humanWon ? "你赢啦！" : "\(game.opponent?.name ?? "")赢了"
+        if game.humanWon { return game.level?.next == nil ? "你打败了棋王！" : "你赢啦！" }
+        return "\(game.opponent?.name ?? "")赢了"
     }
 
     private var subtitle: String {
         if game.isDraw { return "棋盘都下满啦，你们一样厉害" }
         if game.isTwoPlayer { return "下得真精彩，再来一局吧" }
-        if game.humanWon { return "\(game.opponent?.loseLine ?? "")  获得 \(starsEarned) 颗星星" }
+        if game.humanWon {
+            let o = game.opponent?.loseLine ?? ""
+            return "\(o)  获得 \(result.stars) 颗星星"
+        }
         return "差一点点！点「悔棋」或者再来一局吧"
     }
 }

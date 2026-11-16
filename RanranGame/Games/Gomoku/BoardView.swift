@@ -130,7 +130,7 @@ struct BoardView: View {
 }
 
 /// 木质棋盘：带厚度的边、木纹、网格和星位。
-private struct BoardSurface: View {
+struct BoardSurface: View {
     let layout: BoardLayout
 
     var body: some View {
@@ -206,7 +206,7 @@ private struct Crosshair: View {
 }
 
 /// 连成五子后划过的发光线。
-private struct WinStroke: View {
+struct WinStroke: View {
     let from: CGPoint
     let to: CGPoint
     let progress: CGFloat

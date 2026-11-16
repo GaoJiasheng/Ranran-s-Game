@@ -17,6 +17,13 @@ final class GomokuGame {
     private(set) var hint: Point?
     private(set) var threats: [Point] = []
     private(set) var speech: String?
+    /// 人机模式的难度（双人模式为 nil）
+    private(set) var level: GomokuLevel?
+    /// 这一局有没有悔棋、用提示——决定赢了能拿几颗星
+    private(set) var usedUndo = false
+    private(set) var usedHint = false
+    /// 这一局棋谱的 id；悔棋后再下完会覆盖同一条记录
+    private(set) var recordID = UUID()
     /// 每次重新开始都会变，界面用它来重置动画
     private(set) var round = 0
 
@@ -25,11 +32,12 @@ final class GomokuGame {
 
     init(config: GomokuConfig) {
         self.config = config
+        self.level = config.mode.level
     }
 
     // MARK: - 查询
 
-    var opponent: Opponent? { config.mode.opponent }
+    var opponent: Opponent? { level?.character }
     var isTwoPlayer: Bool { opponent == nil }
     /// 人机模式下然然执的颜色
     var humanColor: Stone { config.humanFirst ? .black : .white }
@@ -47,6 +55,19 @@ final class GomokuGame {
     }
 
     func color(ofMove index: Int) -> Stone { index % 2 == 0 ? .black : .white }
+
+    /// 赢了能拿几颗星：赢下比赛 + 没悔棋 + 没用提示
+    var winStars: Int { 1 + (usedUndo ? 0 : 1) + (usedHint ? 0 : 1) }
+
+    /// 把这一局存成棋谱
+    func makeRecord(stars: Int) -> GameRecord {
+        GameRecord(id: recordID, game: "gomoku", date: Date(), boardSize: Board.size,
+                   moves: moves.map { [$0.x, $0.y] },
+                   opponentLevel: level?.number,
+                   playerColor: isTwoPlayer ? nil : Int(humanColor.rawValue),
+                   winner: winner.map { Int($0.rawValue) },
+                   stars: stars)
+    }
 
     // MARK: - 操作
 
@@ -79,6 +100,7 @@ final class GomokuGame {
             isDraw = false
             hint = nil
         }
+        if !isTwoPlayer { usedUndo = true }
         Sound.undo()
         updateThreats()
     }
@@ -97,13 +119,24 @@ final class GomokuGame {
             threats = []
             round += 1
         }
+        usedUndo = false
+        usedHint = false
+        recordID = UUID()
         begin()
+    }
+
+    /// 换一档难度，马上开新的一局
+    func changeLevel(_ newLevel: GomokuLevel) {
+        guard !isTwoPlayer else { return }
+        level = newLevel
+        restart()
     }
 
     func showHint() {
         guard canHumanMove else { return }
-        let p = GomokuAI.bestMove(board: board, color: turn, level: .normal)
+        let p = GomokuAI.bestMove(board: board, color: turn, level: 8)
         withAnimation(.spring(duration: 0.35)) { hint = p }
+        if !isTwoPlayer { usedHint = true }
         Sound.hint()
     }
 
@@ -143,17 +176,17 @@ final class GomokuGame {
     }
 
     private func scheduleAI() {
-        guard let opponent else { return }
+        guard let level else { return }
         aiThinking = true
         let snapshot = board
         let color = turn
-        let level = opponent.level
+        let profile = level.profile
         aiTask = Task { [weak self] in
             let started = ContinuousClock.now
             let move = await Task.detached(priority: .userInitiated) {
-                GomokuAI.bestMove(board: snapshot, color: color, level: level)
+                GomokuAI.bestMove(board: snapshot, color: color, profile: profile)
             }.value
-            let wait = opponent.thinkingTime + .milliseconds(Int.random(in: 0...350)) - (ContinuousClock.now - started)
+            let wait = level.thinkingTime + .milliseconds(Int.random(in: 0...350)) - (ContinuousClock.now - started)
             if wait > .zero { try? await Task.sleep(for: wait) }
             guard let self, !Task.isCancelled else { return }
             self.aiThinking = false
@@ -163,7 +196,7 @@ final class GomokuGame {
 
     /// 轮到然然下时，如果电脑下一步就能连五，把那些点标出来并提醒她。
     private func updateThreats() {
-        guard let opponent, opponent.coaches, !isOver, turn == humanColor else {
+        guard let opponent, let level, level.coaches, !isOver, turn == humanColor else {
             if !threats.isEmpty { withAnimation { threats = [] } }
             return
         }

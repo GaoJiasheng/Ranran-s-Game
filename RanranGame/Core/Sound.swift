@@ -7,7 +7,8 @@ enum Sound {
 
     static func prepare() {
         try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-        for name in ["stone_a", "stone_b", "tap", "win", "lose", "hint", "undo"] {
+        let steps = (1...10).map { "step_\($0)" }
+        for name in ["stone_a", "stone_b", "tap", "win", "lose", "hint", "undo"] + steps {
             guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else { continue }
             pools[name] = (0..<3).compactMap { _ in
                 let p = try? AVAudioPlayer(contentsOf: url)
@@ -31,4 +32,6 @@ enum Sound {
     static func lose() { play("lose", volume: 0.7) }
     static func hint() { play("hint", volume: 0.7) }
     static func undo() { play("undo", volume: 0.6) }
+    /// 难度阶梯上每一档的音，档位越高音越高
+    static func step(_ level: Int) { play("step_\(min(max(level, 1), 10))", volume: 0.5) }
 }
