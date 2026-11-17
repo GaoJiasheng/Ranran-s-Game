@@ -46,7 +46,7 @@ struct SaveArchive: Codable {
 /// 玩家的全部本地数据：名字、星星、各种进度、棋谱。不需要登录，只存在这台 iPad 上。
 @Observable
 final class PlayerStore {
-    static let defaultName = "然然"
+    static let defaultName = "冉冉"
     static let maxNameLength = 8
     /// 跟着存档一起导出的设置项
     private static let settingKeys = ["gomoku.level", "gomoku.humanFirst", "story.voice"]

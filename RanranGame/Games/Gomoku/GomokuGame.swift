@@ -39,7 +39,7 @@ final class GomokuGame {
 
     var opponent: Opponent? { level?.character }
     var isTwoPlayer: Bool { opponent == nil }
-    /// 人机模式下然然执的颜色
+    /// 人机模式下冉冉执的颜色
     var humanColor: Stone { config.humanFirst ? .black : .white }
     var isOver: Bool { winner != nil || isDraw }
     var lastMove: Point? { moves.last }
@@ -194,7 +194,7 @@ final class GomokuGame {
         }
     }
 
-    /// 轮到然然下时，如果电脑下一步就能连五，把那些点标出来并提醒她。
+    /// 轮到冉冉下时，如果电脑下一步就能连五，把那些点标出来并提醒她。
     private func updateThreats() {
         guard let opponent, let level, level.coaches, !isOver, turn == humanColor else {
             if !threats.isEmpty { withAnimation { threats = [] } }

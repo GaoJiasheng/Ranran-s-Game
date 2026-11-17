@@ -114,7 +114,7 @@ struct GomokuLevel: Hashable, Identifiable, Comparable {
     var next: GomokuLevel? { number < Self.range.upperBound ? GomokuLevel(number + 1) : nil }
     var previous: GomokuLevel? { number > Self.range.lowerBound ? GomokuLevel(number - 1) : nil }
 
-    /// 对手快赢时，会不会把危险的地方标出来提醒然然
+    /// 对手快赢时，会不会把危险的地方标出来提醒冉冉
     var coaches: Bool { number <= 6 }
 
     var thinkingTime: Duration { .milliseconds(560 + number * 40) }

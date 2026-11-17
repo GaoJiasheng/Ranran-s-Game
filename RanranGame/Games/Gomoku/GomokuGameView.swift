@@ -111,7 +111,7 @@ struct GomokuGameView: View {
         }
     }
 
-    /// 下面一张：然然（或双人模式的黑棋）
+    /// 下面一张：冉冉（或双人模式的黑棋）
     private var bottomCard: some View {
         Group {
             if game.isTwoPlayer {
