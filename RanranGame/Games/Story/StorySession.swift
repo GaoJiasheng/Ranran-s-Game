@@ -90,6 +90,7 @@ final class StorySession {
     // MARK: 流程
 
     func start() {
+        if sentence == nil && index == 0 { Sound.start() }
         flow?.cancel()
         flow = Task { await tell() }
     }
@@ -233,7 +234,7 @@ final class StorySession {
     }
 
     private func rejected(_ route: StoryRoute) {
-        Sound.undo()
+        Sound.nope()
         guard let acting else { return }
         let text: String
         switch acting {
@@ -266,7 +267,7 @@ final class StorySession {
             } else {
                 text = "现在\(name(s))比\(name(other))多 \(c - y) {m}。故事里说的是多几{m}呢？"
             }
-            Sound.undo()
+            Sound.oops()
             say(CoachLine(text: text, tone: .hint))
             if let i = p.sentences.firstIndex(where: { $0.actions.contains(acting) }) {
                 sentence = i
@@ -274,7 +275,7 @@ final class StorySession {
         case let .balance(f, t):
             if stage.count(f) == stage.count(t) { actingDone(); return }
             let more = stage.count(f) > stage.count(t) ? f : t
-            Sound.undo()
+            Sound.oops()
             say(CoachLine(text: "还不一样多哦，\(name(more))的还多一些。", tone: .hint))
         default:
             break
@@ -282,7 +283,7 @@ final class StorySession {
     }
 
     private func actingDone() {
-        Sound.hint()
+        Sound.done()
         say(CoachLine(text: "演好啦！", tone: .praise), speak: false)
         resumeWaiter()
     }
@@ -293,13 +294,13 @@ final class StorySession {
         guard phase == .answering, input.count < 2 else { return }
         if input == "0" { input = "" }
         input += "\(digit)"
-        Sound.tap()
+        Sound.key()
     }
 
     func backspace() {
         guard phase == .answering, !input.isEmpty else { return }
         input.removeLast()
-        Sound.tap()
+        Sound.key()
     }
 
     func submit() {
@@ -320,7 +321,7 @@ final class StorySession {
 
     private func wrong(_ n: Int) {
         let p = problem
-        Sound.undo()
+        Sound.oops()
         wrongShake += 1
         let hint = p.hints[n] ?? p.genericHint
         if actedOut {
@@ -367,7 +368,7 @@ final class StorySession {
 
     private func solved() async {
         let p = problem
-        Sound.hint()
+        Sound.correct()
         phase = .verifying
         // 没演过的话，自动演一遍给她看，验证答案
         if !actedOut {

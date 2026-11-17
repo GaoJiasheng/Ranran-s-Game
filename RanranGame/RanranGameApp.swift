@@ -14,6 +14,7 @@ struct RanranGameApp: App {
                 .environment(store)
                 .preferredColorScheme(.light)
                 .persistentSystemOverlays(.hidden)
+                .statusBarHidden()
         }
     }
 }

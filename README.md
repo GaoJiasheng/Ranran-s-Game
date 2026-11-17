@@ -26,9 +26,10 @@ RanranGame/
   Views/ProfileView.swift「我的」：名字、战绩、棋谱列表、存档
   Games/Gomoku/          五子棋：规则、AI（十档 + 复盘分析）、棋盘、界面、复盘页
   Games/Story/           小伙伴的故事：出题器（题型 + 常见错法）、演故事的舞台、做题流程、朗读
-  Sounds/                合成的音效（落子声等）
+  Sounds/                合成的音效（落子声、故事里的拿起/放下、答对/答错、过关等）
   Assets.xcassets/       插画、头像、图标
 art/                     Codex 生成的原始插画
+tools/                   重新生成音效的脚本（make_sounds.py：棋子等；make_sfx.py：故事和关键时刻）
 ```
 
 ## 装到 iPad 上

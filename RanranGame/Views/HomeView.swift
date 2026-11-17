@@ -21,42 +21,47 @@ struct HomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             GeometryReader { geo in
-                let wide = geo.size.width > 1000
+                // 横屏两张大卡并排；竖屏（或窄窗口）上下叠放。卡片高度跟着屏幕走，不滚动。
+                let wide = geo.size.width > geo.size.height && geo.size.width > 900
+                let roomy = geo.size.height > 760
                 ZStack {
                     CreamBackground()
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 36) {
+                    AdaptivePage {
+                        VStack(alignment: .leading, spacing: roomy ? 28 : 20) {
                             header
-                            Text("我的游戏")
-                                .font(.kid(26, weight: .heavy))
-                                .foregroundStyle(Palette.inkSoft)
-                                .padding(.top, 12)
+                            if roomy {
+                                Text("我的游戏")
+                                    .font(.kid(26, weight: .heavy))
+                                    .foregroundStyle(Palette.inkSoft)
+                                    .padding(.top, 4)
+                            }
 
                             let gomoku = GameHeroCard(game: .gomoku) { open(.gomoku) }
                             let story = GameHeroCard(game: .story) { open(.story) }
-                            if wide {
-                                HStack(spacing: 28) {
-                                    gomoku.frame(maxWidth: .infinity)
-                                    story.frame(maxWidth: .infinity)
-                                }
-                                .frame(height: 420)
-                                ComingSoonCard().frame(height: 120)
-                            } else {
-                                VStack(spacing: 28) {
-                                    gomoku.frame(height: 400)
-                                    story.frame(height: 400)
-                                    ComingSoonCard().frame(height: 140)
+                            Group {
+                                if wide {
+                                    HStack(spacing: 28) {
+                                        gomoku.frame(maxWidth: .infinity)
+                                        story.frame(maxWidth: .infinity)
+                                    }
+                                    .frame(minHeight: 280, maxHeight: 540)
+                                } else {
+                                    VStack(spacing: 24) {
+                                        gomoku.frame(minHeight: 250, maxHeight: 560)
+                                        story.frame(minHeight: 250, maxHeight: 560)
+                                    }
                                 }
                             }
+                            .frame(maxHeight: .infinity)
+                            ComingSoonCard().frame(height: roomy ? 110 : 84)
                         }
                         .padding(.horizontal, 48)
-                        .padding(.vertical, 40)
-                        .frame(maxWidth: 1400)
+                        .padding(.vertical, roomy ? 36 : 24)
+                        .frame(maxWidth: 1400, maxHeight: .infinity)
                         .frame(maxWidth: .infinity)
                         .offset(y: appeared ? 0 : 30)
                         .opacity(appeared ? 1 : 0)
                     }
-                    .scrollBounceBehavior(.basedOnSize)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -73,6 +78,15 @@ struct HomeView: View {
         }
         .onAppear {
             withAnimation(.spring(duration: 0.7, bounce: 0.25)) { appeared = true }
+            #if DEBUG
+            // 调试截图用：启动参数 -route gomoku / story / profile 直接打开那一页
+            switch UserDefaults.standard.string(forKey: "route") {
+            case "gomoku":  path = [.game(.gomoku)]
+            case "story":   path = [.game(.story)]
+            case "profile": path = [.profile]
+            default: break
+            }
+            #endif
         }
     }
 
@@ -140,6 +154,7 @@ private struct GameHeroCard: View {
 
     var body: some View {
         Button(action: action) {
+            GeometryReader { g in
             ZStack(alignment: .leading) {
                 base
                     .overlay(alignment: .trailing) {
@@ -152,38 +167,52 @@ private struct GameHeroCard: View {
                                        .init(color: .clear, location: 0.62)],
                                startPoint: .leading, endPoint: .trailing)
 
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(title)
-                        .font(.kid(60, weight: .heavy))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text(subtitle)
-                        .font(.kid(22, weight: .semibold))
-                        .foregroundStyle(Palette.inkSoft)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                    accessory
-                        .padding(.top, 6)
-                    Spacer().frame(height: 10)
-                    HStack(spacing: 10) {
-                        Image(systemName: "play.fill")
-                        Text("开始玩")
-                    }
-                    .font(.kid(24, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 15)
-                    .background(button, in: Capsule())
-                    .shadow(color: button.opacity(0.45), radius: 14, y: 8)
+                // 卡片矮的时候先省掉小头像那一行
+                ViewThatFits(in: .vertical) {
+                    content(accessory: true)
+                    content(accessory: false)
                 }
                 .padding(.horizontal, 40)
-                .frame(maxWidth: 400, alignment: .leading)
+                .padding(.vertical, 24)
+                // 文字只占卡片左边一部分，窄卡片上也不压到插画
+                .frame(width: min(420, g.size.width * 0.6), alignment: .leading)
+            }
+            .frame(width: g.size.width, height: g.size.height)
             }
             .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
             .softCard(radius: 44, fill: .clear)
         }
         .buttonStyle(PressableStyle(scale: 0.97))
+    }
+
+    private func content(accessory show: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title)
+                .font(.kid(60, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(subtitle)
+                .font(.kid(22, weight: .semibold))
+                .foregroundStyle(Palette.inkSoft)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            if show {
+                accessory
+                    .padding(.top, 6)
+            }
+            Spacer().frame(height: 10)
+            HStack(spacing: 10) {
+                Image(systemName: "play.fill")
+                Text("开始玩")
+            }
+            .font(.kid(24, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 15)
+            .background(button, in: Capsule())
+            .shadow(color: button.opacity(0.45), radius: 14, y: 8)
+        }
     }
 
     @ViewBuilder private var accessory: some View {

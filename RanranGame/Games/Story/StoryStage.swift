@@ -35,7 +35,10 @@ final class StoryStage {
     var supplyDrag: CGPoint?
     var hover: Spot?
     /// 比一比：对齐的连线、多出来的发光
-    var comparing = false
+    /// 比一比：亮出一一对应和"多出来的"
+    var comparing = false {
+        didSet { if comparing, !oldValue { Sound.sparkle() } }
+    }
     /// 点一点数一数：token id → 第几个
     private(set) var counted: [Int: Int] = [:]
     /// 不显示个数的地方（显示了就等于告诉答案）
@@ -106,7 +109,7 @@ final class StoryStage {
             for _ in 0..<n {
                 if animated {
                     withAnimation(.spring(duration: 0.4, bounce: 0.5)) { _ = add(s) }
-                    Sound.tap()
+                    Sound.pop()
                     try? await Task.sleep(for: .milliseconds(110))
                 } else {
                     add(s)
@@ -137,7 +140,7 @@ final class StoryStage {
             }
             if animated {
                 withAnimation(.spring(duration: 0.55, bounce: 0.3)) { relocate(id, to: to) }
-                Sound.tap()
+                Sound.drop()
             } else {
                 relocate(id, to: to)
             }
@@ -170,6 +173,7 @@ final class StoryStage {
     }
 
     func beginDrag(_ id: Int, at p: CGPoint, hit: Spot?) {
+        if draggingID != id { Sound.pick() }
         draggingID = id
         dragPoint = p
         hover = hit
@@ -192,7 +196,7 @@ final class StoryStage {
         if route == forward { beatTokens.insert(id) } else { beatTokens.remove(id) }
         withAnimation(.spring(duration: 0.45, bounce: 0.35)) { relocate(id, to: target) }
         if target == .supply { removeLater(id, animated: true) }
-        Sound.tap()
+        Sound.drop()
         onDrop?(route)
     }
 
@@ -211,7 +215,7 @@ final class StoryStage {
         }
         guard count(target) < limit else { return }
         withAnimation(.spring(duration: 0.4, bounce: 0.5)) { beatTokens.insert(add(target, origin: .supply)) }
-        Sound.tap()
+        Sound.drop()
         onDrop?(route)
     }
 

@@ -85,7 +85,7 @@ struct StoryPlayView: View {
             let stars = session.stars
             store.addStars(stars)
             let record = store.recordStoryLevel(level, stars: stars)
-            Sound.win()
+            Sound.fanfare()
             withAnimation(.spring(duration: 0.5)) {
                 outcome = StoryOutcome(level: level, stars: stars, correct: session.correctCount,
                                        total: session.problems.count, isRecord: record)
@@ -563,6 +563,7 @@ struct StoryResultOverlay: View {
             }
             if outcome.isRecord {
                 try? await Task.sleep(for: .milliseconds(350))
+                Sound.record()
                 withAnimation(.spring(duration: 0.5, bounce: 0.5)) { showRecord = true }
             }
         }

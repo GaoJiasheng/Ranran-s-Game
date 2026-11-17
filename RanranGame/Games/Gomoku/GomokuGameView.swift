@@ -470,6 +470,7 @@ struct ResultOverlay: View {
             }
             if result.isRecord {
                 try? await Task.sleep(for: .milliseconds(350))
+                Sound.record()
                 withAnimation(.spring(duration: 0.5, bounce: 0.5)) { showRecord = true }
             }
         }

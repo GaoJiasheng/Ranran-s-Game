@@ -224,3 +224,17 @@ struct ConfettiView: View {
         .onAppear { falling = true }
     }
 }
+
+/// 一屏的页面：放得下就固定不动，各部分按屏幕尺寸伸缩；
+/// 只有窗口小到实在放不下（比如分屏缩得很窄）时，才退回可以上下滑。
+struct AdaptivePage<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ViewThatFits(in: .vertical) {
+            content()
+            ScrollView { content() }
+                .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+}

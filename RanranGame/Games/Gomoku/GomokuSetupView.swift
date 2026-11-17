@@ -25,10 +25,11 @@ struct GomokuSetupView: View {
                 CreamBackground(accent: level.character.tint)
                     .animation(.easeInOut(duration: 0.6), value: level.character)
 
-                ScrollView {
-                    VStack(spacing: wide ? 24 : 32) {
+                AdaptivePage {
+                    VStack(spacing: wide ? 20 : 26) {
                         header
                         challengePanel(wide: wide)
+                            .frame(maxHeight: .infinity)
                             .offset(y: appeared ? 0 : 50)
                             .opacity(appeared ? 1 : 0)
                         bottomRow
@@ -37,11 +38,10 @@ struct GomokuSetupView: View {
                             .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.08), value: appeared)
                     }
                     .padding(.horizontal, 40)
-                    .padding(.vertical, 28)
-                    .frame(maxWidth: 1240)
-                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 1240, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
                 }
-                .scrollBounceBehavior(.basedOnSize)
             }
         }
         .onAppear {
@@ -76,6 +76,7 @@ struct GomokuSetupView: View {
                                      best: store.gomokuBest(level),
                                      wins: store.gomokuWins(level),
                                      recommended: level == store.gomokuRecommended,
+                                     row: !wide,
                                      step: { step($0) },
                                      start: start)
         let ladder = VStack(alignment: .leading, spacing: 6) {
@@ -106,7 +107,8 @@ struct GomokuSetupView: View {
                 }
             }
         }
-        .padding(wide ? 40 : 32)
+        .padding(wide ? 36 : 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             LinearGradient(colors: [level.character.tint.opacity(0.20), Palette.paper.opacity(0)],
                            startPoint: .topLeading, endPoint: .center),
@@ -139,7 +141,7 @@ struct GomokuSetupView: View {
     private func start() { start(twoPlayer: false) }
 
     private func start(twoPlayer: Bool) {
-        Sound.tap()
+        Sound.start()
         config = twoPlayer
             ? GomokuConfig(mode: .twoPlayer, humanFirst: true)
             : GomokuConfig(mode: .vsAI(level), humanFirst: humanFirst)
@@ -153,19 +155,41 @@ private struct LevelShowcase: View {
     let best: Int
     let wins: Int
     let recommended: Bool
+    /// 竖屏时头像放左边、文字放右边，给难度阶梯多留高度
+    var row = false
     let step: (Int) -> Void
     let start: () -> Void
 
     private var o: Opponent { level.character }
 
     var body: some View {
-        VStack(spacing: 14) {
+        if row {
+            HStack(spacing: 24) {
+                portrait
+                    .frame(minWidth: 150, maxWidth: 250, minHeight: 150, maxHeight: 250)
+                details
+            }
+            .frame(maxWidth: .infinity)
+        } else {
+            VStack(spacing: 14) {
+                // 头像区跟着屏幕高度伸缩，其余部分保持原大小
+                portrait.frame(minHeight: 100, maxHeight: 230)
+                details
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// 当前对手的大头像，大小跟着可用空间走
+    private var portrait: some View {
+        GeometryReader { g in
+            let k = min(g.size.width, g.size.height) / 220
             ZStack {
                 Circle()
                     .fill(RadialGradient(colors: [o.tint.opacity(0.55), o.tint.opacity(0)],
-                                         center: .center, startRadius: 40, endRadius: 150))
-                    .frame(width: 300, height: 300)
-                Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 190)
+                                         center: .center, startRadius: 40 * k, endRadius: 150 * k))
+                    .frame(width: 300 * k, height: 300 * k)
+                Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 190 * k)
                     .id(o)
                     .transition(.asymmetric(insertion: .scale(scale: 0.5).combined(with: .opacity),
                                             removal: .scale(scale: 1.2).combined(with: .opacity)))
@@ -184,12 +208,16 @@ private struct LevelShowcase: View {
                         .background(Palette.coral, in: Capsule())
                         .overlay(Capsule().strokeBorder(.white, lineWidth: 3))
                         .rotationEffect(.degrees(-8))
-                        .offset(x: 82, y: -78)
+                        .offset(x: 82 * k, y: -78 * k)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .frame(height: 220)
+            .frame(width: g.size.width, height: g.size.height)
+        }
+    }
 
+    private var details: some View {
+        VStack(spacing: 14) {
             HStack(spacing: 14) {
                 StepButton(systemName: "minus", enabled: level.previous != nil) { step(-1) }
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -248,8 +276,9 @@ private struct LevelShowcase: View {
             }
             .buttonStyle(PillButtonStyle(color: Palette.coral, size: 28))
             .padding(.top, 6)
+            .padding(.bottom, 6)
         }
-        .frame(maxWidth: .infinity)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -285,15 +314,19 @@ private struct LevelLadder: View {
     private let count = 10
     private let spacing: CGFloat = 10
     private let markerZone: CGFloat = 84
-    private let barsHeight: CGFloat = 250
     private let footer: CGFloat = 76
+    /// 柱子区最矮/最高多少；中间随屏幕高度伸缩
+    private let minBars: CGFloat = 90
+    private let maxBars: CGFloat = 420
 
     var body: some View {
         GeometryReader { geo in
             let barW = (geo.size.width - spacing * CGFloat(count - 1)) / CGFloat(count)
+            let barsHeight = min(maxBars, max(minBars, geo.size.height - markerZone - footer))
+            let height = { (n: Int) in barsHeight * (0.26 + 0.74 * CGFloat(n - 1) / CGFloat(count - 1)) }
             ZStack(alignment: .topLeading) {
                 ForEach(1...count, id: \.self) { n in
-                    bar(n, width: barW)
+                    bar(n, width: barW, height: height(n), zone: barsHeight)
                         .position(x: x(n, barW), y: markerZone + barsHeight / 2)
                     stars(n)
                         .position(x: x(n, barW), y: markerZone + barsHeight + 18)
@@ -322,7 +355,7 @@ private struct LevelLadder: View {
                     }
             )
         }
-        .frame(height: markerZone + barsHeight + footer)
+        .frame(minHeight: markerZone + minBars + footer, maxHeight: markerZone + maxBars + footer)
         .accessibilityElement()
         .accessibilityLabel("难度")
         .accessibilityValue("第 \(selection) 档")
@@ -339,17 +372,13 @@ private struct LevelLadder: View {
         CGFloat(n - 1) * (barW + spacing) + barW / 2
     }
 
-    private func height(_ n: Int) -> CGFloat {
-        barsHeight * (0.26 + 0.74 * CGFloat(n - 1) / CGFloat(count - 1))
-    }
-
     private func select(_ n: Int) {
         guard n != selection else { return }
         Sound.step(n)
         withAnimation(.spring(duration: 0.4, bounce: 0.35)) { selection = n }
     }
 
-    private func bar(_ n: Int, width: CGFloat) -> some View {
+    private func bar(_ n: Int, width: CGFloat, height: CGFloat, zone: CGFloat) -> some View {
         let tint = GomokuLevel(n).character.tint
         let lit = n <= selection
         let selected = n == selection
@@ -371,10 +400,10 @@ private struct LevelLadder: View {
                         .strokeBorder(.white, lineWidth: selected ? 4 : 0)
                 )
                 .shadow(color: selected ? tint.opacity(0.7) : .clear, radius: 12, y: 4)
-                .frame(height: height(n))
+                .frame(height: height)
                 .scaleEffect(selected ? 1.06 : 1, anchor: .bottom)
         }
-        .frame(width: width, height: barsHeight)
+        .frame(width: width, height: zone)
     }
 
     private func stars(_ n: Int) -> some View {
