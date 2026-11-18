@@ -10,9 +10,15 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate {
     private var current: AVSpeechUtterance?
     private var continuation: CheckedContinuation<Void, Never>?
     private lazy var voice: AVSpeechSynthesisVoice? = {
-        // 优先用质量更好的中文声音
-        let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language == "zh-CN" }
-        return voices.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: "zh-CN")
+        // 英文题用英文声音：优先质量好的；同样质量时英式口音（新加坡学校的口音更接近）在前
+        let order = ["en-GB", "en-AU", "en-US", "en-IE", "en-ZA", "en-IN"]
+        let voices = AVSpeechSynthesisVoice.speechVoices().filter { order.contains($0.language) }
+        // 不要 Eloquence（Grandpa、Rocko……）和搞怪声音（Bubbles……）
+        func rank(_ v: AVSpeechSynthesisVoice) -> (Int, Int, Int) {
+            let odd = v.identifier.contains("eloquence") || v.identifier.contains("speech.synthesis")
+            return (odd ? 0 : 1, v.quality.rawValue, -(order.firstIndex(of: v.language) ?? order.count))
+        }
+        return voices.max { rank($0) < rank($1) } ?? AVSpeechSynthesisVoice(language: "en-GB")
     }()
 
     override private init() {
@@ -29,13 +35,13 @@ final class Narrator: NSObject, AVSpeechSynthesizerDelegate {
         stop()
         let words = StoryText.spoken(text)
         guard enabled, !words.isEmpty else {
-            try? await Task.sleep(for: .milliseconds(min(2600, 400 + words.count * 110)))
+            try? await Task.sleep(for: .milliseconds(min(3200, 400 + words.count * 45)))
             return
         }
         let u = AVSpeechUtterance(string: words)
         u.voice = voice
-        u.rate = 0.44
-        u.pitchMultiplier = 1.08
+        u.rate = 0.42
+        u.pitchMultiplier = 1.05
         u.postUtteranceDelay = 0.12
         await withCheckedContinuation { c in
             continuation = c

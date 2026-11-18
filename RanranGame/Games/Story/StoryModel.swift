@@ -1,20 +1,21 @@
 import SwiftUI
 
-// 「小伙伴的故事」：用演一演、比一比来读懂应用题。
+// 「加减乘除」里的英文应用题，按新加坡数学的思路出题：
+// 先用实物演（Concrete）→ 再画线段图（Pictorial，bar model）→ 最后只看文字（Abstract）。
 //
-// 一道题由几句话组成，每句话可以带"动作"（谁有几个、谁给了谁几个……）。
-// 场景里的物品就是按这些动作摆出来的，所以孩子能亲手把故事演一遍，再回答问题。
+// 一道题由几句话组成，每句话可以带"动作"（谁有几个、谁给了谁几个、每个盘子放几个……）。
+// 舞台上的物品按这些动作摆出来，线段图也跟着每一句一步步画出来。
 
-/// 故事里的人物。`me` 就是玩家自己（用她起的名字）。猫头鹰是老师，不进故事。
+/// 故事里的人物。`me` 就是玩家自己（中文名自动转成拼音，比如 Ranran）。猫头鹰是老师，不进故事。
 enum StoryCast: String, Codable, CaseIterable, Hashable {
     case me, bunny, panda, dragon
 
     func name(_ player: String) -> String {
         switch self {
-        case .me:     player
-        case .bunny:  "小兔"
-        case .panda:  "熊猫"
-        case .dragon: "龙宝宝"
+        case .me:     StoryText.englishName(player)
+        case .bunny:  "Bunny"
+        case .panda:  "Panda"
+        case .dragon: "Dragon"
         }
     }
 
@@ -49,27 +50,9 @@ enum StoryCast: String, Codable, CaseIterable, Hashable {
     }
 }
 
+/// 有插画、能在舞台上拖来拖去的物品
 enum StoryItem: String, Codable, CaseIterable, Hashable {
-    case apple, strawberry, carrot, candy
-
-    var name: String {
-        switch self {
-        case .apple:      "苹果"
-        case .strawberry: "草莓"
-        case .carrot:     "胡萝卜"
-        case .candy:      "糖果"
-        }
-    }
-
-    /// 量词
-    var measure: String {
-        switch self {
-        case .apple:      "个"
-        case .strawberry: "颗"
-        case .carrot:     "根"
-        case .candy:      "颗"
-        }
-    }
+    case apple, strawberry, carrot, candy, cookie, balloon, sticker, pencil
 
     var image: String { "item_\(rawValue)" }
 
@@ -79,13 +62,61 @@ enum StoryItem: String, Codable, CaseIterable, Hashable {
         case .strawberry: "🍓"
         case .carrot:     "🥕"
         case .candy:      "🍬"
+        case .cookie:     "🍪"
+        case .balloon:    "🎈"
+        case .sticker:    "⭐️"
+        case .pencil:     "✏️"
+        }
+    }
+
+    var thing: StoryThing {
+        switch self {
+        case .apple:      StoryThing(one: "apple", many: "apples", art: self, food: true)
+        case .strawberry: StoryThing(one: "strawberry", many: "strawberries", art: self, food: true)
+        case .carrot:     StoryThing(one: "carrot", many: "carrots", art: self, food: true)
+        // 新加坡课本里说 sweets
+        case .candy:      StoryThing(one: "sweet", many: "sweets", art: self, food: true)
+        case .cookie:     StoryThing(one: "cookie", many: "cookies", art: self, food: true)
+        case .balloon:    StoryThing(one: "balloon", many: "balloons", art: self)
+        case .sticker:    StoryThing(one: "sticker", many: "stickers", art: self)
+        case .pencil:     StoryThing(one: "pencil", many: "pencils", art: self)
         }
     }
 }
 
-/// 物品可以在的地方：两位小伙伴，"吃掉的"盘子，篮子（从外面拿来的）。
+/// 题目里数的东西。有插画的才能上舞台演；没有插画的只在"画线段图 / 只看文字"里出现。
+struct StoryThing: Codable, Hashable {
+    var one: String
+    var many: String
+    var art: StoryItem? = nil
+    var food = false
+
+    func word(_ k: Int) -> String { k == 1 ? one : many }
+    /// "1 apple"、"5 apples"
+    func n(_ k: Int) -> String { "\(k) \(word(k))" }
+
+    /// 只出现在文字题里的东西，让题目更多样
+    static let extras: [StoryThing] = [
+        StoryThing(one: "marble", many: "marbles"),
+        StoryThing(one: "storybook", many: "storybooks"),
+        StoryThing(one: "stamp", many: "stamps"),
+        StoryThing(one: "bead", many: "beads"),
+        StoryThing(one: "seashell", many: "seashells"),
+        StoryThing(one: "crayon", many: "crayons"),
+        StoryThing(one: "egg", many: "eggs"),
+        StoryThing(one: "muffin", many: "muffins", food: true),
+        StoryThing(one: "orange", many: "oranges", food: true),
+    ]
+}
+
+/// 物品可以在的地方：两位小伙伴、"用掉的"盘子、篮子，以及分东西用的几个盘子。
 enum Spot: String, Codable, Hashable {
     case a, b, away, supply
+    case p1, p2, p3, p4, p5, p6
+
+    static let plates: [Spot] = [.p1, .p2, .p3, .p4, .p5, .p6]
+    var isPlate: Bool { Spot.plates.contains(self) }
+    var plateIndex: Int? { Spot.plates.firstIndex(of: self) }
 }
 
 enum StoryAction: Codable, Hashable {
@@ -97,15 +128,27 @@ enum StoryAction: Codable, Hashable {
     case build(Spot, Int)
     /// 从一人给另一人，直到一样多
     case balance(Spot, Spot)
+    /// 告诉我们两个人"一共"有几个（舞台上显示一个目标牌子）
+    case whole(Int)
+    /// 摆出几个空盘子
+    case plates(Int)
+    /// 从篮子里往每个盘子放几个（乘法）
+    case fill(Int)
+    /// 把手里的平均分到盘子里（除法：平均分）
+    case share
+    /// 每个盘子放几个，看能放几盘（除法：包含除）
+    case group(Int)
 
     var needsChild: Bool {
-        if case .appear = self { return false }
-        return true
+        switch self {
+        case .appear, .whole, .plates: false
+        default: true
+        }
     }
 }
 
 struct StorySentence: Codable, Hashable {
-    /// 文本里 {a} {b} 是人名，{i} 是物品，{m} 是量词
+    /// 文本里 {a} {b} 是人名
     var text: String
     var actions: [StoryAction] = []
 }
@@ -120,31 +163,59 @@ enum StoryAsk: Codable, Hashable {
     case less(Spot, Spot)
     /// 给了几个才一样多
     case moved
+    /// 每个盘子几个
+    case perPlate
+    /// 几个盘子
+    case plates
+    /// 盘子里一共几个
+    case inPlates
 }
 
 /// 题型。错题本按题型统计，方便家长看出孩子哪一类不熟。
 enum StorySchema: String, Codable, CaseIterable, Hashable {
-    case combine, change, compare, transfer, inverse, equalize, twoStep
+    case combine, partWhole, change, compare, inverse, transfer, equalize, multiply, divide, twoStep
 
     var title: String {
         switch self {
-        case .combine:  "合起来"
-        case .change:   "变一变"
-        case .compare:  "比多少"
-        case .transfer: "给来给去"
-        case .inverse:  "反过来想"
-        case .equalize: "变成一样多"
-        case .twoStep:  "两步题"
+        case .combine:   "Altogether"
+        case .partWhole: "Part & Whole"
+        case .change:    "Add & Take Away"
+        case .compare:   "How Many More"
+        case .inverse:   "More / Fewer Than"
+        case .transfer:  "Giving"
+        case .equalize:  "Make Them Equal"
+        case .multiply:  "Equal Groups"
+        case .divide:    "Sharing"
+        case .twoStep:   "Two Steps"
+        }
+    }
+
+    /// 给家长看的中文名
+    var zh: String {
+        switch self {
+        case .combine:   "合起来"
+        case .partWhole: "求部分"
+        case .change:    "添上和拿走"
+        case .compare:   "比多少"
+        case .inverse:   "多几 / 少几求数"
+        case .transfer:  "给来给去"
+        case .equalize:  "变成一样多"
+        case .multiply:  "乘法：几个几"
+        case .divide:    "除法：平均分"
+        case .twoStep:   "两步题"
         }
     }
 
     var tint: Color {
         switch self {
         case .combine, .change: Palette.sky
+        case .partWhole:        Palette.sage
         case .compare:          Palette.honey
-        case .transfer:         Palette.coral
         case .inverse:          Palette.lilac
+        case .transfer:         Palette.coral
         case .equalize:         Palette.blush
+        case .multiply:         Palette.sky
+        case .divide:           Palette.blush
         case .twoStep:          Palette.sage
         }
     }
@@ -155,40 +226,73 @@ struct StoryProblem: Codable, Hashable, Identifiable {
     var schema: StorySchema
     var a: StoryCast
     var b: StoryCast?
-    var item: StoryItem
+    var thing: StoryThing
     /// 最后一句是问题
     var sentences: [StorySentence]
     var ask: StoryAsk
-    /// 答案句，"□" 是要填的空
+    /// 答案句（answer statement），"□" 是要填的空
     var answerTemplate: String
     var answer: Int
     /// 常见的错误答案 → 针对这种想法的解释
     var hints: [Int: String]
-    /// 揭晓答案时的算式和解释
+    /// 算式（equation），答对或揭晓时显示
     var explain: String
-    var awayLabel: String = "吃掉的"
-    var supplyLabel: String = "妈妈的篮子"
+    /// 每一句读完后的线段图，和 sentences 一一对应
+    var models: [BarModel]
+    /// 能不能在舞台上用实物演（东西有插画、数量摆得下）
+    var canAct: Bool
+    var awayLabel = "Eaten"
+    var supplyLabel = "Basket"
+    var plateWord = "plate"
 
-    /// 场景里要用到的地方
-    var lanes: [Spot] { b == nil ? [.a] : [.a, .b] }
+    var item: StoryItem { thing.art ?? .apple }
+
+    /// "plates"、"boxes"
+    var plateWords: String { StoryText.plural(plateWord) }
+
+    private var allActions: [StoryAction] { sentences.flatMap(\.actions) }
+
+    var usesPlates: Bool {
+        allActions.contains { if case .plates = $0 { return true }; if case .group = $0 { return true }; return false }
+    }
+
+    /// 舞台上的人物那一排
+    var lanes: [Spot] {
+        if usesPlates {
+            return allActions.contains { if case .appear(.a, _) = $0 { return true }; return false } ? [.a] : []
+        }
+        return b == nil ? [.a] : [.a, .b]
+    }
 
     var sides: [Spot] {
         var s: [Spot] = []
-        let all = sentences.flatMap(\.actions)
-        if all.contains(where: { if case let .move(_, to, _) = $0 { return to == .away }; return false }) { s.append(.away) }
-        if all.contains(where: {
+        if allActions.contains(where: { if case let .move(_, to, _) = $0 { return to == .away }; return false }) { s.append(.away) }
+        if allActions.contains(where: {
             switch $0 {
             case let .move(from, _, _): from == .supply
-            case .build: true
+            case .build, .fill: true
             default: false
             }
         }) { s.append(.supply) }
         return s
     }
 
-    /// 一开始没告诉我们有几个的人（反过来想的题）
+    /// 最多会用到几个盘子
+    var plateSlots: Int {
+        var c: [Spot: Int] = [:]
+        for act in allActions { Self.apply(act, to: &c) }
+        return Spot.plates.filter { c[$0] != nil }.count
+    }
+
+    /// 一开始没告诉我们有几个的人（要从篮子里摆出来的）
     var unknown: Spot? {
-        for act in sentences.flatMap(\.actions) { if case let .build(s, _) = act { return s } }
+        for act in allActions { if case let .build(s, _) = act { return s } }
+        return nil
+    }
+
+    /// "一共"的目标数
+    var whole: Int? {
+        for act in allActions { if case let .whole(n) = act { return n } }
         return nil
     }
 
@@ -196,11 +300,17 @@ struct StoryProblem: Codable, Hashable, Identifiable {
     var capacity: Int {
         var c: [Spot: Int] = [:]
         var top = 0
-        for act in sentences.flatMap(\.actions) {
+        for act in allActions {
             Self.apply(act, to: &c)
             top = max(top, c[.a, default: 0], c[.b, default: 0])
         }
         return top
+    }
+
+    var platePeak: Int {
+        var c: [Spot: Int] = [:]
+        for act in allActions { Self.apply(act, to: &c) }
+        return Spot.plates.map { c[$0, default: 0] }.max() ?? 0
     }
 
     static func apply(_ act: StoryAction, to c: inout [Spot: Int], moved: inout Int) {
@@ -215,6 +325,23 @@ struct StoryProblem: Codable, Hashable, Identifiable {
             c[f, default: 0] -= d
             c[t, default: 0] += d
             moved = d
+        case .whole:
+            break
+        case let .plates(g):
+            for p in Spot.plates.prefix(g) { c[p] = c[p] ?? 0 }
+        case let .fill(n):
+            for p in Spot.plates where c[p] != nil { c[p] = n }
+        case .share:
+            let ps = Spot.plates.filter { c[$0] != nil }
+            guard !ps.isEmpty else { return }
+            let each = c[.a, default: 0] / ps.count
+            for p in ps { c[p, default: 0] += each }
+            c[.a] = 0
+        case let .group(n):
+            guard n > 0 else { return }
+            let k = c[.a, default: 0] / n
+            for p in Spot.plates.prefix(k) { c[p] = n }
+            c[.a] = 0
         }
     }
 
@@ -234,16 +361,22 @@ struct StoryProblem: Codable, Hashable, Identifiable {
         case let .more(x, y):   return c[x, default: 0] - c[y, default: 0]
         case let .less(x, y):   return c[y, default: 0] - c[x, default: 0]
         case .moved:            return moved
+        case .perPlate:         return c[.p1, default: 0]
+        case .plates:           return Spot.plates.filter { c[$0, default: 0] > 0 }.count
+        case .inPlates:         return Spot.plates.reduce(0) { $0 + c[$1, default: 0] }
         }
     }
 
     /// 答错了但没有对应的解释时，用这句
     var genericHint: String {
         switch ask {
-        case .total:          "「一共」要把两边的都数进去哦。"
-        case let .count(s):   "跟着故事一步一步想，\(s == .a ? "{a}" : "{b}")最后有几{m}？"
-        case .more, .less:    "把两排一个对一个排好，数数多出来的是几{m}。"
-        case .moved:          "数一数给出去的那几{m}。"
+        case .total:          "Altogether means we count both parts together."
+        case .count:          "Follow the story one step at a time. How many are there at the end?"
+        case .more, .less:    "Line them up one to one. How many are extra?"
+        case .moved:          "Count the ones that were given."
+        case .perPlate:       "Every \(plateWord) gets the same number. How many on one \(plateWord)?"
+        case .plates:         "How many \(plateWords) can we fill?"
+        case .inPlates:       "Count all of them, \(plateWord) by \(plateWord)."
         }
     }
 }
@@ -257,6 +390,18 @@ enum StoryText {
         case name(StoryCast)
         case number(String)
         case blank
+    }
+
+    static func plural(_ w: String) -> String { w.hasSuffix("x") ? w + "es" : w + "s" }
+
+    /// 中文名转成拼音，英文题里用（"冉冉" → "Ranran"）
+    static func englishName(_ s: String) -> String {
+        if s.allSatisfy({ $0.isASCII }) { return s }
+        guard let latin = s.applyingTransform(.toLatin, reverse: false)?
+            .applyingTransform(.stripDiacritics, reverse: false) else { return s }
+        let joined = latin.filter { !$0.isWhitespace }
+        guard let first = joined.first else { return s }
+        return first.uppercased() + joined.dropFirst().lowercased()
     }
 
     static func segments(_ template: String, _ p: StoryProblem) -> [Segment] {
@@ -281,8 +426,6 @@ enum StoryText {
                 switch key {
                 case "a": flushPlain(); out.append(.name(p.a))
                 case "b": flushPlain(); out.append(.name(p.b ?? p.a))
-                case "i": plain += p.item.name
-                case "m": plain += p.item.measure
                 default: break
                 }
                 continue
@@ -300,7 +443,7 @@ enum StoryText {
         return out
     }
 
-    static func plain(_ template: String, _ p: StoryProblem, player: String, blank: String = "几") -> String {
+    static func plain(_ template: String, _ p: StoryProblem, player: String, blank: String = "?") -> String {
         segments(template, p).map { seg in
             switch seg {
             case let .plain(s):  s
@@ -323,64 +466,57 @@ enum StoryText {
             case let .number(n):
                 return text + Text(n).foregroundColor(numberColor).fontWeight(.black)
             case .blank:
-                return text + Text(filled ?? "？").foregroundColor(Palette.honey).fontWeight(.black)
+                return text + Text(filled ?? "?").foregroundColor(Palette.honey).fontWeight(.black)
             }
         }
     }
 
-    /// 给朗读用：数字换成中文（"2 个"读成"两个"），符号读出来
+    /// 给朗读用：把算式里的符号读出来
     static func spoken(_ s: String) -> String {
-        var out = ""
-        var digits = ""
-        let measures: Set<Character> = ["个", "颗", "根"]
-        var chars = Array(s)
-        chars.append(" ")
-        var i = 0
-        while i < chars.count {
-            let c = chars[i]
-            if c.isASCII, c.isNumber { digits.append(c); i += 1; continue }
-            if !digits.isEmpty {
-                let n = Int(digits) ?? 0
-                var j = i
-                while j < chars.count, chars[j] == " " { j += 1 }
-                let beforeMeasure = j < chars.count && measures.contains(chars[j])
-                out += (n == 2 && beforeMeasure) ? "两" : chinese(n)
-                digits = ""
-            }
-            switch c {
-            case "+": out += "加"
-            case "−", "-": out += "减"
-            case "=": out += "等于"
-            case "□": out += "几"
-            case " ": break
-            default: out.append(c)
-            }
-            i += 1
+        var out = s
+        for (sym, word) in [("□", " how many "), ("−", " minus "), ("+", " plus "), ("×", " times "),
+                            ("÷", " divided by "), ("=", " equals "), ("?", "? ")] {
+            out = out.replacingOccurrences(of: sym, with: word)
         }
-        return out
-    }
-
-    static func chinese(_ n: Int) -> String {
-        let d = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
-        guard n >= 0, n < 100 else { return "\(n)" }
-        if n < 10 { return d[n] }
-        let tens = n / 10, ones = n % 10
-        return (tens == 1 ? "" : d[tens]) + "十" + (ones == 0 ? "" : d[ones])
+        return out.replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: .whitespaces)
     }
 }
 
 // MARK: - 出题
 
-/// 按题型随机出题。cap 是每一排最多的个数（10 或 20）。
+/// 出题时的设置：每一排最多几个，要不要能用实物演
+struct StoryCtx {
+    var cap: Int
+    var act: Bool
+}
+
+/// 按题型随机出题。句子和说法参照新加坡小学一、二年级的数学课本。
 enum StoryFactory {
-    typealias Make = (Int) -> StoryProblem
+    typealias Make = (StoryCtx) -> StoryProblem
+    typealias M = BarModel
 
     private static func pair() -> (StoryCast, StoryCast) {
         let two = StoryCast.allCases.shuffled()
         return (two[0], two[1])
     }
 
+    private static func solo() -> StoryCast { StoryCast.allCases.randomElement()! }
+
+    /// 实物演的题只用有插画的东西；文字题里再加一些别的东西
+    private static func thing(_ c: StoryCtx, food: Bool = false) -> StoryThing {
+        var pool = StoryItem.allCases.map(\.thing)
+        if !c.act { pool += StoryThing.extras }
+        if food { pool = pool.filter(\.food) }
+        return pool.randomElement()!
+    }
+
     private static func ph(_ s: Spot) -> String { s == .a ? "{a}" : "{b}" }
+
+    /// 一段线段；label 为 nil 时写上它的数
+    private static func s(_ v: Int, _ label: String? = nil, cap caption: String = "",
+                          _ style: M.Style = .solid, _ tint: M.Tint? = nil) -> M.Seg {
+        M.Seg(value: v, label: label ?? "\(v)", caption: caption, style: style, tint: tint)
+    }
 
     private struct Hints {
         let answer: Int
@@ -391,124 +527,287 @@ enum StoryFactory {
         }
     }
 
-    private static func make(_ schema: StorySchema, a: StoryCast, b: StoryCast?, item: StoryItem,
+    private static func make(_ schema: StorySchema, a: StoryCast, b: StoryCast?, thing: StoryThing,
                              _ sentences: [StorySentence], ask: StoryAsk, answer template: String,
-                             explain: String, away: String = "吃掉的", supply: String = "妈妈的篮子",
+                             explain: String, models: [M], away: String = "Eaten", supply: String = "Basket",
+                             plate: String = "plate", actable: Bool = true,
                              hints: (inout Hints) -> Void) -> StoryProblem {
         let answer = StoryProblem.solve(sentences, ask)
         var h = Hints(answer: answer)
         hints(&h)
-        return StoryProblem(schema: schema, a: a, b: b, item: item, sentences: sentences, ask: ask,
-                            answerTemplate: template, answer: answer, hints: h.map, explain: explain,
-                            awayLabel: away, supplyLabel: supply)
+        var steps = Array(models.prefix(sentences.count))
+        while steps.count < sentences.count, let last = steps.last { steps.append(last) }
+        var p = StoryProblem(schema: schema, a: a, b: b, thing: thing, sentences: sentences, ask: ask,
+                             answerTemplate: template, answer: answer, hints: h.map, explain: explain,
+                             models: steps, canAct: false, awayLabel: away, supplyLabel: supply, plateWord: plate)
+        p.canAct = actable && thing.art != nil && p.capacity <= 20 && p.platePeak <= 6 && p.plateSlots <= 6
+        return p
     }
 
-    // MARK: 合起来
+    // MARK: 部分-整体：合起来
 
-    static func combine(_ cap: Int) -> StoryProblem {
+    static func combine(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let total = Int.random(in: 4...cap)
+        let t = thing(c)
+        let total = Int.random(in: 4...c.cap)
         let x = Int.random(in: 1...(total - 1)), y = total - x
-        return make(.combine, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}有 \(x) {m}{i}。", actions: [.appear(.a, x)]),
-            .init(text: "{b}有 \(y) {m}{i}。", actions: [.appear(.b, y)]),
-            .init(text: "{a}和{b}一共有几{m}{i}？"),
-        ], ask: .total, answer: "{a}和{b}一共有 □ {m}{i}",
-           explain: "把两边合起来：\(x) + \(y) = \(total)") { h in
-            h.add(abs(x - y), "这是两个人差几{m}。「一共」要把两边合起来数哦。")
-            h.add(x, "\(x) {m}只是{a}的，「一共」要把{b}的也算上。")
-            h.add(y, "\(y) {m}只是{b}的，「一共」要把{a}的也算上。")
+        let m1 = M(bars: [M.Bar(segs: [s(x, cap: "{a}", .solid, .a), s(y, cap: "{b}", .solid, .b)])])
+        var m2 = m1
+        m2.braces = [.init(bar: 0, from: 0, to: 1, label: "?")]
+        return make(.combine, a: a, b: b, thing: t, [
+            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
+            .init(text: "{b} has \(t.n(y)).", actions: [.appear(.b, y)]),
+            .init(text: "How many \(t.many) do they have altogether?"),
+        ], ask: .total, answer: "They have □ \(t.many) altogether.",
+           explain: "\(x) + \(y) = \(total)",
+           models: [M(bars: [M.Bar(segs: [s(x, cap: "{a}", .solid, .a)])]), m1, m2]) { h in
+            h.add(abs(x - y), "That is how many more one of them has. Altogether means we put both parts together.")
+            h.add(x, "\(x) is only {a}'s part. Add {b}'s part too.")
+            h.add(y, "\(y) is only {b}'s part. Add {a}'s part too.")
         }
     }
 
-    // MARK: 变一变
+    // MARK: 部分-整体：求一部分
 
-    static func changeLose(_ cap: Int) -> StoryProblem {
-        let a = StoryCast.allCases.randomElement()!
-        let item = StoryItem.allCases.randomElement()!
-        let n = Int.random(in: 4...cap)
-        let k = Int.random(in: 1...min(n - 1, max(3, cap / 2)))
-        let verbs: [(String, String)] = item == .carrot
-            ? [("喂给小马", "喂掉的"), ("送给邻居", "送出去的")]
-            : [("吃掉了", "吃掉的"), ("送给邻居", "送出去的"), ("不小心弄丢了", "弄丢的")]
-        let (verb, away) = verbs.randomElement()!
-        return make(.change, a: a, b: nil, item: item, [
-            .init(text: "{a}有 \(n) {m}{i}。", actions: [.appear(.a, n)]),
-            .init(text: "{a}\(verb) \(k) {m}。", actions: [.move(.a, .away, k)]),
-            .init(text: "{a}还剩几{m}{i}？"),
-        ], ask: .count(.a), answer: "{a}还剩 □ {m}{i}",
-           explain: "原来 \(n) {m}，拿走 \(k) {m}：\(n) − \(k) = \(n - k)", away: away) { h in
-            h.add(n + k, "{i}是变少了，不是变多了。要从 \(n) {m}里拿走 \(k) {m}。")
-            h.add(k, "\(k) {m}是拿走的，题目问的是还剩下的。")
-            h.add(n, "别忘了拿走了 \(k) {m}哦。")
-        }
-    }
-
-    static func changeGain(_ cap: Int) -> StoryProblem {
-        let a = StoryCast.allCases.randomElement()!
-        let total = Int.random(in: 4...cap)
-        let k = Int.random(in: 1...min(total - 1, max(3, cap / 2)))
-        let n = total - k
-        return make(.change, a: a, b: nil, item: .allCases.randomElement()!, [
-            .init(text: "{a}有 \(n) {m}{i}。", actions: [.appear(.a, n)]),
-            .init(text: "妈妈又给了{a} \(k) {m}。", actions: [.move(.supply, .a, k)]),
-            .init(text: "{a}现在有几{m}{i}？"),
-        ], ask: .count(.a), answer: "{a}现在有 □ {m}{i}",
-           explain: "原来 \(n) {m}，又来了 \(k) {m}：\(n) + \(k) = \(total)") { h in
-            h.add(n - k, "妈妈给了{a}，{i}是变多了，要用加法。")
-            h.add(k, "\(k) {m}是妈妈给的，还要加上{a}原来的 \(n) {m}。")
-            h.add(n, "别忘了妈妈又给了 \(k) {m}。")
-        }
-    }
-
-    // MARK: 比多少
-
-    static func compare(_ cap: Int) -> StoryProblem {
+    static func partWhole(_ c: StoryCtx) -> StoryProblem {
+        if !c.act, Bool.random() { return partWholeRest(c) }
         let (a, b) = pair()
-        let big = Int.random(in: 3...cap), small = Int.random(in: 1...(big - 1))
+        let t = thing(c)
+        let total = Int.random(in: 5...c.cap)
+        let x = Int.random(in: 1...(total - 1)), y = total - x
+        let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
+        return make(.partWhole, a: a, b: b, thing: t, [
+            .init(text: "{a} and {b} have \(t.n(total)) altogether.", actions: [.whole(total)]),
+            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
+            .init(text: "How many \(t.many) does {b} have?", actions: [.build(.b, y)]),
+        ], ask: .count(.b), answer: "{b} has □ \(t.many).",
+           explain: "\(total) − \(x) = \(y)",
+           models: [
+            M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])], braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")]),
+            M(bars: [M.Bar(segs: [s(x, cap: "{a}", .solid, .a), s(y, "", cap: "{b}", .solid, .b)])], braces: [whole]),
+            M(bars: [M.Bar(segs: [s(x, cap: "{a}", .solid, .a), s(y, "?", cap: "{b}", .solid, .b)])], braces: [whole]),
+           ], supply: "Basket") { h in
+            h.add(total + x, "\(total) is all of them together. {a}'s \(x) are already inside it, so take them away.")
+            h.add(total, "\(total) is for both of them. We only want {b}'s part.")
+            h.add(x, "\(x) is {a}'s part. How many are left for {b}?")
+        }
+    }
+
+    /// "There are 15 children. 8 are boys. The rest are girls."
+    private struct RestContext {
+        let whole: String, place: String, one: String, two: String
+        /// one / two 是颜色（要说 "yellow flowers"）还是名词（"girls"）
+        let adjective: Bool
+        func phrase(_ part: String) -> String { adjective ? "\(part) \(whole)" : part }
+    }
+
+    private static let restContexts: [RestContext] = [
+        RestContext(whole: "children", place: "at the playground", one: "boys", two: "girls", adjective: false),
+        RestContext(whole: "children", place: "in the class", one: "girls", two: "boys", adjective: false),
+        RestContext(whole: "flowers", place: "in a vase", one: "red", two: "yellow", adjective: true),
+        RestContext(whole: "marbles", place: "in a bag", one: "blue", two: "green", adjective: true),
+        RestContext(whole: "balloons", place: "at the party", one: "pink", two: "white", adjective: true),
+        RestContext(whole: "fish", place: "in the pond", one: "orange", two: "black", adjective: true),
+    ]
+
+    private static func partWholeRest(_ c: StoryCtx) -> StoryProblem {
+        let r = restContexts.randomElement()!
+        let total = Int.random(in: 6...max(6, c.cap))
+        let x = Int.random(in: 1...(total - 1)), y = total - x
+        let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
+        let t = StoryThing(one: r.whole, many: r.whole)
+        return make(.partWhole, a: solo(), b: nil, thing: t, [
+            .init(text: "There are \(total) \(r.whole) \(r.place).", actions: [.whole(total)]),
+            .init(text: "\(x) of them are \(r.one). The rest are \(r.two).", actions: [.appear(.a, x)]),
+            .init(text: "How many \(r.phrase(r.two)) are there?", actions: [.build(.b, y)]),
+        ], ask: .count(.b), answer: "There are □ \(r.phrase(r.two)).",
+           explain: "\(total) − \(x) = \(y)",
+           models: [
+            M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])], braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")]),
+            M(bars: [M.Bar(segs: [s(x, cap: r.one, .solid, .a), s(y, "", cap: r.two, .solid, .b)])], braces: [whole]),
+            M(bars: [M.Bar(segs: [s(x, cap: r.one, .solid, .a), s(y, "?", cap: r.two, .solid, .b)])], braces: [whole]),
+           ], actable: false) { h in
+            h.add(total + x, "\(total) is all the \(r.whole). The \(r.one) ones are inside it, so take them away.")
+            h.add(total, "\(total) is all the \(r.whole). We only want the \(r.two) ones.")
+            h.add(x, "\(x) is the \(r.one) ones. How many are the rest?")
+        }
+    }
+
+    // MARK: 添上和拿走
+
+    static func changeLose(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        let t = thing(c)
+        let n = Int.random(in: 4...c.cap)
+        let k = Int.random(in: 1...min(n - 1, max(3, c.cap / 2)))
+        var verbs: [(String, String, String)] = [("gave away", "gave away", "Given away"), ("lost", "lost", "Lost")]
+        if t.food { verbs += [("ate", "ate", "Eaten"), ("ate", "ate", "Eaten")] }
+        let (verb, caption, away) = verbs.randomElement()!
+        let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(n)")
+        return make(.change, a: a, b: nil, thing: t, [
+            .init(text: "{a} had \(t.n(n)).", actions: [.appear(.a, n)]),
+            .init(text: "{a} \(verb) \(k) of them.", actions: [.move(.a, .away, k)]),
+            .init(text: "How many \(t.many) did {a} have left?"),
+        ], ask: .count(.a), answer: "{a} had □ \(t.many) left.",
+           explain: "\(n) − \(k) = \(n - k)",
+           models: [
+            M(bars: [M.Bar(segs: [s(n, "", .solid, .a)])], braces: [.init(bar: 0, from: 0, to: 0, label: "\(n)")]),
+            M(bars: [M.Bar(segs: [s(n - k, "", cap: "left"), s(k, cap: caption, .gone)])], braces: [whole]),
+            M(bars: [M.Bar(segs: [s(n - k, "?", cap: "left"), s(k, cap: caption, .gone)])], braces: [whole]),
+           ], away: away) { h in
+            h.add(n + k, "Some \(t.many) went away, so {a} has fewer now, not more. Take away \(k).")
+            h.add(k, "\(k) is how many went away. We want how many are left.")
+            h.add(n, "Don't forget: {a} \(verb) \(k) of them.")
+        }
+    }
+
+    static func changeGain(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        let t = thing(c)
+        let total = Int.random(in: 4...c.cap)
+        let k = Int.random(in: 1...min(total - 1, max(3, c.cap / 2)))
+        let n = total - k
+        let giver = ["Mum", "Dad", "Grandma", "Grandpa"].randomElement()!
+        let m1 = M(bars: [M.Bar(segs: [s(n, cap: "at first"), s(k, cap: "more", .solid, .extra)])])
+        var m2 = m1
+        m2.braces = [.init(bar: 0, from: 0, to: 1, label: "?")]
+        return make(.change, a: a, b: nil, thing: t, [
+            .init(text: "{a} had \(t.n(n)).", actions: [.appear(.a, n)]),
+            .init(text: "\(giver) gave {a} \(k) more.", actions: [.move(.supply, .a, k)]),
+            .init(text: "How many \(t.many) does {a} have now?"),
+        ], ask: .count(.a), answer: "{a} has □ \(t.many) now.",
+           explain: "\(n) + \(k) = \(total)",
+           models: [M(bars: [M.Bar(segs: [s(n, cap: "at first")])]), m1, m2],
+           supply: "\(giver)'s basket") { h in
+            h.add(n - k, "{a} got more, so {a} has more now. Add them together.")
+            h.add(k, "\(k) is the new ones. Add the \(n) {a} had at first.")
+            h.add(n, "Don't forget the \(k) more from \(giver).")
+        }
+    }
+
+    // MARK: 比较
+
+    static func compare(_ c: StoryCtx) -> StoryProblem {
+        let (a, b) = pair()
+        let t = thing(c)
+        let big = Int.random(in: 3...c.cap), small = Int.random(in: 1...(big - 1))
         let aBig = Bool.random()
         let (x, y) = aBig ? (big, small) : (small, big)
         let (bs, ss): (Spot, Spot) = aBig ? (.a, .b) : (.b, .a)
-        let askLess = Bool.random()
-        let question = askLess ? "\(ph(ss))比\(ph(bs))少几{m}{i}？" : "\(ph(bs))比\(ph(ss))多几{m}{i}？"
-        let template = askLess ? "\(ph(ss))比\(ph(bs))少 □ {m}" : "\(ph(bs))比\(ph(ss))多 □ {m}"
-        return make(.compare, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}有 \(x) {m}{i}，{b}有 \(y) {m}{i}。", actions: [.appear(.a, x), .appear(.b, y)]),
+        let askFewer = Bool.random()
+        let question = askFewer
+            ? "How many fewer \(t.many) does \(ph(ss)) have than \(ph(bs))?"
+            : "How many more \(t.many) does \(ph(bs)) have than \(ph(ss))?"
+        let template = askFewer
+            ? "\(ph(ss)) has □ fewer \(t.many) than \(ph(bs))."
+            : "\(ph(bs)) has □ more \(t.many) than \(ph(ss))."
+        let barA = M.Bar(name: "{a}", tint: .a, segs: [s(x)])
+        let barB = M.Bar(name: "{b}", tint: .b, segs: [s(y)])
+        var withGap = [barA, barB]
+        withGap[aBig ? 1 : 0].segs.append(s(big - small, "?", .gap))
+        return make(.compare, a: a, b: b, thing: t, [
+            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
+            .init(text: "{b} has \(t.n(y)).", actions: [.appear(.b, y)]),
             .init(text: question),
-        ], ask: askLess ? .less(ss, bs) : .more(bs, ss), answer: template,
-           explain: "一个对一个比，多出来的就是差：\(big) − \(small) = \(big - small)") { h in
-            h.add(x + y, "比多少不是合起来。把两排一个对一个排好，看多出来几{m}。")
-            h.add(big, "\(big) 是\(ph(bs))有的个数，题目问的是差几{m}。")
-            h.add(small, "\(small) 是\(ph(ss))有的个数，题目问的是差几{m}。")
+        ], ask: askFewer ? .less(ss, bs) : .more(bs, ss), answer: template,
+           explain: "\(big) − \(small) = \(big - small)",
+           models: [M(bars: [barA]), M(bars: [barA, barB]), M(bars: withGap)]) { h in
+            h.add(x + y, "We are comparing, not putting together. Line them up and look at the extra ones.")
+            h.add(big, "\(big) is how many \(ph(bs)) has. We want the difference.")
+            h.add(small, "\(small) is how many \(ph(ss)) has. We want the difference.")
+        }
+    }
+
+    // MARK: 多几 / 少几，求一个数
+
+    enum Relation { case aMore, aFewer, bFewer, bMore }
+
+    static func moreThan(_ c: StoryCtx) -> StoryProblem { relation(c, .aMore) }
+    static func fewerThan(_ c: StoryCtx) -> StoryProblem { relation(c, .aFewer) }
+    /// "{b} has 3 fewer than {a}" —— 看到 fewer 就想减，是最常见的坑
+    static func trapFewer(_ c: StoryCtx) -> StoryProblem { relation(c, .bFewer) }
+    static func trapMore(_ c: StoryCtx) -> StoryProblem { relation(c, .bMore) }
+
+    private static func relation(_ c: StoryCtx, _ r: Relation) -> StoryProblem {
+        let (a, b) = pair()
+        let t = thing(c)
+        let aBigger = r == .aMore || r == .bFewer
+        let y: Int, d: Int
+        if aBigger {
+            y = Int.random(in: 2...(c.cap - 2))
+            d = Int.random(in: 1...min(5, c.cap - y))
+        } else {
+            y = Int.random(in: 4...c.cap)
+            d = Int.random(in: 1...min(5, y - 1))
+        }
+        let av = aBigger ? y + d : y - d
+        let text: String
+        switch r {
+        case .aMore:  text = "{a} has \(d) more \(t.word(d)) than {b}."
+        case .aFewer: text = "{a} has \(d) fewer \(t.word(d)) than {b}."
+        case .bFewer: text = "{b} has \(d) fewer \(t.word(d)) than {a}."
+        case .bMore:  text = "{b} has \(d) more \(t.word(d)) than {a}."
+        }
+        let barB = M.Bar(name: "{b}", tint: .b, segs: [s(y)])
+        let aBar1 = aBigger
+            ? M.Bar(name: "{a}", tint: .a, segs: [s(y, ""), s(d, cap: "more", .solid, .extra)])
+            : M.Bar(name: "{a}", tint: .a, segs: [s(av, ""), s(d, cap: "fewer", .gap)])
+        var aBar2 = aBar1
+        if !aBigger { aBar2.segs[0].label = "?" }
+        let braces2: [M.Brace] = aBigger ? [.init(bar: 1, from: 0, to: 1, label: "?")] : []
+        return make(.inverse, a: a, b: b, thing: t, [
+            .init(text: "{b} has \(t.n(y)).", actions: [.appear(.b, y)]),
+            .init(text: text, actions: [.build(.a, av)]),
+            .init(text: "How many \(t.many) does {a} have?"),
+        ], ask: .count(.a), answer: "{a} has □ \(t.many).",
+           explain: aBigger ? "\(y) + \(d) = \(av)" : "\(y) − \(d) = \(av)",
+           models: [M(bars: [barB]), M(bars: [barB, aBar1]), M(bars: [barB, aBar2], braces: braces2)]) { h in
+            switch r {
+            case .aMore:  h.add(y - d, "{a} has MORE than {b}, so {a}'s number is bigger. Don't take away!")
+            case .bFewer: h.add(y - d, "Read it again: {b} has fewer than {a}. So {a} has MORE. Add!")
+            case .aFewer: h.add(y + d, "{a} has FEWER than {b}, so {a}'s number is smaller.")
+            case .bMore:  h.add(y + d, "Read it again: {b} has more than {a}. So {a} has FEWER. Take away!")
+            }
+            h.add(d, "\(d) is only the difference. Start from {b}'s \(y).")
+            h.add(y, "{a} and {b} don't have the same number. They are \(d) apart.")
         }
     }
 
     // MARK: 给来给去
 
     /// 一样多，一个给另一个几个，问差几个 —— 这是最容易错的一类
-    static func transferEqual(_ cap: Int) -> StoryProblem {
+    static func transferEqual(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let n = Int.random(in: 3...min(cap, 10))
+        let t = thing(c)
+        let n = Int.random(in: 3...min(c.cap, 10))
         let k = Int.random(in: 1...min(n - 1, 4))
-        let askLess = Int.random(in: 0..<3) == 0
-        return make(.transfer, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}和{b}各有 \(n) {m}{i}。", actions: [.appear(.a, n), .appear(.b, n)]),
-            .init(text: "{a}给了{b} \(k) {m}。", actions: [.move(.a, .b, k)]),
-            .init(text: askLess ? "现在{a}比{b}少几{m}？" : "现在{b}比{a}多几{m}？"),
-        ], ask: askLess ? .less(.a, .b) : .more(.b, .a),
-           answer: askLess ? "{a}比{b}少 □ {m}" : "{b}比{a}多 □ {m}",
-           explain: "{a}剩 \(n) − \(k) = \(n - k) {m}，{b}有 \(n) + \(k) = \(n + k) {m}，差 \(n + k) − \(n - k) = \(2 * k) {m}") { h in
-            h.add(k, "{a}给出去 \(k) {m}，自己少了 \(k) {m}；{b}拿到 \(k) {m}，又多了 \(k) {m}。一边少、一边多，一共差了 \(k) + \(k) = \(2 * k) {m}。")
-            h.add(n + k, "\(n + k) 是{b}现在有的个数，题目问的是差几{m}。")
-            h.add(n - k, "\(n - k) 是{a}现在有的个数，题目问的是差几{m}。")
-            h.add(0, "给了以后，两个人就不一样多啦。")
+        let askFewer = Int.random(in: 0..<3) == 0
+        let before = [M.Bar(name: "{a}", tint: .a, segs: [s(n)]), M.Bar(name: "{b}", tint: .b, segs: [s(n)])]
+        let after = [M.Bar(name: "{a}", tint: .a, segs: [s(n - k), s(k, cap: "gave", .gone)]),
+                     M.Bar(name: "{b}", tint: .b, segs: [s(n), s(k, cap: "got", .solid, .a)])]
+        let diff = [M.Bar(name: "{a}", tint: .a, segs: [s(n - k), s(2 * k, "?", .gap)]),
+                    M.Bar(name: "{b}", tint: .b, segs: [s(n), s(k, cap: "from {a}", .solid, .a)])]
+        return make(.transfer, a: a, b: b, thing: t, [
+            .init(text: "{a} and {b} have \(t.n(n)) each.", actions: [.appear(.a, n), .appear(.b, n)]),
+            .init(text: "{a} gives {b} \(k) of them.", actions: [.move(.a, .b, k)]),
+            .init(text: askFewer ? "How many fewer \(t.many) does {a} have than {b} now?"
+                                 : "How many more \(t.many) does {b} have than {a} now?"),
+        ], ask: askFewer ? .less(.a, .b) : .more(.b, .a),
+           answer: askFewer ? "{a} has □ fewer \(t.many) than {b}." : "{b} has □ more \(t.many) than {a}.",
+           explain: "{a}: \(n) − \(k) = \(n - k)   {b}: \(n) + \(k) = \(n + k)   \(n + k) − \(n - k) = \(2 * k)",
+           models: [M(bars: before), M(bars: after), M(bars: diff)]) { h in
+            h.add(k, "{a} gave \(k) away, so {a} has \(k) fewer. {b} got \(k), so {b} has \(k) more. The difference is \(k) + \(k) = \(2 * k).")
+            h.add(n + k, "\(n + k) is how many {b} has now. We want the difference.")
+            h.add(n - k, "\(n - k) is how many {a} has now. We want the difference.")
+            h.add(0, "After giving, they don't have the same number any more.")
         }
     }
 
     /// 本来就不一样多，再给来给去
-    static func transferUnequal(_ cap: Int) -> StoryProblem {
+    static func transferUnequal(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let top = min(cap, 12)
+        let t = thing(c)
+        let top = min(c.cap, 12)
         var x = 0, y = 0, k = 0
         repeat {
             x = Int.random(in: 4...top)
@@ -517,190 +816,374 @@ enum StoryFactory {
         } while x - k == y + k || x == y
         let fa = x - k, fb = y + k
         let (bs, ss): (Spot, Spot) = fa > fb ? (.a, .b) : (.b, .a)
-        return make(.transfer, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}有 \(x) {m}{i}，{b}有 \(y) {m}{i}。", actions: [.appear(.a, x), .appear(.b, y)]),
-            .init(text: "{a}给了{b} \(k) {m}。", actions: [.move(.a, .b, k)]),
-            .init(text: "现在\(ph(bs))比\(ph(ss))多几{m}？"),
-        ], ask: .more(bs, ss), answer: "\(ph(bs))比\(ph(ss))多 □ {m}",
-           explain: "{a}剩 \(x) − \(k) = \(fa) {m}，{b}有 \(y) + \(k) = \(fb) {m}，差 \(max(fa, fb)) − \(min(fa, fb)) = \(abs(fa - fb)) {m}") { h in
-            h.add(abs(x - y), "\(abs(x - y)) 是给之前差的。给了以后两边都变了，要重新比一比。")
-            h.add(k, "\(k) {m}是给出去的，要看给完以后两边差多少。")
-            h.add(fa + fb, "比多少不是合起来哦。")
+        var final = [M.Bar(name: "{a}", tint: .a, segs: [s(fa)]),
+                     M.Bar(name: "{b}", tint: .b, segs: [s(y), s(k, cap: "from {a}", .solid, .a)])]
+        final[fa > fb ? 1 : 0].segs.append(s(abs(fa - fb), "?", .gap))
+        return make(.transfer, a: a, b: b, thing: t, [
+            .init(text: "{a} has \(t.n(x)). {b} has \(t.n(y)).", actions: [.appear(.a, x), .appear(.b, y)]),
+            .init(text: "{a} gives {b} \(k) of them.", actions: [.move(.a, .b, k)]),
+            .init(text: "How many more \(t.many) does \(ph(bs)) have than \(ph(ss)) now?"),
+        ], ask: .more(bs, ss), answer: "\(ph(bs)) has □ more \(t.many) than \(ph(ss)).",
+           explain: "{a}: \(x) − \(k) = \(fa)   {b}: \(y) + \(k) = \(fb)   \(max(fa, fb)) − \(min(fa, fb)) = \(abs(fa - fb))",
+           models: [
+            M(bars: [M.Bar(name: "{a}", tint: .a, segs: [s(x)]), M.Bar(name: "{b}", tint: .b, segs: [s(y)])]),
+            M(bars: [M.Bar(name: "{a}", tint: .a, segs: [s(fa), s(k, cap: "gave", .gone)]),
+                     M.Bar(name: "{b}", tint: .b, segs: [s(y), s(k, cap: "got", .solid, .a)])]),
+            M(bars: final),
+           ]) { h in
+            h.add(abs(x - y), "\(abs(x - y)) was the difference before giving. Both of them changed, so compare again.")
+            h.add(k, "\(k) is how many were given. Compare them after giving.")
+            h.add(fa + fb, "We are comparing, not putting together.")
         }
     }
 
     /// 给来给去以后，问某个人有几个
-    static func transferCount(_ cap: Int) -> StoryProblem {
+    static func transferCount(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let n = Int.random(in: 3...min(cap, 10))
+        let t = thing(c)
+        let n = Int.random(in: 3...min(c.cap, 10))
         let k = Int.random(in: 1...min(n - 1, 4))
         let askB = Bool.random()
-        return make(.transfer, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}和{b}各有 \(n) {m}{i}。", actions: [.appear(.a, n), .appear(.b, n)]),
-            .init(text: "{a}给了{b} \(k) {m}。", actions: [.move(.a, .b, k)]),
-            .init(text: askB ? "现在{b}有几{m}{i}？" : "现在{a}还剩几{m}{i}？"),
-        ], ask: .count(askB ? .b : .a), answer: askB ? "{b}现在有 □ {m}{i}" : "{a}还剩 □ {m}{i}",
-           explain: askB ? "{b}拿到了 \(k) {m}，变多了：\(n) + \(k) = \(n + k)"
-                         : "{a}给出去 \(k) {m}，变少了：\(n) − \(k) = \(n - k)") { h in
+        let before = [M.Bar(name: "{a}", tint: .a, segs: [s(n)]), M.Bar(name: "{b}", tint: .b, segs: [s(n)])]
+        var after = [M.Bar(name: "{a}", tint: .a, segs: [s(n - k, ""), s(k, cap: "gave", .gone)]),
+                     M.Bar(name: "{b}", tint: .b, segs: [s(n), s(k, cap: "got", .solid, .a)])]
+        var braces: [M.Brace] = []
+        if askB { braces = [.init(bar: 1, from: 0, to: 1, label: "?")] } else { after[0].segs[0].label = "?" }
+        return make(.transfer, a: a, b: b, thing: t, [
+            .init(text: "{a} and {b} have \(t.n(n)) each.", actions: [.appear(.a, n), .appear(.b, n)]),
+            .init(text: "{a} gives {b} \(k) of them.", actions: [.move(.a, .b, k)]),
+            .init(text: askB ? "How many \(t.many) does {b} have now?" : "How many \(t.many) does {a} have left?"),
+        ], ask: .count(askB ? .b : .a),
+           answer: askB ? "{b} has □ \(t.many) now." : "{a} has □ \(t.many) left.",
+           explain: askB ? "\(n) + \(k) = \(n + k)" : "\(n) − \(k) = \(n - k)",
+           models: [M(bars: before), M(bars: after), M(bars: after, braces: braces)]) { h in
             if askB {
-                h.add(n - k, "{b}是拿到{i}的那个，会变多哦。")
+                h.add(n - k, "{b} is the one who got them, so {b} has more now.")
             } else {
-                h.add(n + k, "{a}是把{i}给出去的那个，会变少哦。")
+                h.add(n + k, "{a} gave them away, so {a} has fewer now.")
             }
-            h.add(k, "\(k) {m}是给的个数，还要算上原来的 \(n) {m}。")
-            h.add(n, "给来给去以后就变了，不是原来的 \(n) {m}了。")
+            h.add(k, "\(k) is how many were given. Start from the \(n) at first.")
+            h.add(n, "After giving, it is not \(n) any more.")
         }
     }
 
     // MARK: 变成一样多
 
-    static func equalize(_ cap: Int) -> StoryProblem {
+    static func equalize(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let half = Int.random(in: 1...max(1, min(4, cap / 4)))
+        let t = thing(c)
+        let half = Int.random(in: 1...max(1, min(4, c.cap / 4)))
         let d = 2 * half
-        let y = Int.random(in: 1...(cap - d)), x = y + d
-        return make(.equalize, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{a}有 \(x) {m}{i}，{b}有 \(y) {m}{i}。", actions: [.appear(.a, x), .appear(.b, y)]),
-            .init(text: "{a}要给{b}几{m}，两个人就一样多了？", actions: [.balance(.a, .b)]),
-        ], ask: .moved, answer: "{a}要给{b} □ {m}",
-           explain: "{a}比{b}多 \(d) {m}，多出来的要分成两半，给出去一半：\(d) 的一半是 \(half)") { h in
-            h.add(d, "给 \(d) {m}的话，{b}就变成 \(x) {m}，{a}只剩 \(y) {m}，反过来了！给出去的时候，自己也会变少哦。")
-        }
-    }
-
-    // MARK: 反过来想
-
-    static func inverseMore(_ cap: Int) -> StoryProblem { inverse(cap, aSays: true) }
-    static func inverseLess(_ cap: Int) -> StoryProblem { inverse(cap, aSays: false) }
-
-    /// aSays: true 是"{a}比{b}多"，false 是"{b}比{a}少"（看到"少"就想用减法，是常见的坑）
-    private static func inverse(_ cap: Int, aSays: Bool) -> StoryProblem {
-        let (a, b) = pair()
-        let y = Int.random(in: 2...(cap - 2))
-        let d = Int.random(in: 1...min(5, cap - y))
-        let relation = aSays ? "{a}比{b}多 \(d) {m}。" : "{b}比{a}少 \(d) {m}。"
-        return make(.inverse, a: a, b: b, item: .allCases.randomElement()!, [
-            .init(text: "{b}有 \(y) {m}{i}。", actions: [.appear(.b, y)]),
-            .init(text: relation, actions: [.build(.a, y + d)]),
-            .init(text: "{a}有几{m}{i}？"),
-        ], ask: .count(.a), answer: "{a}有 □ {m}{i}",
-           explain: "{a}的 = 和{b}一样多的 \(y) {m} + 多出来的 \(d) {m}：\(y) + \(d) = \(y + d)",
-           supply: "篮子") { h in
-            if aSays {
-                h.add(y - d, "「{a}比{b}多」，说明{a}的更多，不能用减法哦。")
-            } else {
-                h.add(y - d, "看清楚：是{b}比{a}少，那{a}就比{b}多，要用加法！")
-            }
-            h.add(d, "\(d) {m}只是多出来的那部分，还要加上和{b}一样多的 \(y) {m}。")
-            h.add(y, "{a}和{b}不是一样多哦，差了 \(d) {m}。")
+        let y = Int.random(in: 1...(c.cap - d)), x = y + d
+        let barA = M.Bar(name: "{a}", tint: .a, segs: [s(y, ""), s(half, ""), s(half, "")])
+        let barB = M.Bar(name: "{b}", tint: .b, segs: [s(y, "")])
+        var a2 = barA
+        a2.segs[1] = s(half, "?", cap: "give", .solid, .extra)
+        var b2 = barB
+        b2.segs.append(s(half, "", cap: "gets", .gap))
+        return make(.equalize, a: a, b: b, thing: t, [
+            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
+            .init(text: "{b} has \(t.n(y)).", actions: [.appear(.b, y)]),
+            .init(text: "How many \(t.many) must {a} give {b} so that they have the same number?", actions: [.balance(.a, .b)]),
+        ], ask: .moved, answer: "{a} must give {b} □ \(t.many).",
+           explain: "\(x) − \(y) = \(d)   Half of \(d) is \(half).",
+           models: [
+            M(bars: [M.Bar(name: "{a}", tint: .a, segs: [s(x)])]),
+            M(bars: [barA, barB], braces: [.init(bar: 0, from: 1, to: 2, label: "\(d) more")]),
+            M(bars: [a2, b2], braces: [.init(bar: 0, from: 1, to: 2, label: "\(d) more")]),
+           ]) { h in
+            h.add(d, "If {a} gives \(d), {b} gets \(x) and {a} has only \(y). Now it's the other way round! When {a} gives, {a} also gets fewer.")
         }
     }
 
     // MARK: 两步题
 
-    static func twoStepLoseGain(_ cap: Int) -> StoryProblem {
-        let a = StoryCast.allCases.randomElement()!
-        let n = Int.random(in: 4...(cap - 3))
+    static func twoStepLoseGain(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        let t = thing(c, food: true)
+        let n = Int.random(in: 4...(c.cap - 3))
         let k1 = Int.random(in: 1...min(n - 1, 5))
-        let k2 = Int.random(in: 1...min(cap - (n - k1), 5))
+        let k2 = Int.random(in: 1...min(c.cap - (n - k1), 5))
         let end = n - k1 + k2
-        return make(.twoStep, a: a, b: nil, item: [.apple, .strawberry, .candy].randomElement()!, [
-            .init(text: "{a}有 \(n) {m}{i}。", actions: [.appear(.a, n)]),
-            .init(text: "{a}吃掉了 \(k1) {m}。", actions: [.move(.a, .away, k1)]),
-            .init(text: "妈妈又给了{a} \(k2) {m}。", actions: [.move(.supply, .a, k2)]),
-            .init(text: "{a}现在有几{m}{i}？"),
-        ], ask: .count(.a), answer: "{a}现在有 □ {m}{i}",
-           explain: "先吃掉 \(k1) {m}：\(n) − \(k1) = \(n - k1)，妈妈又给 \(k2) {m}：\(n - k1) + \(k2) = \(end)") { h in
-            h.add(n - k1, "后来妈妈又给了 \(k2) {m}，别忘了加上。")
-            h.add(n + k2, "别忘了{a}先吃掉了 \(k1) {m}。")
-            h.add(n + k1 + k2, "吃掉是变少，妈妈给是变多。")
-            h.add(n - k1 - k2, "吃掉是变少，妈妈给是变多。")
+        let giver = ["Mum", "Dad", "Grandma"].randomElement()!
+        return make(.twoStep, a: a, b: nil, thing: t, [
+            .init(text: "{a} had \(t.n(n)).", actions: [.appear(.a, n)]),
+            .init(text: "{a} ate \(k1) of them.", actions: [.move(.a, .away, k1)]),
+            .init(text: "Then \(giver) gave {a} \(k2) more.", actions: [.move(.supply, .a, k2)]),
+            .init(text: "How many \(t.many) does {a} have now?"),
+        ], ask: .count(.a), answer: "{a} has □ \(t.many) now.",
+           explain: "\(n) − \(k1) = \(n - k1)   \(n - k1) + \(k2) = \(end)",
+           models: [
+            M(bars: [M.Bar(segs: [s(n)])]),
+            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k1, cap: "ate", .gone)])]),
+            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k2, cap: "more", .solid, .extra), s(k1, cap: "ate", .gone)])]),
+            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k2, cap: "more", .solid, .extra), s(k1, cap: "ate", .gone)])],
+              braces: [.init(bar: 0, from: 0, to: 1, label: "?")]),
+           ], supply: "\(giver)'s basket") { h in
+            h.add(n - k1, "Then \(giver) gave {a} \(k2) more. Don't forget to add them.")
+            h.add(n + k2, "Don't forget: {a} ate \(k1) first.")
+            h.add(n + k1 + k2, "Eating makes fewer. Getting more makes more.")
+            h.add(n - k1 - k2, "Eating makes fewer. Getting more makes more.")
         }
     }
 
-    static func twoStepTransferEat(_ cap: Int) -> StoryProblem {
+    /// "There are 15 children. 9 are boys. The rest are girls. How many more boys than girls?"
+    static func restCompare(_ c: StoryCtx) -> StoryProblem {
+        let r = restContexts.randomElement()!
+        let total = Int.random(in: 7...max(7, c.cap))
+        let x = Int.random(in: (total / 2 + 1)...(total - 1)), y = total - x
+        let t = StoryThing(one: r.whole, many: r.whole)
+        let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
+        return make(.twoStep, a: solo(), b: nil, thing: t, [
+            .init(text: "There are \(total) \(r.whole) \(r.place).", actions: [.whole(total)]),
+            .init(text: "\(x) of them are \(r.one). The rest are \(r.two).", actions: [.appear(.a, x), .appear(.b, y)]),
+            .init(text: "How many more \(r.phrase(r.one)) than \(r.phrase(r.two)) are there?"),
+        ], ask: .more(.a, .b), answer: "There are □ more \(r.phrase(r.one)) than \(r.phrase(r.two)).",
+           explain: "\(total) − \(x) = \(y)   \(x) − \(y) = \(x - y)",
+           models: [
+            M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])], braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")]),
+            M(bars: [M.Bar(segs: [s(x, cap: r.one, .solid, .a), s(y, "", cap: r.two, .solid, .b)])], braces: [whole]),
+            M(bars: [M.Bar(name: r.one, tint: .a, segs: [s(x)]),
+                     M.Bar(name: r.two, tint: .b, segs: [s(y), s(x - y, "?", .gap)])], total: "\(total)"),
+           ], actable: false) { h in
+            h.add(y, "\(y) is how many \(r.two) there are. Now compare: how many more \(r.one)?")
+            h.add(x, "\(x) is the \(r.one) ones. Find the \(r.two) ones first, then compare.")
+            h.add(total - y, "First find the \(r.two) ones: \(total) − \(x) = \(y).")
+        }
+    }
+
+    /// "{b} has 3 more than {a}. How many do they have altogether?"
+    static func moreThenTotal(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
-        let n = Int.random(in: 4...min(cap, 10))
-        let k = Int.random(in: 1...min(n - 1, 4))
-        let j = Int.random(in: 1...(2 * k - 1))
-        return make(.twoStep, a: a, b: b, item: [.apple, .strawberry, .candy].randomElement()!, [
-            .init(text: "{a}和{b}各有 \(n) {m}{i}。", actions: [.appear(.a, n), .appear(.b, n)]),
-            .init(text: "{a}给了{b} \(k) {m}。", actions: [.move(.a, .b, k)]),
-            .init(text: "{b}吃掉了 \(j) {m}。", actions: [.move(.b, .away, j)]),
-            .init(text: "现在{b}比{a}多几{m}？"),
-        ], ask: .more(.b, .a), answer: "{b}比{a}多 □ {m}",
-           explain: "{a}剩 \(n - k) {m}，{b}有 \(n) + \(k) − \(j) = \(n + k - j) {m}，差 \(n + k - j) − \(n - k) = \(2 * k - j)") { h in
-            h.add(2 * k, "别忘了{b}后来吃掉了 \(j) {m}。")
-            h.add(k - j, "{a}给出去的时候，自己也少了 \(k) {m}哦。")
-            h.add(k, "一边少、一边多，差的不只是给出去的 \(k) {m}。")
+        let t = thing(c)
+        let x = Int.random(in: 2...max(2, c.cap / 2))
+        let d = Int.random(in: 1...min(5, max(1, c.cap - x)))
+        let bv = x + d
+        let barA = M.Bar(name: "{a}", tint: .a, segs: [s(x)])
+        let barB = M.Bar(name: "{b}", tint: .b, segs: [s(x, ""), s(d, cap: "more", .solid, .extra)])
+        return make(.twoStep, a: a, b: b, thing: t, [
+            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
+            .init(text: "{b} has \(d) more \(t.word(d)) than {a}.", actions: [.build(.b, bv)]),
+            .init(text: "How many \(t.many) do they have altogether?"),
+        ], ask: .total, answer: "They have □ \(t.many) altogether.",
+           explain: "{b}: \(x) + \(d) = \(bv)   \(x) + \(bv) = \(x + bv)",
+           models: [M(bars: [barA]), M(bars: [barA, barB]), M(bars: [barA, barB], total: "?")]) { h in
+            h.add(bv, "\(bv) is only {b}'s. Add {a}'s \(x) too.")
+            h.add(x + d, "First find {b}'s: \(x) + \(d) = \(bv). Then put them together.")
+            h.add(2 * x, "Don't forget: {b} has \(d) more than {a}.")
+        }
+    }
+
+    // MARK: 乘法：几个几
+
+    static func multiply(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        // 放在盘子上的只用吃的东西
+        let t = thing(c, food: c.act)
+        let g: Int, n: Int
+        if c.act {
+            g = Int.random(in: 2...4); n = Int.random(in: 2...4)
+        } else {
+            g = Int.random(in: 2...5); n = [2, 3, 4, 5, 5, 10].randomElement()!
+        }
+        let total = g * n
+        let units = M(bars: [M.Bar(segs: (0..<g).map { _ in s(n, "", .solid, .neutral) })])
+        let labelled = M(bars: [M.Bar(segs: (0..<g).map { _ in s(n, nil, .solid, .neutral) })])
+        var asked = labelled
+        asked.braces = [.init(bar: 0, from: 0, to: g - 1, label: "?")]
+        let adds = Array(repeating: "\(n)", count: g).joined(separator: " + ")
+        let explain = "\(adds) = \(total)   \(g) × \(n) = \(total)"
+        let skip = (1...g).map { "\($0 * n)" }.joined(separator: ", ")
+        let hints: (inout Hints) -> Void = { h in
+            h.add(g + n, "Count \(n) for every group: \(skip).")
+            h.add(n, "\(n) is just one group. There are \(g) groups.")
+            h.add(g, "\(g) is how many groups. Count all the \(t.many).")
+        }
+        let actions: [[StoryAction]] = [[.plates(g)], [.fill(n)], []]
+        if c.act || (t.food && Bool.random()) {
+            return make(.multiply, a: a, b: nil, thing: t, [
+                .init(text: "There are \(g) plates.", actions: actions[0]),
+                .init(text: "Each plate has \(t.n(n)).", actions: actions[1]),
+                .init(text: "How many \(t.many) are there in all?"),
+            ], ask: .inPlates, answer: "There are □ \(t.many) in all.", explain: explain,
+               models: [units, labelled, asked], hints: hints)
+        }
+        let box = ["bag", "box", "packet"].randomElement()!
+        return make(.multiply, a: a, b: nil, thing: t, [
+            .init(text: "{a} has \(g) \(StoryText.plural(box)) of \(t.many).", actions: actions[0]),
+            .init(text: "There are \(t.n(n)) in each \(box).", actions: actions[1]),
+            .init(text: "How many \(t.many) does {a} have?"),
+        ], ask: .inPlates, answer: "{a} has □ \(t.many).", explain: explain,
+           models: [units, labelled, asked], plate: box, actable: false, hints: hints)
+    }
+
+    // MARK: 除法：平均分、包含除
+
+    static func sharing(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        let t = thing(c, food: c.act)
+        let g: Int, q: Int
+        if c.act {
+            g = Int.random(in: 2...4); q = Int.random(in: 2...4)
+        } else {
+            g = Int.random(in: 2...5); q = Int.random(in: 2...(c.cap >= 50 ? 10 : 5))
+        }
+        let total = g * q
+        let wholeOnly = M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])],
+                          braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")])
+        let split = M(bars: [M.Bar(segs: (0..<g).map { _ in s(q, "", .solid, .neutral) })],
+                      braces: [.init(bar: 0, from: 0, to: g - 1, label: "\(total)")])
+        var asked = split
+        asked.bars[0].segs[0].label = "?"
+        let hints: (inout Hints) -> Void = { h in
+            h.add(total - g, "Sharing equally means every group gets the same number.")
+            h.add(g, "\(g) is how many groups. How many in each group?")
+            h.add(total, "\(total) is all of them. Share them out equally.")
+            h.add(total * g, "When we share, each one gets fewer, not more.")
+        }
+        let explain = "\(total) ÷ \(g) = \(q)   because \(g) × \(q) = \(total)"
+        if c.act || (t.food && Bool.random()) {
+            return make(.divide, a: a, b: nil, thing: t, [
+                .init(text: "{a} has \(t.n(total)).", actions: [.appear(.a, total)]),
+                .init(text: "{a} puts them equally on \(g) plates.", actions: [.plates(g), .share]),
+                .init(text: "How many \(t.many) are there on each plate?"),
+            ], ask: .perPlate, answer: "There are □ \(t.many) on each plate.", explain: explain,
+               models: [wholeOnly, split, asked], hints: hints)
+        }
+        return make(.divide, a: a, b: nil, thing: t, [
+            .init(text: "{a} has \(t.n(total)).", actions: [.appear(.a, total)]),
+            .init(text: "{a} shares them equally among \(g) friends.", actions: [.plates(g), .share]),
+            .init(text: "How many \(t.many) does each friend get?"),
+        ], ask: .perPlate, answer: "Each friend gets □ \(t.many).", explain: explain,
+           models: [wholeOnly, split, asked], plate: "friend", actable: false, hints: hints)
+    }
+
+    static func grouping(_ c: StoryCtx) -> StoryProblem {
+        let a = solo()
+        let t = thing(c, food: c.act)
+        let q: Int, k: Int
+        if c.act {
+            q = Int.random(in: 2...5); k = Int.random(in: 2...(q >= 5 ? 4 : 5))
+        } else {
+            q = [2, 3, 4, 5, 5, 10].randomElement()!; k = Int.random(in: 2...5)
+        }
+        let total = q * k
+        let box = c.act ? "plate" : (t.food ? ["bag", "box", "plate"] : ["bag", "box"]).randomElement()!
+        let boxes = StoryText.plural(box)
+        let verb = box == "plate" ? "on each plate" : "in each \(box)"
+        let wholeOnly = M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])],
+                          braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")])
+        let split = M(bars: [M.Bar(segs: (0..<k).map { _ in s(q, nil, .solid, .neutral) })],
+                      braces: [.init(bar: 0, from: 0, to: k - 1, label: "\(total)")])
+        var asked = split
+        asked.braces.append(.init(bar: 0, from: 0, to: k - 1, label: "? \(boxes)", below: true))
+        return make(.divide, a: a, b: nil, thing: t, [
+            .init(text: "{a} has \(t.n(total)).", actions: [.appear(.a, total)]),
+            .init(text: "{a} puts \(t.n(q)) \(verb).", actions: [.group(q)]),
+            .init(text: "How many \(boxes) does {a} need?"),
+        ], ask: .plates, answer: "{a} needs □ \(boxes).",
+           explain: "\(total) ÷ \(q) = \(k)   because \(k) × \(q) = \(total)",
+           models: [wholeOnly, split, asked], plate: box) { h in
+            h.add(total - q, "Each \(box) gets \(q). How many \(boxes) can we fill?")
+            h.add(q, "\(q) is how many go in each \(box). Count the \(boxes).")
+            h.add(total, "\(total) is all the \(t.many). We want the number of \(boxes).")
         }
     }
 }
 
 // MARK: - 关卡
 
-/// 三种玩法，表示方式一步步"褪"掉：先用手演，再先猜后演，最后只看文字。
+/// 三种玩法 = 新加坡数学的 C-P-A：先用实物演，再画线段图，最后只看文字。
 enum StoryMode: String, Hashable {
-    case act, guess, read
+    case act, model, read
 
     var title: String {
         switch self {
-        case .act:   "演一演"
-        case .guess: "先猜再演"
-        case .read:  "只看文字"
+        case .act:   "Act it out"
+        case .model: "Draw a model"
+        case .read:  "Just read"
         }
     }
 
     var icon: String {
         switch self {
         case .act:   "hand.draw.fill"
-        case .guess: "lightbulb.fill"
+        case .model: "rectangle.split.3x1.fill"
         case .read:  "text.alignleft"
+        }
+    }
+
+    /// 关卡圆圈下面的短名字
+    var short: String {
+        switch self {
+        case .act:   "Act"
+        case .model: "Model"
+        case .read:  "Read"
+        }
+    }
+
+    var problemCount: Int {
+        switch self {
+        case .act:   6
+        case .model: 8
+        case .read:  10
         }
     }
 }
 
 enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
-    case changes = 1, compare, transfer, inverse, challenge
+    case together = 1, partWhole, compare, moreFewer, giving, groups, sharing, challenge
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
-        case .changes:   "合起来，变一变"
-        case .compare:   "比一比"
-        case .transfer:  "给来给去"
-        case .inverse:   "反过来想"
-        case .challenge: "大挑战"
+        case .together:  "Altogether"
+        case .partWhole: "Part & Whole"
+        case .compare:   "How Many More?"
+        case .moreFewer: "More or Fewer?"
+        case .giving:    "Giving"
+        case .groups:    "Equal Groups"
+        case .sharing:   "Sharing"
+        case .challenge: "Challenge"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .changes:   "一共有几个？还剩几个？"
-        case .compare:   "谁多？多几个？一个对一个比"
-        case .transfer:  "我给你，我就少了，你就多了"
-        case .inverse:   "「谁比谁少」，到底谁多？"
-        case .challenge: "什么题都有，先想想是哪一种"
+        case .together:  "Put together, take away"
+        case .partWhole: "Find the missing part"
+        case .compare:   "Line up and compare"
+        case .moreFewer: "Who has more? Read carefully!"
+        case .giving:    "I give, I have fewer"
+        case .groups:    "Same number in each group"
+        case .sharing:   "Share equally"
+        case .challenge: "Two steps, every type"
         }
     }
 
     var tint: Color {
         switch self {
-        case .changes:   Palette.sky
+        case .together:  Palette.sky
+        case .partWhole: Palette.sage
         case .compare:   Palette.honey
-        case .transfer:  Palette.coral
-        case .inverse:   Palette.lilac
-        case .challenge: Palette.sage
+        case .moreFewer: Palette.lilac
+        case .giving:    Palette.coral
+        case .groups:    Color(hex: 0x7DB8C9)
+        case .sharing:   Palette.blush
+        case .challenge: Color(hex: 0xC9A15B)
         }
     }
 
     var icon: String {
         switch self {
-        case .changes:   "plus.forwardslash.minus"
-        case .compare:   "equal.circle.fill"
-        case .transfer:  "arrow.left.arrow.right"
-        case .inverse:   "arrow.uturn.backward"
+        case .together:  "plus"
+        case .partWhole: "square.split.2x1.fill"
+        case .compare:   "equal"
+        case .moreFewer: "arrow.up.arrow.down"
+        case .giving:    "arrow.left.arrow.right"
+        case .groups:    "multiply"
+        case .sharing:   "divide"
         case .challenge: "flag.checkered"
         }
     }
@@ -709,9 +1192,8 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
 }
 
 struct StoryLevel: Hashable, Identifiable {
-    static let range = 1...15
+    static let range = 1...24
     static let all = range.map(StoryLevel.init)
-    static let problemsPerLevel = 5
 
     let number: Int
 
@@ -720,52 +1202,74 @@ struct StoryLevel: Hashable, Identifiable {
     }
 
     var id: Int { number }
-    var chapter: StoryChapter { StoryChapter(rawValue: (number - 1) / 3 + 1) ?? .changes }
+    var chapter: StoryChapter { StoryChapter(rawValue: (number - 1) / 3 + 1) ?? .together }
     var indexInChapter: Int { (number - 1) % 3 }
     var next: StoryLevel? { number < Self.range.upperBound ? StoryLevel(number + 1) : nil }
 
     var mode: StoryMode {
-        if chapter == .challenge { return indexInChapter == 0 ? .guess : .read }
-        return [.act, .guess, .read][indexInChapter]
+        if chapter == .challenge { return indexInChapter == 0 ? .model : .read }
+        return [.act, .model, .read][indexInChapter]
     }
 
-    /// 每一排最多几个
+    var problemCount: Int { mode.problemCount }
+
+    /// 数的范围：用手演的在 10 以内，画图和读题到 20，大挑战到 50、100
     var cap: Int {
-        switch number {
-        case 3, 6, 12, 13, 14, 15: 20
-        default: 10
+        if chapter == .challenge { return [20, 50, 100][indexInChapter] }
+        return mode == .act ? 10 : 20
+    }
+
+    /// 这一章的主角题型
+    private var main: [StoryFactory.Make] {
+        typealias F = StoryFactory
+        switch chapter {
+        case .together:  return [F.combine, F.changeLose, F.changeGain]
+        case .partWhole: return [F.partWhole, F.partWhole, F.changeLose]
+        case .compare:   return [F.compare, F.compare, F.compare]
+        case .moreFewer:
+            return indexInChapter == 0 ? [F.moreThan, F.fewerThan]
+                                       : [F.moreThan, F.fewerThan, F.trapFewer, F.trapMore]
+        case .giving:    return [F.transferEqual, F.transferCount, F.transferUnequal, F.equalize]
+        case .groups:    return [F.multiply]
+        case .sharing:   return [F.sharing, F.grouping]
+        case .challenge:
+            return [F.twoStepLoseGain, F.restCompare, F.moreThenTotal, F.trapFewer, F.partWhole,
+                    F.multiply, F.sharing, F.transferEqual, F.grouping, F.trapMore]
         }
     }
 
-    /// 这一关的 5 道题。排在前面的是这一章的主角题型，后面会混进别的题型，逼着先认清是哪种题。
-    func makeProblems() -> [StoryProblem] {
+    /// 前面几章的题，读题关里混进来，逼着先认清是哪一种
+    private var review: [StoryFactory.Make] {
         typealias F = StoryFactory
-        let plan: [StoryFactory.Make]
-        switch number {
-        case 1:  plan = [F.combine, F.changeLose, F.changeGain, F.combine, F.changeLose]
-        case 2:  plan = [F.changeGain, F.combine, F.changeLose, F.changeGain, F.combine]
-        case 3:  plan = [F.combine, F.changeLose, F.changeGain, F.changeLose, F.changeGain].shuffled()
-        case 4, 5: plan = Array(repeating: F.compare, count: 5)
-        case 6:  plan = [F.compare, F.compare, F.compare, F.combine, F.changeLose].shuffled()
-        case 7:  plan = [F.transferEqual, F.transferEqual, F.transferCount, F.transferEqual, F.transferUnequal]
-        case 8:  plan = [F.transferEqual, F.transferUnequal, F.transferCount, F.equalize, F.transferEqual]
-        case 9:  plan = [F.transferEqual, F.transferUnequal, F.equalize, F.transferCount, F.transferEqual].shuffled()
-        case 10: plan = [F.inverseMore, F.inverseLess, F.inverseMore, F.inverseLess, F.inverseLess]
-        case 11: plan = [F.inverseLess, F.inverseMore, F.inverseLess, F.inverseMore, F.inverseLess].shuffled()
-        case 12: plan = [F.inverseLess, F.inverseMore, F.compare, F.inverseLess, F.compare].shuffled()
-        case 13: plan = [F.compare, F.transferEqual, F.inverseLess, F.changeLose, F.equalize].shuffled()
-        case 14: plan = [F.transferUnequal, F.inverseMore, F.combine, F.transferEqual, F.inverseLess].shuffled()
-        default: plan = [F.twoStepLoseGain, F.transferEqual, F.inverseLess, F.twoStepTransferEat, F.equalize].shuffled()
+        switch chapter {
+        case .together, .challenge: return []
+        case .partWhole: return [F.combine, F.changeGain]
+        case .compare:   return [F.combine, F.partWhole, F.changeLose]
+        case .moreFewer: return [F.compare, F.partWhole]
+        case .giving:    return [F.compare, F.trapFewer]
+        case .groups:    return [F.combine, F.compare]
+        case .sharing:   return [F.multiply, F.partWhole]
+        }
+    }
+
+    func makeProblems() -> [StoryProblem] {
+        let ctx = StoryCtx(cap: cap, act: mode == .act)
+        var plan: [StoryFactory.Make] = []
+        while plan.count < problemCount { plan += main.shuffled() }
+        plan = Array(plan.prefix(problemCount))
+        if mode == .read, !review.isEmpty {
+            for (i, make) in zip([2, 5, 8], review.shuffled()) where i < plan.count { plan[i] = make }
         }
         var used = Set<String>()
         return plan.map { make in
             // 同一关里别出两道一模一样的题
-            for _ in 0..<12 {
-                let p = make(cap)
+            // 答案至少是 2：答案句里的名词是复数（"□ apples"）
+            for _ in 0..<30 {
+                let p = make(ctx)
                 let key = p.sentences.map(\.text).joined()
-                if used.insert(key).inserted { return p }
+                if p.answer >= 2, used.insert(key).inserted { return p }
             }
-            return make(cap)
+            return make(ctx)
         }
     }
 }
@@ -785,28 +1289,31 @@ struct StoryMistake: Codable, Identifiable, Hashable {
 }
 
 extension PlayerStore {
-    func storyBest(_ level: StoryLevel) -> Int { count("story.best.\(level.number)") }
+    func storyBest(_ level: StoryLevel) -> Int { count("wp.best.\(level.number)") }
 
     /// 推荐的关：第一个还没拿到星星的关
     var storyRecommended: StoryLevel {
         StoryLevel.all.first { storyBest($0) == 0 } ?? StoryLevel(StoryLevel.range.upperBound)
     }
 
-    var storyStars: Int { StoryLevel.all.reduce(0) { $0 + storyBest($1) } }
+    /// 一共做对了多少道题
+    var storySolved: Int { count("wp.solved") }
 
     @discardableResult
     func recordStoryLevel(_ level: StoryLevel, stars: Int) -> Bool {
         let isRecord = stars > storyBest(level)
-        if isRecord { setCount("story.best.\(level.number)", stars) }
+        if isRecord { setCount("wp.best.\(level.number)", stars) }
         return isRecord
     }
 
     /// 每道题第一次答对还是答错，按题型统计
     func recordStoryAnswer(_ schema: StorySchema, correct: Bool) {
-        increment("story.\(correct ? "right" : "wrong").\(schema.rawValue)")
+        increment("wp.\(correct ? "right" : "wrong").\(schema.rawValue)")
     }
 
+    func recordStorySolved() { increment("wp.solved") }
+
     func storyStats(_ schema: StorySchema) -> (right: Int, wrong: Int) {
-        (count("story.right.\(schema.rawValue)"), count("story.wrong.\(schema.rawValue)"))
+        (count("wp.right.\(schema.rawValue)"), count("wp.wrong.\(schema.rawValue)"))
     }
 }

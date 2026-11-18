@@ -145,12 +145,12 @@ private struct GameHeroCard: View {
     let game: GameEntry
     let action: () -> Void
 
-    private var title: String { game == .gomoku ? "五子棋" : "小伙伴的故事" }
-    private var subtitle: String { game == .gomoku ? "十档难度，从小兔打到龙宝宝" : "听故事、演一演，读懂应用题" }
-    private var art: String { game == .gomoku ? "card_gomoku" : "card_story" }
-    private var base: Color { game == .gomoku ? Color(hex: 0xF8DCCB) : Color(hex: 0xDDEEDF) }
-    private var fade: Color { game == .gomoku ? Color(hex: 0xFBE9DD) : Color(hex: 0xEAF4EA) }
-    private var button: Color { game == .gomoku ? Palette.coral : Color(hex: 0x6FA67C) }
+    private var title: String { game == .gomoku ? "五子棋" : "加减乘除" }
+    private var subtitle: String { game == .gomoku ? "十档难度，从小兔打到龙宝宝" : "英文应用题，演一演、画一画、算一算" }
+    private var art: String { game == .gomoku ? "card_gomoku" : "card_math" }
+    private var base: Color { game == .gomoku ? Color(hex: 0xF8DCCB) : Color(hex: 0xDCEBF5) }
+    private var fade: Color { game == .gomoku ? Color(hex: 0xFBE9DD) : Color(hex: 0xEAF3F8) }
+    private var button: Color { game == .gomoku ? Palette.coral : Color(hex: 0x5FA3C9) }
 
     var body: some View {
         Button(action: action) {
@@ -223,12 +223,13 @@ private struct GameHeroCard: View {
                 }
             }
         } else {
-            HStack(spacing: 6) {
-                ForEach(StoryItem.allCases, id: \.self) { item in
-                    ArtImage(name: item.image, fallback: item.emoji)
-                        .frame(width: 46, height: 46)
-                        .frame(width: 58, height: 58)
-                        .background(Palette.paper.opacity(0.8), in: Circle())
+            HStack(spacing: 8) {
+                ForEach(["plus", "minus", "multiply", "divide"], id: \.self) { symbol in
+                    Image(systemName: symbol)
+                        .font(.system(size: 24, weight: .heavy))
+                        .foregroundStyle(button)
+                        .frame(width: 54, height: 54)
+                        .background(Palette.paper.opacity(0.85), in: Circle())
                 }
             }
         }

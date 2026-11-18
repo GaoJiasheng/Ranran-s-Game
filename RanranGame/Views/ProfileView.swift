@@ -474,7 +474,7 @@ private struct StoryReportCard: View {
         let shown = showAll ? mistakes : Array(mistakes.prefix(5))
         return VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                Text("应用题")
+                Text("加减乘除 · 应用题")
                     .font(.kid(28, weight: .heavy))
                     .foregroundStyle(Palette.ink)
                 if let summary = summary(stats) {
@@ -486,7 +486,7 @@ private struct StoryReportCard: View {
             }
 
             if stats.isEmpty {
-                Text("做过「小伙伴的故事」以后，这里会按题型显示做对、做错了多少，做错的题也会收进错题本。")
+                Text("做过「加减乘除」以后，这里会按题型显示做对、做错了多少，做错的题也会收进错题本。")
                     .font(.kid(18, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -512,7 +512,7 @@ private struct StoryReportCard: View {
                             .foregroundStyle(Palette.coral)
                     }
                     Spacer()
-                    Text("点一道题，再演一遍")
+                    Text("点一道题，再做一遍")
                         .font(.kid(16, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft.opacity(0.85))
                 }
@@ -574,9 +574,14 @@ private struct SchemaTile: View {
         let total = max(right + wrong, 1)
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(schema.title)
-                    .font(.kid(19, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(schema.zh)
+                        .font(.kid(19, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    Text(schema.title)
+                        .font(.kid(13, weight: .bold))
+                        .foregroundStyle(Palette.inkSoft)
+                }
                 Spacer()
                 if weakest {
                     Text("多练练")
@@ -615,7 +620,7 @@ private struct MistakeRow: View {
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text(p.schema.title)
+                        Text(p.schema.zh)
                             .font(.kid(14, weight: .heavy))
                             .foregroundStyle(Palette.ink.opacity(0.8))
                             .padding(.horizontal, 10)
@@ -625,7 +630,7 @@ private struct MistakeRow: View {
                             .font(.kid(14, weight: .semibold))
                             .foregroundStyle(Palette.inkSoft)
                     }
-                    Text(p.sentences.map { StoryText.plain($0.text, p, player: player) }.joined())
+                    Text(p.sentences.map { StoryText.plain($0.text, p, player: player) }.joined(separator: " "))
                         .font(.kid(18, weight: .bold))
                         .foregroundStyle(Palette.ink)
                         .multilineTextAlignment(.leading)

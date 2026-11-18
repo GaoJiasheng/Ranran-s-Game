@@ -41,6 +41,34 @@ struct SaveArchive: Codable {
     var records: [GameRecord]
     /// 应用题的错题本（旧存档里没有）
     var storyMistakes: [StoryMistake]? = nil
+
+    init(playerName: String, totalStars: Int, counts: [String: Int], settings: [String: Int],
+         records: [GameRecord], storyMistakes: [StoryMistake]?) {
+        self.playerName = playerName
+        self.totalStars = totalStars
+        self.counts = counts
+        self.settings = settings
+        self.records = records
+        self.storyMistakes = storyMistakes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case format, version, exportedAt, playerName, totalStars, counts, settings, records, storyMistakes
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        format = try c.decodeIfPresent(String.self, forKey: .format) ?? "ranran-save"
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        exportedAt = try c.decodeIfPresent(Date.self, forKey: .exportedAt) ?? Date()
+        playerName = try c.decode(String.self, forKey: .playerName)
+        totalStars = try c.decode(Int.self, forKey: .totalStars)
+        counts = try c.decode([String: Int].self, forKey: .counts)
+        settings = try c.decode([String: Int].self, forKey: .settings)
+        records = try c.decode([GameRecord].self, forKey: .records)
+        // 旧版（中文题）的错题格式不一样，读不出来就不要了，别让整份存档导入失败
+        storyMistakes = try? c.decodeIfPresent([StoryMistake].self, forKey: .storyMistakes)
+    }
 }
 
 /// 玩家的全部本地数据：名字、星星、各种进度、棋谱。不需要登录，只存在这台 iPad 上。

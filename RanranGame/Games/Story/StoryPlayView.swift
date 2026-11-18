@@ -8,6 +8,8 @@ struct StoryPlayView: View {
 
     @State private var session: StorySession
     @State private var outcome: StoryOutcome?
+    /// 正在飞向右上角的星星
+    @State private var flying: [UUID] = []
     /// 从错题本进来时的那道错题
     private let mistake: StoryMistake?
     private let onNextLevel: ((StoryLevel) -> Void)?
@@ -32,7 +34,7 @@ struct StoryPlayView: View {
             ZStack {
                 CreamBackground(accent: tint)
                 VStack(spacing: 18) {
-                    topBar
+                    topBar(width: geo.size.width)
                     if wide {
                         HStack(alignment: .top, spacing: 20) {
                             VStack(spacing: 18) {
@@ -59,6 +61,15 @@ struct StoryPlayView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 22)
 
+                ForEach(flying, id: \.self) { id in
+                    FlyingStar(from: CGPoint(x: geo.size.width - 210, y: geo.size.height - 330),
+                               to: CGPoint(x: geo.size.width - 96, y: 52)) {
+                        land(id)
+                    }
+                    .allowsHitTesting(false)
+                    .zIndex(20)
+                }
+
                 if let outcome {
                     StoryResultOverlay(outcome: outcome,
                                        onNext: outcome.level.next.map { next in { goNext(next) } },
@@ -73,7 +84,11 @@ struct StoryPlayView: View {
             session.player = store.name
             session.onFirstAnswer = { problem, right, answer in
                 store.recordStoryAnswer(problem.schema, correct: right)
-                if let level = session.level, !right {
+                if right {
+                    store.recordStorySolved()
+                    // 一次就答对：一颗星星飞到右上角
+                    withAnimation(.spring(duration: 0.3)) { flying.append(UUID()) }
+                } else if let level = session.level {
                     store.saveMistake(StoryMistake(level: level.number, problem: problem, answer: answer))
                 }
             }
@@ -83,7 +98,6 @@ struct StoryPlayView: View {
         .onChange(of: session.phase) { _, phase in
             guard phase == .finished, let level = session.level else { return }
             let stars = session.stars
-            store.addStars(stars)
             let record = store.recordStoryLevel(level, stars: stars)
             Sound.fanfare()
             withAnimation(.spring(duration: 0.5)) {
@@ -91,6 +105,13 @@ struct StoryPlayView: View {
                                        total: session.problems.count, isRecord: record)
             }
         }
+    }
+
+    /// 星星落到计数器上，才真的加上去（数字跟着跳）
+    private func land(_ id: UUID) {
+        flying.removeAll { $0 == id }
+        store.addStars(1)
+        Sound.step(min(4 + session.streak, 10))
     }
 
     private func goNext(_ next: StoryLevel) {
@@ -108,34 +129,81 @@ struct StoryPlayView: View {
 
     // MARK: 顶栏
 
-    private var topBar: some View {
-        ZStack {
-            VStack(spacing: 2) {
-                Text(title)
-                    .font(.kid(30, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
-                if let level = session.level {
-                    Label(level.mode.title, systemImage: level.mode.icon)
-                        .font(.kid(16, weight: .bold))
-                        .foregroundStyle(Palette.inkSoft)
+    /// 宽屏：标题居中，进度在左；窄屏（竖着的小 iPad）：标题靠左、进度放在标题下面，免得挤在一起
+    @ViewBuilder
+    private func topBar(width: CGFloat) -> some View {
+        if width >= 1000 {
+            ZStack {
+                VStack(spacing: 2) {
+                    Text(title)
+                        .font(.kid(30, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    if let level = session.level {
+                        Label(level.mode.title, systemImage: level.mode.icon)
+                            .font(.kid(16, weight: .bold))
+                            .foregroundStyle(Palette.inkSoft)
+                    }
+                }
+                HStack(spacing: 16) {
+                    backButton
+                    if session.problems.count > 1 { progress }
+                    Spacer()
+                    trailingButtons
                 }
             }
-            HStack(spacing: 16) {
-                RoundIconButton(systemName: "chevron.left", label: "返回") { dismiss() }
-                Spacer()
-                if session.problems.count > 1 { progress }
-                RoundIconButton(systemName: voiceOn ? "speaker.wave.2.fill" : "speaker.slash.fill",
-                                label: voiceOn ? "关掉朗读" : "打开朗读") {
-                    voiceOn.toggle()
-                    if !voiceOn { Narrator.shared.stop() }
+        } else {
+            HStack(spacing: 14) {
+                backButton
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.kid(26, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    if session.problems.count > 1 { progress }
                 }
+                Spacer(minLength: 8)
+                trailingButtons
             }
         }
     }
 
+    private var backButton: some View {
+        RoundIconButton(systemName: "chevron.left", label: "Back") { dismiss() }
+    }
+
+    @ViewBuilder
+    private var trailingButtons: some View {
+        if session.streak >= 2 { streakBadge.transition(.scale.combined(with: .opacity)) }
+        RoundIconButton(systemName: voiceOn ? "speaker.wave.2.fill" : "speaker.slash.fill",
+                        label: voiceOn ? "Voice off" : "Voice on") {
+            voiceOn.toggle()
+            if !voiceOn { Narrator.shared.stop() }
+        }
+        StarCounter()
+    }
+
     private var title: String {
-        guard let level = session.level else { return "错题再练" }
-        return "第 \(level.number) 关 · \(level.chapter.title)"
+        guard let level = session.level else { return "Try Again" }
+        return "Level \(level.number) · \(level.chapter.title)"
+    }
+
+    /// 连续答对
+    private var streakBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral], startPoint: .top, endPoint: .bottom))
+            Text("\(session.streak)")
+                .font(.kid(24, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .softCard(radius: 24)
+        .animation(.spring(duration: 0.4, bounce: 0.5), value: session.streak)
+        .accessibilityLabel("\(session.streak) in a row")
     }
 
     private var progress: some View {
@@ -180,7 +248,7 @@ struct StoryPlayView: View {
                     .background(Palette.cream, in: Circle())
             }
             .buttonStyle(PressableStyle(scale: 0.9))
-            .accessibilityLabel("再听一遍")
+            .accessibilityLabel("Listen again")
         }
         .padding(.horizontal, 26)
         .padding(.vertical, 20)
@@ -202,7 +270,7 @@ struct StoryPlayView: View {
                         .foregroundStyle(Palette.honey)
                 }
                 StoryText.styled(s.text, p, player: store.name)
-                    .font(.kid(30, weight: isQuestion ? .heavy : .bold))
+                    .font(.kid(28, weight: isQuestion ? .heavy : .bold))
                     .foregroundStyle(Palette.ink)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -223,15 +291,23 @@ struct StoryPlayView: View {
 
     private var stageCard: some View {
         ZStack(alignment: .topLeading) {
-            if session.stage.visible {
+            switch session.display {
+            case .tokens:
                 StoryStageView(stage: session.stage, player: store.name)
                     .padding(10)
                     .transition(.opacity)
-            } else {
+            case .model:
+                BarModelView(model: session.model, problem: session.problem, player: store.name,
+                             answer: session.phase == .solved ? session.problem.answer : nil)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 16)
+                    .transition(.opacity)
+            case .blank:
                 readOnlyPlaceholder
             }
-            if let caption = session.stageCaption, session.stage.visible {
-                Text(caption)
+            if session.display != .tokens {
+                Label(session.display == .model ? "Model" : "Just read",
+                      systemImage: session.display == .model ? StoryMode.model.icon : StoryMode.read.icon)
                     .font(.kid(16, weight: .heavy))
                     .foregroundStyle(Palette.inkSoft)
                     .padding(.horizontal, 14)
@@ -250,11 +326,13 @@ struct StoryPlayView: View {
             }
         }
         .overlay(alignment: .bottomLeading) {
-            if session.stage.comparing, session.phase == .answering || session.phase == .solved {
+            if session.display == .tokens, session.stage.comparing,
+               session.phase == .answering || session.phase == .solved {
                 Button {
                     session.stage.resetCounting()
                 } label: {
-                    Label("点一点发光的，数一数", systemImage: "hand.tap.fill")
+                    Label(session.problem.usesPlates ? "Tap to count" : "Tap the glowing ones to count",
+                          systemImage: "hand.tap.fill")
                         .font(.kid(16, weight: .bold))
                         .foregroundStyle(Palette.inkSoft)
                         .padding(.horizontal, 14)
@@ -268,7 +346,7 @@ struct StoryPlayView: View {
         .background(Palette.paper, in: RoundedRectangle(cornerRadius: 36, style: .continuous))
         .softCard(radius: 36)
         .animation(.spring(duration: 0.4), value: session.needsConfirm)
-        .animation(.spring(duration: 0.4), value: session.stage.visible)
+        .animation(.spring(duration: 0.4), value: session.display)
     }
 
     private var readOnlyPlaceholder: some View {
@@ -278,7 +356,7 @@ struct StoryPlayView: View {
                 Avatar(image: p.a.image, fallback: p.a.emoji, tint: p.a.tint, size: 96)
                 if let b = p.b { Avatar(image: b.image, fallback: b.emoji, tint: b.tint, size: 96) }
             }
-            Text("这一关只看文字，在脑子里演一演")
+            Text("Picture the story in your head")
                 .font(.kid(22, weight: .bold))
                 .foregroundStyle(Palette.inkSoft)
         }
@@ -297,7 +375,7 @@ struct StoryPlayView: View {
                     if let line {
                         StoryText.styled(line.text, p, player: store.name)
                     } else {
-                        Text("仔细听故事哦")
+                        Text("Listen to the story")
                     }
                 }
                 .font(.kid(21, weight: .bold))
@@ -307,11 +385,25 @@ struct StoryPlayView: View {
                 .id(line?.text)
                 .transition(.opacity)
 
-                if session.phase == .offerAct {
+                if let equation = line?.equation {
+                    Text(equation)
+                        .font(.kid(24, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                        .monospacedDigit()
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.6)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Palette.paper.opacity(0.75), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+
+                if session.phase == .offerHelp, let help = session.help {
                     Button {
-                        session.actOut()
+                        session.acceptHelp()
                     } label: {
-                        Label("演一演", systemImage: "hand.draw.fill")
+                        Label(help == .act ? "Act it out" : "Draw a model",
+                              systemImage: help == .act ? StoryMode.act.icon : StoryMode.model.icon)
                     }
                     .buttonStyle(PillButtonStyle(color: Palette.coral, size: 21))
                 }
@@ -319,7 +411,7 @@ struct StoryPlayView: View {
                     Button {
                         if session.isLast, mistake != nil { finishPractice() } else { session.next() }
                     } label: {
-                        Label(session.isLast ? (mistake != nil ? "完成" : "看看成绩") : "下一题",
+                        Label(session.isLast ? (mistake != nil ? "Done" : "See my stars") : "Next",
                               systemImage: session.isLast ? "flag.checkered" : "arrow.right")
                     }
                     .buttonStyle(PillButtonStyle(color: Palette.coral, size: 21))
@@ -421,7 +513,7 @@ private struct Keypad: View {
                 key(action: backspace) {
                     Image(systemName: "delete.left.fill").font(.system(size: 24, weight: .bold))
                 }
-                .accessibilityLabel("删除")
+                .accessibilityLabel("Delete")
                 digit(0)
                 Button(action: submit) {
                     Image(systemName: "checkmark")
@@ -434,7 +526,7 @@ private struct Keypad: View {
                 }
                 .buttonStyle(PressableStyle(scale: 0.92))
                 .disabled(!canSubmit)
-                .accessibilityLabel("确定")
+                .accessibilityLabel("Check")
             }
         }
         .disabled(!enabled)
@@ -485,7 +577,7 @@ struct StoryResultOverlay: View {
                 Text(title)
                     .font(.kid(48, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                Text("一次就答对了 \(outcome.correct) / \(outcome.total) 题")
+                Text("Right the first time: \(outcome.correct) / \(outcome.total)")
                     .font(.kid(23, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
 
@@ -515,19 +607,19 @@ struct StoryResultOverlay: View {
                 HStack(spacing: 18) {
                     if let onNext {
                         Button { Sound.tap(); onNext() } label: {
-                            Label("下一关", systemImage: "arrow.right")
+                            Label("Next level", systemImage: "arrow.right")
                         }
                         .buttonStyle(PillButtonStyle(color: Palette.coral, size: 24))
                     }
                     Button { Sound.tap(); onAgain() } label: {
-                        Label("再玩一次", systemImage: "arrow.clockwise")
+                        Label("Play again", systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(PillButtonStyle(color: Palette.sage, size: 24))
                 }
                 .padding(.top, 6)
 
                 Button { Sound.tap(); onLeave() } label: {
-                    Label("回到关卡", systemImage: "square.grid.2x2")
+                    Label("All levels", systemImage: "square.grid.2x2")
                 }
                 .font(.kid(19, weight: .bold))
                 .foregroundStyle(Palette.inkSoft)
@@ -539,7 +631,7 @@ struct StoryResultOverlay: View {
             .softCard(radius: 44)
             .overlay(alignment: .topTrailing) {
                 if showRecord {
-                    Text("新纪录！")
+                    Text("New record!")
                         .font(.kid(22, weight: .heavy))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
@@ -571,17 +663,65 @@ struct StoryResultOverlay: View {
 
     private var title: String {
         switch outcome.stars {
-        case 3: "全对啦！"
-        case 2: "做得不错！"
-        default: "完成啦！"
+        case 3: "Perfect!"
+        case 2: "Great job!"
+        default: "Finished!"
         }
     }
 
     private var advice: String {
         switch outcome.stars {
-        case 3: "每道题都读懂了，真厉害"
-        case 2: "做错的题已经放进「我的」错题本里了"
-        default: "多演几遍就会啦，错题可以在「我的」里再练"
+        case 3: "You understood every story. +\(outcome.correct) stars!"
+        case 2: "+\(outcome.correct) stars! The tricky ones are saved for practice."
+        default: "+\(outcome.correct) stars. Practice makes perfect!"
+        }
+    }
+}
+
+// MARK: - 飞向计数器的星星
+
+/// 答对一题时，一颗星星从答题板弹起来，划一道弧线飞到右上角的星星计数器。
+struct FlyingStar: View {
+    let from: CGPoint
+    let to: CGPoint
+    let landed: () -> Void
+
+    @State private var t: CGFloat = 0
+    @State private var pop: CGFloat = 0.2
+
+    var body: some View {
+        // 二次贝塞尔：控制点在起点和终点上方，飞出一道弧
+        let control = CGPoint(x: (from.x + to.x) / 2 - 140, y: min(from.y, to.y) - 120)
+        Image(systemName: "star.fill")
+            .font(.system(size: 64, weight: .bold))
+            .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral], startPoint: .top, endPoint: .bottom))
+            .shadow(color: Palette.honey.opacity(0.7), radius: 14)
+            .scaleEffect(pop * (1 - t * 0.55))
+            .rotationEffect(.degrees(Double(t) * 220))
+            .modifier(Arc(t: t, from: from, control: control, to: to))
+            .task {
+                withAnimation(.spring(duration: 0.35, bounce: 0.6)) { pop = 1.25 }
+                try? await Task.sleep(for: .milliseconds(380))
+                withAnimation(.easeIn(duration: 0.65)) { t = 1 }
+                try? await Task.sleep(for: .milliseconds(660))
+                landed()
+            }
+    }
+
+    /// 让 t 的动画逐帧算出弧线上的位置（只动画 position 的话会走直线）
+    private struct Arc: AnimatableModifier {
+        var t: CGFloat
+        let from: CGPoint
+        let control: CGPoint
+        let to: CGPoint
+        var animatableData: CGFloat {
+            get { t }
+            set { t = newValue }
+        }
+        func body(content: Content) -> some View {
+            let u = 1 - t
+            content.position(x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
+                             y: u * u * from.y + 2 * u * t * control.y + t * t * to.y)
         }
     }
 }

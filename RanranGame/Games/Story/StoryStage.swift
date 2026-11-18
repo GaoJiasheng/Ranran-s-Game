@@ -45,6 +45,24 @@ final class StoryStage {
     var hiddenBadges: Set<Spot> = []
     var visible = true
 
+    /// 盘子有几个（乘法、除法用）
+    private(set) var plateCount = 0
+    /// 演盘子的这一步怎么拖：nil 的时候盘子不能动
+    var plateRule: PlateRule?
+    /// "一共有几个"的目标牌子
+    private(set) var wholeTarget: Int?
+    /// 跳着数：点盘子时记下数到几（第几个盘子 → 数到的数）
+    private(set) var plateCounted: [Int: Int] = [:]
+
+    enum PlateRule: Equatable {
+        /// 从篮子里往每个盘子放 n 个
+        case fill(Int)
+        /// 把手里的平均分到盘子里
+        case share
+        /// 每个盘子最多 n 个
+        case group(Int)
+    }
+
     var onDrop: ((StoryRoute) -> Void)?
     var onReject: ((StoryRoute) -> Void)?
 
@@ -68,13 +86,23 @@ final class StoryStage {
         comparing = false
         counted = [:]
         hiddenBadges = []
+        plateCount = 0
+        plateRule = nil
+        wholeTarget = nil
+        plateCounted = [:]
     }
 
     func clear() {
         tokens = []
         counted = [:]
         comparing = false
+        plateCount = 0
+        plateRule = nil
+        wholeTarget = nil
+        plateCounted = [:]
     }
+
+    var activePlates: [Spot] { Array(Spot.plates.prefix(plateCount)) }
 
     func ordered(_ spot: Spot) -> [StoryToken] {
         tokens.filter { $0.spot == spot }.sorted { $0.order < $1.order }
@@ -83,7 +111,9 @@ final class StoryStage {
     func count(_ spot: Spot) -> Int { tokens.reduce(0) { $0 + ($1.spot == spot ? 1 : 0) } }
 
     func counts() -> [Spot: Int] {
-        [.a: count(.a), .b: count(.b), .away: count(.away)]
+        var c: [Spot: Int] = [.a: count(.a), .b: count(.b), .away: count(.away)]
+        for p in activePlates { c[p] = count(p) }
+        return c
     }
 
     @discardableResult
@@ -124,6 +154,35 @@ final class StoryStage {
         case let .balance(f, t):
             let d = (count(f) - count(t)) / 2
             if d > 0 { await autoMove(from: f, to: t, d, animated: animated) }
+        case let .whole(n):
+            withAnimation(.spring(duration: 0.45, bounce: 0.4)) { wholeTarget = n }
+            if animated { Sound.pop() }
+        case let .plates(g):
+            for i in plateCount..<max(plateCount, g) {
+                withAnimation(.spring(duration: 0.45, bounce: 0.4)) { plateCount = i + 1 }
+                if animated {
+                    Sound.pop()
+                    try? await Task.sleep(for: .milliseconds(160))
+                }
+            }
+        case let .fill(n):
+            for p in activePlates where count(p) < n {
+                await autoMove(from: .supply, to: p, n - count(p), animated: animated)
+            }
+        case .share:
+            var i = 0
+            while count(.a) > 0, !activePlates.isEmpty, !Task.isCancelled {
+                await autoMove(from: .a, to: activePlates[i % activePlates.count], 1, animated: animated)
+                i += 1
+            }
+        case let .group(n):
+            var i = 0
+            while count(.a) > 0, i < Spot.plates.count, !Task.isCancelled {
+                if plateCount <= i { withAnimation(.spring(duration: 0.4)) { plateCount = i + 1 } }
+                let p = Spot.plates[i]
+                await autoMove(from: .a, to: p, max(0, min(n - count(p), count(.a))), animated: animated)
+                i += 1
+            }
         }
     }
 
@@ -160,16 +219,76 @@ final class StoryStage {
     // MARK: 孩子拖动
 
     func canDrag(from spot: Spot) -> Bool {
+        if let plateRule {
+            switch plateRule {
+            case .fill:          return spot == .supply || spot.isPlate
+            case .share, .group: return spot == .a || spot.isPlate
+            }
+        }
         guard let forward else { return false }
         return spot == forward.from || spot == forward.to
     }
 
     /// 按故事方向拖：可以；反方向：只有这一步拖过去的那几个可以拿回来
     private func permits(_ route: StoryRoute, token id: Int?) -> Bool {
+        if let plateRule {
+            switch plateRule {
+            case .fill:
+                return (route.from == .supply || route.from.isPlate) && (route.to == .supply || route.to.isPlate)
+            case .share:
+                return (route.from == .a || route.from.isPlate) && (route.to == .a || route.to.isPlate)
+            case let .group(n):
+                guard (route.from == .a || route.from.isPlate) && (route.to == .a || route.to.isPlate) else { return false }
+                return !route.to.isPlate || count(route.to) < n
+            }
+        }
         guard let forward else { return false }
         if route == forward { return true }
         if route.from == forward.to, route.to == forward.from, let id { return beatTokens.contains(id) }
         return false
+    }
+
+    /// 演盘子的时候点一下盘子：放进去一个（从篮子里或者从手里）；比一比的时候点盘子：跳着数
+    func tapPlate(_ i: Int) {
+        let p = Spot.plates[i]
+        if comparing {
+            countPlate(i)
+            return
+        }
+        guard let plateRule else { return }
+        switch plateRule {
+        case .fill:
+            guard count(p) < 12 else { return }
+            withAnimation(.spring(duration: 0.4, bounce: 0.5)) { _ = add(p, origin: .supply) }
+            Sound.drop()
+            onDrop?(StoryRoute(from: .supply, to: p))
+        case .share, .group:
+            guard let last = ordered(.a).last else { return }
+            let route = StoryRoute(from: .a, to: p)
+            guard permits(route, token: last.id) else {
+                onReject?(route)
+                return
+            }
+            withAnimation(.spring(duration: 0.45, bounce: 0.35)) { relocate(last.id, to: p) }
+            Sound.drop()
+            growPlates()
+            onDrop?(route)
+        }
+    }
+
+    /// 每盘放几个：手里还有，而且盘子都放满了，就再摆一个空盘子（最多摆到这道题要用的盘子数）
+    private func growPlates() {
+        guard case let .group(n) = plateRule, count(.a) > 0,
+              plateCount < min(max(problem.plateSlots, 1), Spot.plates.count) else { return }
+        if activePlates.allSatisfy({ count($0) >= n }) {
+            withAnimation(.spring(duration: 0.45, bounce: 0.4)) { plateCount += 1 }
+            Sound.pop()
+        }
+    }
+
+    /// 开始"每盘放几个"时先摆一个空盘子
+    func beginGrouping() {
+        if plateCount == 0 { withAnimation(.spring(duration: 0.45, bounce: 0.4)) { plateCount = 1 } }
     }
 
     func beginDrag(_ id: Int, at p: CGPoint, hit: Spot?) {
@@ -192,11 +311,12 @@ final class StoryStage {
             onReject?(route)
             return
         }
-        if target != .supply, target != .away, count(target) >= limit { return }
+        if target != .supply, target != .away, count(target) >= (target.isPlate ? 12 : limit) { return }
         if route == forward { beatTokens.insert(id) } else { beatTokens.remove(id) }
         withAnimation(.spring(duration: 0.45, bounce: 0.35)) { relocate(id, to: target) }
         if target == .supply { removeLater(id, animated: true) }
         Sound.drop()
+        growPlates()
         onDrop?(route)
     }
 
@@ -213,7 +333,7 @@ final class StoryStage {
             onReject?(route)
             return
         }
-        guard count(target) < limit else { return }
+        guard count(target) < (target.isPlate ? 12 : limit) else { return }
         withAnimation(.spring(duration: 0.4, bounce: 0.5)) { beatTokens.insert(add(target, origin: .supply)) }
         Sound.drop()
         onDrop?(route)
@@ -235,17 +355,35 @@ final class StoryStage {
             ids = ordered(s).map(\.id)
         case .moved:
             ids = tokens.filter { ($0.spot == .a || $0.spot == .b) && ($0.origin == .a || $0.origin == .b) && $0.origin != $0.spot }.map(\.id)
+        case .perPlate:
+            ids = ordered(.p1).map(\.id)
+        case .inPlates:
+            ids = tokens.filter { $0.spot.isPlate }.map(\.id)
+        case .plates:
+            ids = []
         }
         return Set(ids)
     }
 
     var focusLabel: String {
         switch problem.ask {
-        case .more, .less: "多出来的"
-        case .total:       "合起来"
-        case .count:       "现在有的"
-        case .moved:       "给过去的"
+        case .more, .less: "the extra ones"
+        case .total:       "altogether"
+        case .count:       "now"
+        case .moved:       "given"
+        case .perPlate:    "one \(problem.plateWord)"
+        case .plates:      problem.plateWords
+        case .inPlates:    "in all"
         }
+    }
+
+    /// 点盘子跳着数：问几个盘子就 1、2、3……；问一共几个就 4、8、12……
+    private func countPlate(_ i: Int) {
+        guard problem.usesPlates, plateCounted[i] == nil, i < plateCount else { return }
+        let step = problem.ask == .plates ? 1 : count(Spot.plates[i])
+        let n = (plateCounted.values.max() ?? 0) + step
+        withAnimation(.spring(duration: 0.3, bounce: 0.6)) { plateCounted[i] = n }
+        Sound.step(min(plateCounted.count + 2, 10))
     }
 
     func countTap(_ id: Int) {
@@ -256,7 +394,10 @@ final class StoryStage {
     }
 
     func resetCounting() {
-        withAnimation(.easeOut(duration: 0.2)) { counted = [:] }
+        withAnimation(.easeOut(duration: 0.2)) {
+            counted = [:]
+            plateCounted = [:]
+        }
     }
 }
 
@@ -268,11 +409,13 @@ struct StageLayout {
     let lanes: [Spot]
     let sides: [Spot]
     let capacity: Int
+    /// 最多几个盘子（0 = 这道题不用盘子）
+    var plates = 0
 
     let pad: CGFloat = 14
 
     /// 竖着有空间时，盘子和篮子放在下面一排，把横向的位置都留给物品
-    var sidesBelow: Bool { !sides.isEmpty && size.height >= CGFloat(lanes.count) * 130 + 170 }
+    var sidesBelow: Bool { plates == 0 && !sides.isEmpty && size.height >= CGFloat(lanes.count) * 130 + 170 }
     var sideRowH: CGFloat { sidesBelow ? min(190, size.height * 0.36) : 0 }
 
     var labelW: CGFloat { min(120, size.width * 0.14) }
@@ -280,16 +423,22 @@ struct StageLayout {
     var itemsX0: CGFloat { pad + labelW + 16 }
     var itemsX1: CGFloat { size.width - pad - (sideW > 0 ? sideW + 22 : 14) }
 
-    private var lanesHeight: CGFloat { size.height - (sidesBelow ? sideRowH + 10 : 0) }
-    var laneH: CGFloat {
-        min(lanes.count == 1 ? 210 : 180, (lanesHeight - pad * 2) / CGFloat(max(lanes.count, 1)))
+    /// 有盘子的时候，人物那一排在上面，盘子在下面
+    private var lanesHeight: CGFloat {
+        if plates > 0 { return lanes.isEmpty ? 0 : min(170, size.height * 0.36) }
+        return size.height - (sidesBelow ? sideRowH + 10 : 0)
     }
-    private var lanesTop: CGFloat { (lanesHeight - laneH * CGFloat(lanes.count)) / 2 }
+    var laneH: CGFloat {
+        guard !lanes.isEmpty else { return 0 }
+        return min(lanes.count == 1 ? 210 : 180, (lanesHeight - pad * 2) / CGFloat(lanes.count))
+    }
+    private var lanesTop: CGFloat { plates > 0 ? pad : (lanesHeight - laneH * CGFloat(lanes.count)) / 2 }
 
     var cell: CGFloat {
         let n = max(capacity, 10)
         let groups = CGFloat((n - 1) / 5)
-        return min(84, laneH * 0.5, (itemsX1 - itemsX0) / (CGFloat(n) + groups * 0.35))
+        let byLane = laneH > 0 ? laneH * 0.5 : 84
+        return min(84, byLane, (itemsX1 - itemsX0) / (CGFloat(n) + groups * 0.35))
     }
 
     var gap: CGFloat { cell * 0.35 }
@@ -315,11 +464,62 @@ struct StageLayout {
         return CGRect(x: size.width - pad - sideW, y: top + CGFloat(j) * (h + spacing), width: sideW, height: h)
     }
 
+    // MARK: 盘子
+
+    private var platesTop: CGFloat { lanes.isEmpty ? pad : lanesTop + laneH * CGFloat(lanes.count) + 4 }
+    private var platesRight: CGFloat { size.width - pad - (sideW > 0 ? sideW + 22 : 0) }
+    /// 盘子一排最多几个
+    private var plateCols: Int { plates <= 4 ? plates : 3 }
+    private var plateRows: Int { plates == 0 ? 0 : (plates + plateCols - 1) / plateCols }
+    private let plateLabelH: CGFloat = 40
+
+    var plateD: CGFloat {
+        guard plates > 0 else { return 0 }
+        let spacing: CGFloat = 18
+        let w = (platesRight - pad - spacing * CGFloat(plateCols - 1)) / CGFloat(plateCols)
+        let h = (size.height - platesTop - pad - CGFloat(plateRows) * plateLabelH) / CGFloat(plateRows)
+        return max(60, min(250, w, h))
+    }
+
+    func plateRect(_ i: Int) -> CGRect {
+        let spacing: CGFloat = 18
+        let d = plateD
+        let row = i / plateCols, col = i % plateCols
+        let inRow = min(plateCols, plates - row * plateCols)
+        let rowW = CGFloat(inRow) * d + CGFloat(inRow - 1) * spacing
+        let x0 = pad + (platesRight - pad - rowW) / 2
+        let blockH = CGFloat(plateRows) * (d + plateLabelH)
+        let y0 = platesTop + max(0, (size.height - pad - platesTop - blockH) / 2)
+        return CGRect(x: x0 + CGFloat(col) * (d + spacing), y: y0 + CGFloat(row) * (d + plateLabelH), width: d, height: d)
+    }
+
+    /// 盘子里物品的大小：放 6 个以内时宽松，再多就缩小
+    func plateCell(_ count: Int) -> CGFloat {
+        let rows = max(2, (count + 2) / 3)
+        return plateD * min(0.27, 0.66 / CGFloat(rows))
+    }
+
+    /// 盘子里第 index 个的位置（一共 count 个）：一排 3 个居中摆，4 个摆成 2×2
+    func plateSlot(_ index: Int, count: Int, plate i: Int) -> CGPoint {
+        let r = plateRect(i)
+        let cols = count == 4 ? 2 : 3
+        let rows = (count + cols - 1) / cols
+        let c = plateCell(count) * 1.08
+        let row = index / cols
+        let inRow = min(cols, count - row * cols)
+        let x = r.midX + (CGFloat(index % cols) - CGFloat(inRow - 1) / 2) * c
+        let y = r.midY + (CGFloat(row) - CGFloat(rows - 1) / 2) * c
+        return CGPoint(x: x, y: y)
+    }
+
+    // MARK: 位置
+
     func slotX(_ index: Int) -> CGFloat {
         itemsX0 + cell * (CGFloat(index) + 0.5) + gap * CGFloat(index / 5)
     }
 
-    func slot(_ index: Int, in spot: Spot) -> CGPoint {
+    func slot(_ index: Int, in spot: Spot, count: Int = 0) -> CGPoint {
+        if let i = spot.plateIndex { return plateSlot(index, count: max(count, index + 1), plate: i) }
         switch spot {
         case .a, .b:
             let r = laneRect(spot) ?? .zero
@@ -335,14 +535,20 @@ struct StageLayout {
         case .supply:
             guard let r = sideRect(.supply) else { return .zero }
             return CGPoint(x: r.midX, y: r.midY - 8)
+        default:
+            return .zero
         }
     }
 
     func awayCell(_ r: CGRect) -> CGFloat { min(cell * 0.8, 54, (r.width - 20) / 3) }
 
-    func hit(_ p: CGPoint) -> Spot? {
+    func hit(_ p: CGPoint, plateCount: Int = 0) -> Spot? {
         for s in sides {
             if let r = sideRect(s), r.insetBy(dx: -12, dy: -12).contains(p) { return s }
+        }
+        for i in 0..<min(plateCount, plates) {
+            let r = plateRect(i).insetBy(dx: -14, dy: -14)
+            if hypot(p.x - r.midX, p.y - r.midY) <= r.width / 2 { return Spot.plates[i] }
         }
         for (i, s) in lanes.enumerated() where laneRect(i).insetBy(dx: -8, dy: -2).contains(p) {
             return s
@@ -360,11 +566,15 @@ struct StoryStageView: View {
     var body: some View {
         GeometryReader { geo in
             let p = stage.problem
-            let L = StageLayout(size: geo.size, lanes: p.lanes, sides: p.sides, capacity: stage.limit)
+            let L = StageLayout(size: geo.size, lanes: p.lanes, sides: p.sides, capacity: stage.limit,
+                                plates: p.usesPlates ? max(p.plateSlots, 1) : 0)
             let focus = stage.comparing ? stage.focus() : []
             ZStack(alignment: .topLeading) {
                 ForEach(Array(p.lanes.enumerated()), id: \.element) { i, spot in
                     lane(spot, rect: L.laneRect(i), L: L)
+                }
+                ForEach(0..<stage.plateCount, id: \.self) { i in
+                    plate(i, L: L)
                 }
                 ForEach(p.sides, id: \.self) { spot in
                     if let r = L.sideRect(spot) { side(spot, rect: r, L: L) }
@@ -383,7 +593,41 @@ struct StoryStageView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .overlay(alignment: .topTrailing) { wholeBadge }
             .coordinateSpace(name: "stage")
+        }
+    }
+
+    /// "Altogether: 12" 目标牌子，旁边是现在一共几个
+    @ViewBuilder
+    private var wholeBadge: some View {
+        if let target = stage.wholeTarget {
+            let now = stage.count(.a) + stage.count(.b)
+            HStack(spacing: 10) {
+                Text("Altogether")
+                    .font(.kid(17, weight: .heavy))
+                    .foregroundStyle(Palette.inkSoft)
+                Text("\(target)")
+                    .font(.kid(26, weight: .black))
+                    .foregroundStyle(Palette.ink)
+                if now > 0 {
+                    Text("now \(now)")
+                        .font(.kid(16, weight: .heavy))
+                        .foregroundStyle(now == target ? Color(hex: 0x4E8A5C) : Palette.coral)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background((now == target ? Palette.sage : Palette.coral).opacity(0.16), in: Capsule())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Palette.honey.opacity(0.22), in: Capsule())
+            .overlay(Capsule().strokeBorder(Palette.honey, lineWidth: 2.5))
+            .padding(16)
+            .animation(.spring(duration: 0.3), value: now)
+            .transition(.scale.combined(with: .opacity))
         }
     }
 
@@ -416,17 +660,8 @@ struct StoryStageView: View {
                 Avatar(image: cast.image, fallback: cast.emoji, tint: cast.tint, size: avatar)
                     .overlay(alignment: .bottomTrailing) {
                         if !stage.hiddenBadges.contains(spot), p.unknown != spot || n > 0 {
-                            Text("\(n)")
-                                .font(.kid(19, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .monospacedDigit()
-                                .contentTransition(.numericText())
-                                .frame(minWidth: 32, minHeight: 32)
-                                .padding(.horizontal, 4)
-                                .background(cast.ink, in: Capsule())
-                                .overlay(Capsule().strokeBorder(.white, lineWidth: 3))
+                            countBadge(n, color: cast.ink)
                                 .offset(x: 10, y: 4)
-                                .animation(.spring(duration: 0.3), value: n)
                         }
                     }
                 Text(cast.name(player))
@@ -444,7 +679,7 @@ struct StoryStageView: View {
                         .font(.kid(44, weight: .black))
                         .foregroundStyle(cast.ink.opacity(0.55))
                     if stage.canDrag(from: .supply) {
-                        Text("从篮子里拖\(p.item.name)过来")
+                        Text("Drag \(p.thing.many) from the basket")
                             .font(.kid(19, weight: .bold))
                             .foregroundStyle(Palette.inkSoft)
                     }
@@ -455,7 +690,64 @@ struct StoryStageView: View {
         }
     }
 
-    // MARK: 盘子和篮子
+    private func countBadge(_ n: Int, color: Color) -> some View {
+        Text("\(n)")
+            .font(.kid(19, weight: .heavy))
+            .foregroundStyle(.white)
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .frame(minWidth: 32, minHeight: 32)
+            .padding(.horizontal, 4)
+            .background(color, in: Capsule())
+            .overlay(Capsule().strokeBorder(.white, lineWidth: 3))
+            .animation(.spring(duration: 0.3), value: n)
+    }
+
+    // MARK: 盘子
+
+    private func plate(_ i: Int, L: StageLayout) -> some View {
+        let p = stage.problem
+        let spot = Spot.plates[i]
+        let r = L.plateRect(i)
+        let hovering = stage.hover == spot
+        let n = stage.count(spot)
+        let counted = stage.plateCounted[i]
+        let glow = stage.comparing && (p.ask == .plates || p.ask == .inPlates || (p.ask == .perPlate && i == 0))
+        return ZStack {
+            Circle()
+                .fill(Palette.honey.opacity(glow ? 0.25 : 0))
+                .frame(width: r.width * 1.12, height: r.width * 1.12)
+            ArtImage(name: "item_plate", fallback: "🍽️")
+                .frame(width: r.width, height: r.height)
+                .scaleEffect(hovering ? 1.06 : 1)
+                .overlay(
+                    Circle().strokeBorder(Palette.coral.opacity(hovering ? 0.8 : 0), lineWidth: 3.5)
+                )
+            if let counted {
+                Text("\(counted)")
+                    .font(.kid(22, weight: .black))
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(Palette.coral, in: Circle())
+                    .overlay(Circle().strokeBorder(.white, lineWidth: 3))
+                    .offset(x: r.width * 0.36, y: -r.width * 0.36)
+                    .transition(.scale(scale: 0.3).combined(with: .opacity))
+            }
+        }
+        .frame(width: r.width, height: r.height)
+        .overlay(alignment: .bottom) {
+            if !stage.hiddenBadges.contains(spot) {
+                countBadge(n, color: Palette.inkSoft)
+                    .offset(y: 30)
+            }
+        }
+        .contentShape(Circle())
+        .onTapGesture { stage.tapPlate(i) }
+        .position(x: r.midX, y: r.midY)
+        .transition(.scale(scale: 0.4).combined(with: .opacity))
+    }
+
+    // MARK: 用掉的盘子和篮子
 
     @ViewBuilder
     private func side(_ spot: Spot, rect: CGRect, L: StageLayout) -> some View {
@@ -466,7 +758,10 @@ struct StoryStageView: View {
                 Text(p.awayLabel)
                     .font(.kid(18, weight: .heavy))
                     .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .padding(.top, 14)
+                    .padding(.horizontal, 8)
                 Spacer()
                 if !stage.hiddenBadges.contains(.away), stage.count(.away) > 0 {
                     Text("\(stage.count(.away))")
@@ -495,6 +790,9 @@ struct StoryStageView: View {
                 Text(p.supplyLabel)
                     .font(.kid(17, weight: .heavy))
                     .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 6)
             }
             .frame(width: rect.width, height: rect.height)
             .background(
@@ -511,9 +809,9 @@ struct StoryStageView: View {
                 DragGesture(minimumDistance: 2, coordinateSpace: .named("stage"))
                     .onChanged { v in
                         stage.supplyDrag = v.location
-                        stage.hover = L.hit(v.location)
+                        stage.hover = L.hit(v.location, plateCount: stage.plateCount)
                     }
-                    .onEnded { v in stage.dropFromSupply(on: L.hit(v.location)) },
+                    .onEnded { v in stage.dropFromSupply(on: L.hit(v.location, plateCount: stage.plateCount)) },
                 including: canDrag ? .all : .none
             )
         }
@@ -523,11 +821,17 @@ struct StoryStageView: View {
 
     private func token(_ t: StoryToken, L: StageLayout, focused: Bool) -> some View {
         let p = stage.problem
-        let index = stage.ordered(t.spot).firstIndex { $0.id == t.id } ?? 0
+        let siblings = stage.ordered(t.spot)
+        let index = siblings.firstIndex { $0.id == t.id } ?? 0
         let dragging = stage.draggingID == t.id
         let inAway = t.spot == .away
-        let size = inAway && !dragging ? (L.sideRect(.away).map { L.awayCell($0) } ?? L.cell) : L.cell
-        let moved = (t.origin == .a || t.origin == .b) && t.origin != t.spot && t.spot != .away
+        let size: CGFloat = {
+            if dragging { return L.cell }
+            if inAway { return L.sideRect(.away).map { L.awayCell($0) } ?? L.cell }
+            if t.spot.isPlate { return L.plateCell(siblings.count) }
+            return L.cell
+        }()
+        let moved = (t.origin == .a || t.origin == .b) && t.origin != t.spot && t.spot != .away && !t.spot.isPlate
         let originTint = t.origin == .a ? p.a.tint : (p.b ?? p.a).tint
         let canDrag = stage.canDrag(from: t.spot)
         return TokenView(item: p.item, size: size, focused: focused,
@@ -535,14 +839,20 @@ struct StoryStageView: View {
             .opacity(inAway && !dragging ? 0.6 : 1)
             .opacity(t.spot == .supply ? 0 : 1)
             .scaleEffect(dragging ? 1.18 : 1)
-            .position(dragging ? stage.dragPoint : L.slot(index, in: t.spot))
+            .position(dragging ? stage.dragPoint : L.slot(index, in: t.spot, count: siblings.count))
             .zIndex(dragging ? 10 : 1)
             .transition(.scale(scale: 0.2).combined(with: .opacity))
-            .onTapGesture { stage.countTap(t.id) }
+            .onTapGesture {
+                if stage.comparing {
+                    stage.countTap(t.id)
+                } else if let i = t.spot.plateIndex {
+                    stage.tapPlate(i)
+                }
+            }
             .gesture(
                 DragGesture(minimumDistance: 2, coordinateSpace: .named("stage"))
-                    .onChanged { v in stage.beginDrag(t.id, at: v.location, hit: L.hit(v.location)) }
-                    .onEnded { v in stage.drop(t.id, on: L.hit(v.location)) },
+                    .onChanged { v in stage.beginDrag(t.id, at: v.location, hit: L.hit(v.location, plateCount: stage.plateCount)) }
+                    .onEnded { v in stage.drop(t.id, on: L.hit(v.location, plateCount: stage.plateCount)) },
                 including: canDrag ? .all : .none
             )
     }
@@ -572,8 +882,8 @@ struct StoryStageView: View {
             .stroke(Palette.inkSoft.opacity(0.35), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
             .transition(.opacity)
         }
-        // 把问到的那几个圈起来
-        let points = stage.tokens.filter { focus.contains($0.id) }.compactMap { t -> CGPoint? in
+        // 把问到的那几个圈起来（盘子题由盘子自己发光）
+        let points = p.usesPlates ? [] : stage.tokens.filter { focus.contains($0.id) }.compactMap { t -> CGPoint? in
             guard let i = stage.ordered(t.spot).firstIndex(where: { $0.id == t.id }) else { return nil }
             return L.slot(i, in: t.spot)
         }
