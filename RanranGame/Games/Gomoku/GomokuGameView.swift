@@ -129,7 +129,11 @@ struct GomokuGameView: View {
             .font(.kid(20, weight: .semibold))
             .foregroundStyle(Palette.inkSoft)
             .multilineTextAlignment(.center)
+            // 固定一行的高度：文字换了（比如带省略号的"正在想…"）也不能把棋盘顶得上下动
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity)
+            .frame(height: 30)
             .contentTransition(.opacity)
             .animation(.easeInOut(duration: 0.25), value: statusText)
     }

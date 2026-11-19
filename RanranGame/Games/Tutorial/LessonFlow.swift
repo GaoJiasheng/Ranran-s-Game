@@ -152,7 +152,7 @@ struct LessonScaffold<Board: View>: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         VStack(spacing: 18) {
                             header
-                            teacher
+                            teacher(fixed: false)
                             Spacer(minLength: 0)
                             controls
                         }
@@ -162,7 +162,7 @@ struct LessonScaffold<Board: View>: View {
                 } else {
                     VStack(spacing: 18) {
                         header
-                        teacher
+                        teacher(fixed: true)
                         board()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         controls
@@ -207,7 +207,8 @@ struct LessonScaffold<Board: View>: View {
         }
     }
 
-    private var teacher: some View {
+    /// fixed：竖屏时老师在棋盘上面，气泡固定三行高，话长话短都不会把棋盘顶来顶去
+    private func teacher(fixed: Bool) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Avatar(image: "avatar_owl", fallback: "🦉", tint: Palette.honey, size: 86)
                 .keyframeAnimator(initialValue: 0.0, trigger: flow.line) { v, y in
@@ -221,9 +222,12 @@ struct LessonScaffold<Board: View>: View {
                     .font(.kid(23, weight: .bold))
                     .foregroundStyle(Palette.ink)
                     .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(fixed ? 3 : nil)
+                    .minimumScaleFactor(fixed ? 0.75 : 1)
+                    .fixedSize(horizontal: false, vertical: !fixed)
                     .contentTransition(.opacity)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(height: fixed ? 96 : nil, alignment: .topLeading)
                 HStack(spacing: 10) {
                     Button {
                         flow.replay()
