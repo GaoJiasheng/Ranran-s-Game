@@ -252,7 +252,7 @@ struct StoryPlayView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
-                Narrator.shared.say(p.sentences.map { StoryText.plain($0.text, p, player: store.name) }.joined())
+                Narrator.shared.say(p.sentences.map { StoryText.plain($0.text, p, player: store.name) })
             } label: {
                 Image(systemName: "ear.fill")
                     .font(.system(size: 22, weight: .bold))

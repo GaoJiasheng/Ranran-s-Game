@@ -62,7 +62,7 @@ final class StorySession {
     init(level: StoryLevel) {
         self.level = level
         mode = level.mode
-        problems = level.makeProblems()
+        problems = StoryBank.problems(for: level) ?? level.makeProblems()
         stage = StoryStage(problem: problems[0])
     }
 
@@ -141,9 +141,11 @@ final class StorySession {
 
     private func render(_ template: String) -> String { StoryText.plain(template, problem, player: player) }
 
-    private func say(_ line: CoachLine, speak: Bool = true) {
+    /// parts：分成几句读（每句都有录音），不给就读整句
+    private func say(_ line: CoachLine, speak: Bool = true, parts: [String]? = nil) {
         withAnimation(.spring(duration: 0.4, bounce: 0.3)) { coach = line }
-        if speak { Narrator.shared.say(render(line.text)) }
+        guard speak else { return }
+        if let parts { Narrator.shared.say(parts.map(render)) } else { Narrator.shared.say(render(line.text)) }
     }
 
     private func prepareStage() {
@@ -439,7 +441,8 @@ final class StorySession {
         if let next = nextHelp {
             help = next
             withAnimation(.spring(duration: 0.4)) { phase = .offerHelp }
-            say(CoachLine(text: hint + (next == .act ? " Let's act it out!" : " Let's draw a model!"), tone: .hint))
+            let offer = next == .act ? StoryVoiceLines.actIt : StoryVoiceLines.drawIt
+            say(CoachLine(text: hint + " " + offer, tone: .hint), parts: [hint, offer])
             return
         }
         wrongAfterHelp += 1
@@ -475,9 +478,9 @@ final class StorySession {
     }
 
     private func praise(first: Bool) -> String {
-        guard first else { return ["That's right!", "Yes, you got it!"].randomElement()! }
-        if streak >= 3 { return "\(streak) in a row! Amazing!" }
-        return ["Correct!", "Well done!", "Great thinking!", "You got it!"].randomElement()!
+        guard first else { return StoryVoiceLines.laterTry.randomElement()! }
+        if streak >= 3 { return StoryVoiceLines.streak(streak) }
+        return StoryVoiceLines.firstTry.randomElement()!
     }
 
     private func solved(first: Bool) async {
@@ -496,7 +499,7 @@ final class StorySession {
         let praise = praise(first: first)
         withAnimation(.spring(duration: 0.5, bounce: 0.4)) { phase = .solved }
         say(CoachLine(text: praise, tone: .praise, equation: p.explain), speak: false)
-        await Narrator.shared.speak(praise + " " + StoryText.plain(p.answerTemplate, p, player: player, blank: "\(p.answer)"))
+        await Narrator.shared.speak([praise, StoryText.plain(p.answerTemplate, p, player: player, blank: "\(p.answer)")])
     }
 
     private func reveal() {
@@ -511,6 +514,7 @@ final class StorySession {
             }
             phase = .solved
         }
-        say(CoachLine(text: "The answer is \(p.answer). Let's look at it together.", tone: .reveal, equation: p.explain))
+        say(CoachLine(text: StoryVoiceLines.answerIs(p.answer) + " " + StoryVoiceLines.lookTogether, tone: .reveal, equation: p.explain),
+            parts: [StoryVoiceLines.answerIs(p.answer), StoryVoiceLines.lookTogether])
     }
 }

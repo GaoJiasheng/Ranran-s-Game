@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Generate and validate Ranran's Mandarin lesson narration.
+"""Generate and validate Ranran's Mandarin or English lesson narration.
 
 Run from any directory: python3 tools/voice/generate_voice.py
+English narration: python3 tools/voice/generate_voice.py --profile en
 Dependencies are isolated in /tmp/mandarin-tts-env; ffmpeg/ffprobe must be on PATH.
 Only `speak` is synthesized. Intermediate audio stays in a temporary directory.
 An unchanged file is skipped only after its settings, digest, and audio pass QA.
@@ -29,6 +30,7 @@ VENV = Path('/tmp/mandarin-tts-env')
 MANIFEST = ROOT / 'tools/voice/manifest.json'
 INDEX = ROOT / 'tools/voice/voice_index.json'
 OUTPUT = ROOT / 'RanranGame/Voice'
+PROFILE = 'zh'
 EDGE_VERSION = '7.3.1'
 SETTINGS = {
     'pipeline_version': 2,
@@ -56,6 +58,20 @@ SETTINGS = {
     'limiter_release_ms': 50,
     'encoded_loudness_tolerance_lu': 0.75,
 }
+
+
+def select_profile(profile):
+    """Keep the original Mandarin settings (and their cache identity) intact."""
+    global PROFILE, MANIFEST, INDEX, OUTPUT, SETTINGS
+    PROFILE = profile
+    MANIFEST = ROOT / ('tools/voice/manifest_en.json' if profile == 'en'
+                       else 'tools/voice/manifest.json')
+    INDEX = ROOT / ('tools/voice/voice_index_en.json' if profile == 'en'
+                    else 'tools/voice/voice_index.json')
+    OUTPUT = ROOT / ('RanranGame/VoiceEN' if profile == 'en' else 'RanranGame/Voice')
+    SETTINGS = dict(SETTINGS, voice='en-GB-SoniaNeural' if profile == 'en'
+                    else 'zh-CN-XiaoxiaoNeural', rate='-10%' if profile == 'en' else '-8%',
+                    bitrate_bps=40000 if profile == 'en' else 64000)
 
 
 def bootstrap():
@@ -128,8 +144,12 @@ def install_file(source, destination):
 
 
 def save_index(index, temporary):
+    serialized = json.dumps(index, ensure_ascii=False, indent=2) + '\n'
+    # In particular, an all-skipped Mandarin run must leave its index untouched.
+    if INDEX.exists() and INDEX.read_text(encoding='utf-8') == serialized:
+        return
     checkpoint = temporary / 'voice_index.json'
-    checkpoint.write_text(json.dumps(index, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    checkpoint.write_text(serialized, encoding='utf-8')
     install_file(checkpoint, INDEX)
 
 
@@ -146,6 +166,8 @@ def load_manifest():
             raise ValueError(f'Unsafe or invalid file stem: {name!r}')
         if name in names:
             raise ValueError(f'Duplicate manifest file: {name}')
+        if PROFILE == 'en' and not name.startswith('en_'):
+            raise ValueError(f'English file stem must start with en_: {name}')
         if not isinstance(speak, str) or not speak.strip():
             raise ValueError(f'Missing speak string: {name}')
         names.add(name)
@@ -177,7 +199,7 @@ async def process_audio(raw, wav, mp3):
             'aresample=24000'
         )
         await ffmpeg('-i', wav, '-af', filters, '-ac', '1', '-ar', '24000',
-                     '-map_metadata', '-1', '-c:a', 'libmp3lame', '-b:a', '64k',
+                     '-map_metadata', '-1', '-c:a', 'libmp3lame', '-b:a', str(SETTINGS['bitrate_bps']),
                      '-compression_level', '0', mp3)
         _, log = await ffmpeg('-i', mp3, '-af', f'{norm}:print_format=json', '-f', 'null', '-')
         encoded_lufs = finite(loudness_json(log)['input_i'])
@@ -197,8 +219,8 @@ async def validate(path, speak):
     stream = streams[0]
     if (stream.get('codec_name') != 'mp3' or stream.get('channels') != 1
             or int(stream.get('sample_rate', 0)) != 24000
-            or int(stream.get('bit_rate', 0)) != 64000):
-        raise ValueError('Output must be mono 24 kHz 64 kbps MP3')
+            or int(stream.get('bit_rate', 0)) != SETTINGS['bitrate_bps']):
+        raise ValueError(f'Output must be mono 24 kHz {SETTINGS["bitrate_bps"] // 1000} kbps MP3')
     duration = finite(probe['format']['duration'])
     if not 0.4 <= duration <= 30:
         raise ValueError(f'Duration {duration:.3f}s outside 0.4–30s')
@@ -208,13 +230,25 @@ async def validate(path, speak):
     if not spoken:
         raise ValueError('No countable spoken characters')
     cps = spoken / duration
-    if spoken >= 6:
+    if PROFILE == 'en':
+        # Contractions count as one word; numerals count as written word tokens.
+        # This never changes the exact manifest string sent to the synthesizer.
+        words = len(re.findall(r"[A-Za-z0-9]+(?:['’][A-Za-z0-9]+)*", speak))
+        if not words:
+            raise ValueError('No countable English words')
+        wps = words / duration
+        # Brief affirmations need proportionally more articulation/edge padding.
+        plausible = (1.2 <= wps <= 4.5 if words >= 4
+                     else words / 4.5 <= duration <= words / 1.2 + 0.45)
+        if not plausible:
+            raise ValueError(f'Implausible speaking rate: {words} words / {duration:.3f}s = {wps:.2f}/s')
+    elif spoken >= 6:
         plausible = 2 <= cps <= 7
     else:
         # A one-syllable affirmation has proportionally more articulation,
         # punctuation and edge-padding time. Allow 450ms of fixed overhead.
         plausible = spoken / 7 <= duration <= spoken / 2 + 0.45
-    if not plausible:
+    if PROFILE == 'zh' and not plausible:
         raise ValueError(f'Implausible speaking rate: {spoken} characters / {duration:.3f}s = {cps:.2f}/s')
     _, log = await ffmpeg('-v', 'info', '-xerror', '-i', path, '-af',
                          'volumedetect,loudnorm=I=-16:TP=-1.5:LRA=7:print_format=json',
@@ -232,7 +266,7 @@ async def validate(path, speak):
         raise ValueError(f'Encoded loudness {lufs:.2f} LUFS outside -16 ±0.75 LU')
     if peak > -0.5:
         raise ValueError(f'Encoded true peak too high: {peak:.2f} dBTP')
-    return {
+    measurement = {
         'duration_seconds': round(duration, 6),
         'chinese_characters': han,
         'spoken_characters': spoken,
@@ -242,6 +276,11 @@ async def validate(path, speak):
         'true_peak_dbtp': peak,
         'size_bytes': path.stat().st_size,
     }
+    if PROFILE == 'en':
+        for key in ('chinese_characters', 'spoken_characters', 'characters_per_second'):
+            del measurement[key]
+        measurement.update(words=words, words_per_second=round(wps, 4))
+    return measurement
 
 
 async def run(args):
@@ -262,10 +301,14 @@ async def run(args):
     OUTPUT.mkdir(parents=True, exist_ok=True)
     wanted = {item['file'] for item in manifest}
     removed = 0
-    for path in OUTPUT.glob('*.mp3'):
-        if path.stem not in wanted:
-            path.unlink()
-            removed += 1
+    # Obsolete-file deletion is strictly confined to the English output folder.
+    if PROFILE == 'en':
+        if OUTPUT != ROOT / 'RanranGame/VoiceEN' or OUTPUT.is_symlink():
+            raise ValueError('Unsafe English cleanup directory')
+        for path in OUTPUT.glob('*.mp3'):
+            if path.stem not in wanted:
+                path.unlink()
+                removed += 1
     index = {key: value for key, value in index.items() if key in wanted}
     semaphore = asyncio.Semaphore(args.concurrency)
     counts = {'generated': 0, 'skipped': 0, 'failed': 0}
@@ -290,11 +333,13 @@ async def run(args):
                             raise ValueError('Stored audio digest differs')
                         measurement = await validate(destination, speak)
                         metrics[name] = measurement
+                        changed = cached.get('validation') != measurement
                         cached['validation'] = measurement
                         counts['skipped'] += 1
                         completed += 1
                         print(f'[{completed}/{len(manifest)}] skipped {name}', flush=True)
-                        save_index(index, temporary)
+                        if changed:
+                            save_index(index, temporary)
                         return
                     except (RuntimeError, ValueError, KeyError, OSError) as error:
                         print(f'Regenerating {name}: {error}', flush=True)
@@ -331,7 +376,8 @@ async def run(args):
                             failures[name] = detail
                             counts['failed'] += 1
                         else:
-                            await asyncio.sleep(2 ** attempt + random.uniform(0.2, 1.0))
+                            backoff = (5 if PROFILE == 'en' else 1) * 2 ** attempt
+                            await asyncio.sleep(backoff + random.uniform(0.2, 1.0))
                 completed += 1
                 print(f'[{completed}/{len(manifest)}] '
                       f'{"FAILED" if name in failures else "generated"} {name}', flush=True)
@@ -361,18 +407,23 @@ async def run(args):
         for name in sample:
             item = by_name[name]
             value = await validate(OUTPUT / f'{name}.mp3', item['speak'])
-            print(f'  {name}: {value["duration_seconds"]:.3f}s; '
-                  f'{value["chinese_characters"]} Chinese chars; '
-                  f'{value["characters_per_second"]:.2f} chars/s; '
+            rate = (f'{value["words"]} words; {value["words_per_second"]:.2f} words/s'
+                    if PROFILE == 'en' else
+                    f'{value["chinese_characters"]} Chinese chars; '
+                    f'{value["characters_per_second"]:.2f} chars/s')
+            print(f'  {name}: {value["duration_seconds"]:.3f}s; {rate}; '
                   f'{value["integrated_lufs"]:.2f} LUFS; {item["speak"]}', flush=True)
     return 1 if failures or actual != wanted or len(metrics) != len(manifest) else 0
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--profile', choices=('zh', 'en'), default='zh',
+                        help='Narration profile (default: zh)')
     parser.add_argument('--concurrency', type=int, default=3, choices=range(1, 5),
                         help='Maximum simultaneous synthesis/processing jobs (default: 3)')
     args = parser.parse_args()
+    select_profile(args.profile)
     bootstrap()
     return asyncio.run(run(args))
 

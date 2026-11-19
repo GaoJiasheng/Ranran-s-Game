@@ -20,7 +20,9 @@
   每章三关 = 新加坡数学的 C-P-A：**Act it out**（亲手拖物品、往盘子里分）→ **Draw a model**（每读一句画一段线段图，
   part-whole 和 comparison 两种模型）→ **Just read**。答错时先针对错法解释，再给帮助（只看文字 → 画线段图 → 用实物演）。
   **每道题一次就答对 = 1 颗星**，星星当场飞进右上角的计数器；连对会出现 🔥 连击；关卡页显示一共做对了多少题。
-  每关 6 / 8 / 10 题（演 / 画 / 读），题目每次随机生成。
+  每关 6 / 8 / 10 题（演 / 画 / 读）。题目来自预先出好的题库（每关 3 套，轮流出、套内打乱），
+  题库里的故事句、问题、答案句和针对错法的提示都**预先录好了英文配音**（Codex 生成，英式女声 Sonia）；
+  拖物品时报实时数量这类随时变化的话用系统语音读。名字按 "Ranran" 录，改了名字的话带名字的句子会用系统语音。
 
 **我的**（点主页左上角头像进入，不占主界面）：
 - 自定义名字（最多 8 个字），不需要登录，所有数据只存在这台 iPad 上。
@@ -42,6 +44,8 @@ RanranGame/
   Games/Tutorial/        教学：课程数据和进度、判题逻辑、课程表、一课的流程和画面（五子棋 / 象棋各一个棋盘）
   Games/Story/           加减乘除：出题器（题型 + 常见错法 + 线段图）、演故事的舞台（含分盘子）、线段图、做题流程、英文朗读
   Tutorials/             教学内容（gomoku.json、xiangqi.json，由 tools/tutorials/build_tutorials.py 生成）
+  Content/               加减乘除题库 story_bank.json（由 tools/storybank 生成）
+  VoiceEN/               加减乘除英文配音（en_<哈希>.mp3）
   Voice/                 教学配音（Codex 用 edge-tts「晓晓」生成，文件名是文字的哈希）
   Sounds/                合成的音效（落子声、故事里的拿起/放下、答对/答错、过关等）
   Assets.xcassets/       插画、头像、图标
@@ -49,8 +53,10 @@ art/                     Codex 生成的原始插画
 docs/tutorials.md        每个游戏的教学规划
 tools/                   重新生成音效的脚本（make_sounds.py：棋子等；make_sfx.py：故事和关键时刻）
 tools/tutorials/         教学内容生成脚本（改完运行它，再重新生成配音）
+tools/storybank/         题库生成器：zsh tools/storybank/build.sh（出题 + 检查 + 写英文配音清单）。
+                         注意：每次运行都会重新随机出题，之后要重新生成英文配音（--profile en）
 tools/voice/             配音：build_manifest.py 收集要读的句子（含象棋多音字处理：车→jū、将→jiàng），
-                         generate_voice.py 生成 / 更新 mp3（只重做改过的句子）
+                         generate_voice.py 生成 / 更新 mp3（只重做改过的句子；--profile en 是英文）
 ```
 
 ## 装到 iPad 上
