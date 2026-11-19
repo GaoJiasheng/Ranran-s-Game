@@ -66,14 +66,15 @@ struct GomokuSetupView: View {
             HStack {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
                 Spacer()
-                StarCounter()
+                // 五子棋里拿到的星星 = 每一档的星星加起来
+                StarCounter(value: store.gomokuStarTotal)
             }
         }
     }
 
     private func challengePanel(wide: Bool) -> some View {
         let showcase = LevelShowcase(level: level,
-                                     best: store.gomokuBest(level),
+                                     stars: store.gomokuStars(level),
                                      wins: store.gomokuWins(level),
                                      recommended: level == store.gomokuRecommended,
                                      row: !wide,
@@ -91,7 +92,7 @@ struct GomokuSetupView: View {
             }
             LevelLadder(selection: selection,
                         recommended: store.gomokuRecommended.number,
-                        best: { store.gomokuBest(GomokuLevel($0)) })
+                        stars: { store.gomokuStars(GomokuLevel($0)) })
         }
 
         return Group {
@@ -152,7 +153,8 @@ struct GomokuSetupView: View {
 
 private struct LevelShowcase: View {
     let level: GomokuLevel
-    let best: Int
+    /// 这一档一共拿到的星星
+    let stars: Int
     let wins: Int
     let recommended: Bool
     /// 竖屏时头像放左边、文字放右边，给难度阶梯多留高度
@@ -255,13 +257,15 @@ private struct LevelShowcase: View {
                 .minimumScaleFactor(0.8)
 
             HStack(spacing: 6) {
-                if best > 0 {
-                    ForEach(0..<3, id: \.self) { i in
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(i < best ? Palette.honey : Palette.ink.opacity(0.12))
-                    }
-                    Text("赢过 \(wins) 次")
-                        .padding(.leading, 6)
+                if wins > 0 {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(Palette.honey)
+                    Text("\(stars)")
+                        .font(.kid(17, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                        .monospacedDigit()
+                    Text("· 赢过 \(wins) 次")
+                        .padding(.leading, 2)
                 } else {
                     Text("还没有赢过这一档")
                 }
@@ -309,7 +313,8 @@ private struct StepButton: View {
 private struct LevelLadder: View {
     @Binding var selection: Int
     let recommended: Int
-    let best: (Int) -> Int
+    /// 每一档一共拿到的星星
+    let stars: (Int) -> Int
 
     private let count = 10
     private let spacing: CGFloat = 10
@@ -328,7 +333,7 @@ private struct LevelLadder: View {
                 ForEach(1...count, id: \.self) { n in
                     bar(n, width: barW, height: height(n), zone: barsHeight)
                         .position(x: x(n, barW), y: markerZone + barsHeight / 2)
-                    stars(n)
+                    tally(n)
                         .position(x: x(n, barW), y: markerZone + barsHeight + 18)
                     if n == recommended && n != selection {
                         Text("推荐")
@@ -406,14 +411,17 @@ private struct LevelLadder: View {
         .frame(width: width, height: zone)
     }
 
-    private func stars(_ n: Int) -> some View {
-        let b = best(n)
+    /// 柱子下面："★ 7"，这一档一共拿到几颗
+    private func tally(_ n: Int) -> some View {
+        let k = stars(n)
         return HStack(spacing: 2) {
-            ForEach(0..<3, id: \.self) { i in
-                Image(systemName: "star.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(i < b ? Palette.honey : Palette.ink.opacity(0.1))
-            }
+            Image(systemName: "star.fill")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(k > 0 ? Palette.honey : Palette.ink.opacity(0.15))
+            Text("\(k)")
+                .font(.kid(13, weight: .heavy))
+                .foregroundStyle(k > 0 ? Palette.ink : Palette.inkSoft.opacity(0.5))
+                .monospacedDigit()
         }
     }
 

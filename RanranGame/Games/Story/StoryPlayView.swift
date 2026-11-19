@@ -93,6 +93,16 @@ struct StoryPlayView: View {
                 }
             }
             if session.phase == .telling && session.sentence == nil { session.start() }
+            #if DEBUG
+            // 调试截图用：启动参数 -result 4 直接弹出"答对 4 题"的结算
+            let shown = UserDefaults.standard.integer(forKey: "result")
+            if shown > 0, let level = session.level {
+                session.stop()
+                outcome = StoryOutcome(level: level, stars: shown >= session.problems.count ? 3 : 2,
+                                       correct: min(shown, session.problems.count),
+                                       total: session.problems.count, isRecord: true)
+            }
+            #endif
         }
         .onDisappear { session.stop() }
         .onChange(of: session.phase) { _, phase in
@@ -110,7 +120,10 @@ struct StoryPlayView: View {
     /// 星星落到计数器上，才真的加上去（数字跟着跳）
     private func land(_ id: UUID) {
         flying.removeAll { $0 == id }
-        store.addStars(1)
+        // 记在这一关上；错题本里重做对了，记回那道题原来的关
+        if let level = session.level ?? mistake.map({ StoryLevel($0.level) }) {
+            store.earnStoryStar(level)
+        }
         Sound.step(min(4 + session.streak, 10))
     }
 
@@ -180,7 +193,7 @@ struct StoryPlayView: View {
             voiceOn.toggle()
             if !voiceOn { Narrator.shared.stop() }
         }
-        StarCounter()
+        StarCounter(value: store.storyStarTotal)
     }
 
     private var title: String {
@@ -568,7 +581,7 @@ struct StoryResultOverlay: View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
             Color.black.opacity(0.12).ignoresSafeArea()
-            if outcome.stars == 3 { ConfettiView() }
+            if outcome.correct == outcome.total { ConfettiView() }
 
             VStack(spacing: 18) {
                 Avatar(image: "avatar_owl", fallback: "🦉", tint: Palette.honey, size: 150)
@@ -581,14 +594,16 @@ struct StoryResultOverlay: View {
                     .font(.kid(23, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
 
-                HStack(spacing: 22) {
-                    ForEach(0..<3, id: \.self) { i in
+                // 这一关几道题就有几个星位，第一下就答对的那几个亮起来 —— 和飞到右上角的星星一一对应
+                let size: CGFloat = outcome.total <= 6 ? 54 : outcome.total <= 8 ? 46 : 40
+                HStack(spacing: outcome.total <= 6 ? 16 : 10) {
+                    ForEach(0..<outcome.total, id: \.self) { i in
                         ZStack {
                             Image(systemName: "star.fill")
-                                .font(.system(size: 58, weight: .bold))
+                                .font(.system(size: size, weight: .bold))
                                 .foregroundStyle(Palette.ink.opacity(0.08))
                             Image(systemName: "star.fill")
-                                .font(.system(size: 58, weight: .bold))
+                                .font(.system(size: size, weight: .bold))
                                 .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
                                                                 startPoint: .top, endPoint: .bottom))
                                 .shadow(color: Palette.honey.opacity(0.6), radius: 10)
@@ -648,9 +663,9 @@ struct StoryResultOverlay: View {
         }
         .task {
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { appeared = true }
-            for i in 0..<outcome.stars {
-                try? await Task.sleep(for: .milliseconds(i == 0 ? 500 : 300))
-                Sound.step(6 + i * 2)
+            for i in 0..<outcome.correct {
+                try? await Task.sleep(for: .milliseconds(i == 0 ? 500 : 180))
+                Sound.step(min(4 + i, 10))
                 withAnimation(.spring(duration: 0.45, bounce: 0.6)) { lit = i + 1 }
             }
             if outcome.isRecord {
@@ -670,10 +685,11 @@ struct StoryResultOverlay: View {
     }
 
     private var advice: String {
+        let got = outcome.correct == 1 ? "+1 star" : "+\(outcome.correct) stars"
         switch outcome.stars {
-        case 3: "You understood every story. +\(outcome.correct) stars!"
-        case 2: "+\(outcome.correct) stars! The tricky ones are saved for practice."
-        default: "+\(outcome.correct) stars. Practice makes perfect!"
+        case 3: return "You understood every story. \(got) and a crown!"
+        case 2: return "\(got)! The tricky ones are saved for practice."
+        default: return "\(got). Play again to collect more!"
         }
     }
 }

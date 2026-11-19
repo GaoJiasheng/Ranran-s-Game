@@ -54,6 +54,7 @@ struct StorySetupView: View {
                     ForEach(Array(row.enumerated()), id: \.element) { c, chapter in
                         ChapterCard(chapter: chapter,
                                     best: { store.storyBest($0) },
+                                    stars: { store.storyStars($0) },
                                     recommended: store.storyRecommended) { level in
                             Sound.tap()
                             playing = level
@@ -94,7 +95,8 @@ struct StorySetupView: View {
                     .padding(.vertical, 11)
                     .softCard(radius: 40)
                 }
-                StarCounter()
+                // 这个游戏里拿到的星星 = 下面每一关的星星加起来
+                StarCounter(value: store.storyStarTotal)
             }
         }
     }
@@ -141,8 +143,11 @@ struct StorySetupView: View {
 private struct ChapterCard: View {
     let chapter: StoryChapter
     let best: (StoryLevel) -> Int
+    let stars: (StoryLevel) -> Int
     let recommended: StoryLevel
     let open: (StoryLevel) -> Void
+
+    private var chapterStars: Int { chapter.levels.reduce(0) { $0 + stars($1) } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -159,6 +164,12 @@ private struct ChapterCard: View {
                         .minimumScaleFactor(0.6)
                 }
                 Spacer(minLength: 0)
+                if chapterStars > 0 {
+                    StarTally(count: chapterStars, size: 17)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Palette.honey.opacity(0.16), in: Capsule())
+                }
             }
             Text(chapter.subtitle)
                 .font(.kid(15, weight: .semibold))
@@ -177,7 +188,8 @@ private struct ChapterCard: View {
                             .frame(height: 5)
                             .padding(.top, 30)
                     }
-                    LevelNode(level: level, stars: best(level), tint: chapter.tint,
+                    LevelNode(level: level, cleared: best(level) > 0, perfect: best(level) >= 3,
+                              stars: stars(level), tint: chapter.tint,
                               recommended: level == recommended) { open(level) }
                 }
             }
@@ -211,9 +223,12 @@ private struct ChapterCard: View {
     }
 }
 
-/// 一关："圆 + 下面写字和星星"。
+/// 一关："圆 + 下面写字和这一关拿到的星星"。做完过一次圆就涂满；有一次全对就戴皇冠。
 private struct LevelNode: View {
     let level: StoryLevel
+    let cleared: Bool
+    let perfect: Bool
+    /// 这一关一共拿到的星星
     let stars: Int
     let tint: Color
     let recommended: Bool
@@ -230,12 +245,13 @@ private struct LevelNode: View {
                     .foregroundStyle(Palette.inkSoft)
                     .lineLimit(1)
                     .fixedSize()
-                starRow
+                StarTally(count: stars, size: 14)
+                    .opacity(stars > 0 ? 1 : 0.35)
             }
             .frame(minWidth: 66)
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .accessibilityLabel("Level \(level.number), \(level.mode.title), \(stars) stars")
+        .accessibilityLabel("Level \(level.number), \(level.mode.title), \(stars) stars\(perfect ? ", perfect" : "")")
         .onAppear {
             guard recommended else { return }
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { bounce = true }
@@ -245,18 +261,30 @@ private struct LevelNode: View {
     private func circle(_ d: CGFloat) -> some View {
         ZStack {
             Circle()
-                .fill(stars > 0 ? tint : Palette.paper)
-                .overlay(Circle().strokeBorder(tint, lineWidth: stars > 0 ? 0 : 3.5))
-                .shadow(color: tint.opacity(stars > 0 ? 0.45 : 0.15), radius: 10, y: 6)
+                .fill(cleared ? tint : Palette.paper)
+                .overlay(Circle().strokeBorder(tint, lineWidth: cleared ? 0 : 3.5))
+                .shadow(color: tint.opacity(cleared ? 0.45 : 0.15), radius: 10, y: 6)
             VStack(spacing: 0) {
                 Image(systemName: level.mode.icon)
                     .font(.system(size: d * 0.3, weight: .bold))
                 Text("\(level.number)")
                     .font(.kid(d * 0.2, weight: .heavy))
             }
-            .foregroundStyle(stars > 0 ? .white : Palette.ink.opacity(0.8))
+            .foregroundStyle(cleared ? .white : Palette.ink.opacity(0.8))
         }
         .frame(width: d, height: d)
+        .overlay(alignment: .topTrailing) {
+            if perfect {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Palette.honey)
+                    .padding(5)
+                    .background(.white, in: Circle())
+                    .shadow(color: Palette.honey.opacity(0.5), radius: 4, y: 2)
+                    .offset(x: 8, y: -6)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .top) {
             if recommended {
                 Text("Next")
@@ -271,14 +299,23 @@ private struct LevelNode: View {
             }
         }
     }
+}
 
-    private var starRow: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<3, id: \.self) { i in
-                Image(systemName: "star.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(i < stars ? Palette.honey : Palette.ink.opacity(0.1))
-            }
+/// "★ 12"：这里一共拿到几颗星星
+private struct StarTally: View {
+    let count: Int
+    var size: CGFloat = 14
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "star.fill")
+                .font(.system(size: size * 0.85, weight: .bold))
+                .foregroundStyle(count > 0 ? Palette.honey : Palette.ink.opacity(0.25))
+            Text("\(count)")
+                .font(.kid(size, weight: .heavy))
+                .foregroundStyle(count > 0 ? Palette.ink : Palette.inkSoft)
+                .monospacedDigit()
+                .contentTransition(.numericText())
         }
     }
 }

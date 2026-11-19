@@ -182,7 +182,6 @@ struct GomokuGameView: View {
                 awardedRounds.insert(round)
                 let stars = game.winStars
                 let record = store.recordGomokuWin(level, stars: stars)
-                store.addStars(stars)
                 lastResult = RoundResult(stars: stars, usedUndo: game.usedUndo, usedHint: game.usedHint, isRecord: record)
                 lossStreak = 0
             } else if !game.humanWon, game.winner != nil, !countedLosses.contains(round) {

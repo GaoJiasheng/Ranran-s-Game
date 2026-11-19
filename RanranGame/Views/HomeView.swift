@@ -259,19 +259,21 @@ private struct ComingSoonCard: View {
     }
 }
 
-/// 星星数量。
+/// 星星数量。主页是全部的星星；游戏页传 value，只显示这个游戏里拿到的（= 各关星星加起来）。
 struct StarCounter: View {
     enum Size { case regular, large }
     var size: Size = .regular
+    var value: Int? = nil
     @Environment(PlayerStore.self) private var store
 
     var body: some View {
         let big = size == .large
+        let shown = value ?? store.totalStars
         HStack(spacing: 10) {
             Image(systemName: "star.fill")
                 .font(.system(size: big ? 30 : 24, weight: .bold))
                 .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral], startPoint: .top, endPoint: .bottom))
-            Text("\(store.totalStars)")
+            Text("\(shown)")
                 .font(.kid(big ? 34 : 28, weight: .heavy))
                 .foregroundStyle(Palette.ink)
                 .contentTransition(.numericText())
@@ -280,7 +282,7 @@ struct StarCounter: View {
         .padding(.horizontal, big ? 26 : 20)
         .padding(.vertical, big ? 14 : 11)
         .softCard(radius: 40)
-        .animation(.spring, value: store.totalStars)
+        .animation(.spring, value: shown)
     }
 }
 

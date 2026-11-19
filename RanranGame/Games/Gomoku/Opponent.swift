@@ -156,6 +156,9 @@ struct GomokuConfig: Hashable, Identifiable {
 extension PlayerStore {
     func gomokuBest(_ level: GomokuLevel) -> Int { count("gomoku.best.\(level.number)") }
     func gomokuWins(_ level: GomokuLevel) -> Int { count("gomoku.wins.\(level.number)") }
+    /// 这一档一共拿到的星星（每赢一盘都加）
+    func gomokuStars(_ level: GomokuLevel) -> Int { count("gomoku.stars.\(level.number)") }
+    var gomokuStarTotal: Int { GomokuLevel.all.reduce(0) { $0 + gomokuStars($1) } }
 
     /// 推荐挑战的档位：已经赢过的最高一档再往上一档。
     var gomokuRecommended: GomokuLevel {
@@ -163,10 +166,11 @@ extension PlayerStore {
         return GomokuLevel(cleared + 1)
     }
 
-    /// 记一次胜利，返回是不是这一档的新纪录。
+    /// 记一次胜利（星星记在这一档上并加进总数），返回是不是这一档的新纪录。
     @discardableResult
     func recordGomokuWin(_ level: GomokuLevel, stars: Int) -> Bool {
         increment("gomoku.wins.\(level.number)")
+        earnStars(stars, key: "gomoku.stars.\(level.number)")
         let isRecord = stars > gomokuBest(level)
         if isRecord { setCount("gomoku.best.\(level.number)", stars) }
         return isRecord

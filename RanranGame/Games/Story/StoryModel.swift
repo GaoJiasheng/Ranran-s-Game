@@ -1289,7 +1289,15 @@ struct StoryMistake: Codable, Identifiable, Hashable {
 }
 
 extension PlayerStore {
+    /// 这一关最好的一次做得怎么样（1~3，3 = 全对）；只用来判断过没过关、有没有皇冠，不当星星显示
     func storyBest(_ level: StoryLevel) -> Int { count("wp.best.\(level.number)") }
+    func storyPerfect(_ level: StoryLevel) -> Bool { storyBest(level) >= 3 }
+
+    /// 这一关一共拿到的星星：每次第一下就答对都加一颗，重玩也算
+    func storyStars(_ level: StoryLevel) -> Int { count("wp.stars.\(level.number)") }
+    func storyStars(_ chapter: StoryChapter) -> Int { chapter.levels.reduce(0) { $0 + storyStars($1) } }
+    var storyStarTotal: Int { StoryLevel.all.reduce(0) { $0 + storyStars($1) } }
+    func earnStoryStar(_ level: StoryLevel) { earnStars(1, key: "wp.stars.\(level.number)") }
 
     /// 推荐的关：第一个还没拿到星星的关
     var storyRecommended: StoryLevel {

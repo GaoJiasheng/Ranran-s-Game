@@ -104,6 +104,7 @@ final class PlayerStore {
         counts = (defaults.dictionary(forKey: "counts") as? [String: Int]) ?? [:]
         records = (try? Self.decoder.decode([GameRecord].self, from: Data(contentsOf: recordsURL))) ?? []
         storyMistakes = (try? Self.decoder.decode([StoryMistake].self, from: Data(contentsOf: mistakesURL))) ?? []
+        migrateStarLedger()
     }
 
     // MARK: 名字
@@ -118,9 +119,29 @@ final class PlayerStore {
 
     // MARK: 星星和计数
 
+    /// 星星的规矩：每颗星都记在拿到它的那一关上（"<游戏>.stars.<关>"），同时加进总数。
+    /// 各游戏页右上角显示这个游戏的合计，主页显示全部。
     func addStars(_ n: Int) {
         totalStars += n
         defaults.set(totalStars, forKey: "totalStars")
+    }
+
+    /// 给某一关记 n 颗星，并加进总数
+    func earnStars(_ n: Int, key: String) {
+        guard n > 0 else { return }
+        setCount(key, count(key) + n)
+        addStars(n)
+    }
+
+    /// 老存档里五子棋的星星只加进了总数、没记在哪一档上，按棋谱补记一次
+    private func migrateStarLedger() {
+        guard count("stars.ledger") == 0 else { return }
+        for r in records where r.game == "gomoku" && r.stars > 0 {
+            guard let level = r.opponentLevel else { continue }
+            counts["gomoku.stars.\(level)", default: 0] += r.stars
+        }
+        counts["stars.ledger"] = 1
+        defaults.set(counts, forKey: "counts")
     }
 
     func count(_ key: String) -> Int { counts[key, default: 0] }
@@ -206,6 +227,7 @@ final class PlayerStore {
         }
         persistRecords()
         persistMistakes()
+        migrateStarLedger()
     }
 
     static let encoder: JSONEncoder = {
