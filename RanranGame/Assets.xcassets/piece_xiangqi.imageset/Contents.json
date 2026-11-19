@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "piece_xiangqi.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

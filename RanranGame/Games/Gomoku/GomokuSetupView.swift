@@ -9,6 +9,7 @@ struct GomokuSetupView: View {
     @AppStorage("gomoku.level") private var savedLevel = 0
     @State private var config: GomokuConfig?
     @State private var appeared = false
+    @State private var showTutorial = false
 
     private var level: GomokuLevel {
         savedLevel == 0 ? store.gomokuRecommended : GomokuLevel(savedLevel)
@@ -46,9 +47,16 @@ struct GomokuSetupView: View {
         }
         .onAppear {
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "tutorial") { showTutorial = true }
+            #endif
         }
         .navigationDestination(item: $config) { c in
             GomokuGameView(config: c)
+                .toolbar(.hidden, for: .navigationBar)
+        }
+        .navigationDestination(isPresented: $showTutorial) {
+            TutorialHomeView(game: "gomoku", accent: Palette.coral)
                 .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -63,9 +71,10 @@ struct GomokuSetupView: View {
                     .font(.kid(20, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
             }
-            HStack {
+            HStack(spacing: 14) {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
                 Spacer()
+                TutorialButton { showTutorial = true }
                 // 五子棋里拿到的星星 = 每一档的星星加起来
                 StarCounter(value: store.gomokuStarTotal)
             }
@@ -73,7 +82,7 @@ struct GomokuSetupView: View {
     }
 
     private func challengePanel(wide: Bool) -> some View {
-        let showcase = LevelShowcase(level: level,
+        let showcase = LevelShowcase(level: LevelInfo(level),
                                      stars: store.gomokuStars(level),
                                      wins: store.gomokuWins(level),
                                      recommended: level == store.gomokuRecommended,
@@ -149,10 +158,28 @@ struct GomokuSetupView: View {
     }
 }
 
-// MARK: - 左边：当前这一档的对手
+// MARK: - 左边：当前这一档的对手（五子棋、象棋共用）
 
-private struct LevelShowcase: View {
-    let level: GomokuLevel
+/// 一档难度在选择页上要显示的东西
+struct LevelInfo: Equatable {
+    let number: Int
+    let blurb: String
+    let previous: Int?
+    let next: Int?
+    var character: Opponent { Opponent.forLevel(number) }
+
+    init(number: Int, blurb: String, range: ClosedRange<Int> = 1...10) {
+        self.number = number
+        self.blurb = blurb
+        previous = number > range.lowerBound ? number - 1 : nil
+        next = number < range.upperBound ? number + 1 : nil
+    }
+
+    init(_ level: GomokuLevel) { self.init(number: level.number, blurb: level.blurb) }
+}
+
+struct LevelShowcase: View {
+    let level: LevelInfo
     /// 这一档一共拿到的星星
     let stars: Int
     let wins: Int
@@ -286,7 +313,7 @@ private struct LevelShowcase: View {
     }
 }
 
-private struct StepButton: View {
+struct StepButton: View {
     let systemName: String
     let enabled: Bool
     let action: () -> Void
@@ -310,7 +337,7 @@ private struct StepButton: View {
 // MARK: - 右边：难度阶梯
 
 /// 十根越来越高的柱子。按住左右滑动或者点一下来选档位，每换一档响一个越来越高的音。
-private struct LevelLadder: View {
+struct LevelLadder: View {
     @Binding var selection: Int
     let recommended: Int
     /// 每一档一共拿到的星星
@@ -384,7 +411,7 @@ private struct LevelLadder: View {
     }
 
     private func bar(_ n: Int, width: CGFloat, height: CGFloat, zone: CGFloat) -> some View {
-        let tint = GomokuLevel(n).character.tint
+        let tint = Opponent.forLevel(n).tint
         let lit = n <= selection
         let selected = n == selection
         return VStack {
@@ -449,7 +476,7 @@ private struct LevelLadder: View {
 
     /// 站在选中柱子顶上的小伙伴头像
     private var marker: some View {
-        let o = GomokuLevel(selection).character
+        let o = Opponent.forLevel(selection)
         return VStack(spacing: -2) {
             Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 66)
                 .id(o)

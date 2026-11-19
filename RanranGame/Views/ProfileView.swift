@@ -7,6 +7,8 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selected: GameRecord?
+    /// 棋谱列表看哪个游戏
+    @State private var recordGame = "gomoku"
     @State private var practicing: StoryMistake?
     @State private var exporting = false
     @State private var exportDocument: SaveDocument?
@@ -64,8 +66,10 @@ struct ProfileView: View {
             }
         }
         .navigationDestination(item: $selected) { record in
-            GomokuReplayView(record: record)
-                .toolbar(.hidden, for: .navigationBar)
+            Group {
+                if record.game == "xiangqi" { XiangqiReplayView(record: record) } else { GomokuReplayView(record: record) }
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .navigationDestination(item: $practicing) { mistake in
             StoryPlayView(mistake: mistake)
@@ -119,12 +123,18 @@ struct ProfileView: View {
     // MARK: 棋谱
 
     private var recordsCard: some View {
-        let records = store.records(for: "gomoku")
+        let records = store.records(for: recordGame)
         return VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                Text("五子棋棋谱")
+                Text("棋谱")
                     .font(.kid(28, weight: .heavy))
                     .foregroundStyle(Palette.ink)
+                Picker("游戏", selection: $recordGame) {
+                    Text("五子棋").tag("gomoku")
+                    Text("象棋").tag("xiangqi")
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
                 if !records.isEmpty {
                     Text("\(records.count) 盘")
                         .font(.kid(18, weight: .bold))
@@ -426,12 +436,21 @@ private struct RecordRow: View {
         .buttonStyle(PressableStyle(scale: 0.98))
     }
 
-    private var level: GomokuLevel? { record.opponentLevel.map(GomokuLevel.init) }
+    private var xiangqi: Bool { record.game == "xiangqi" }
+    private var level: Int? { record.opponentLevel }
 
     @ViewBuilder private var leading: some View {
         if let level {
-            let o = level.character
+            let o = Opponent.forLevel(level)
             Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 62)
+        } else if xiangqi {
+            ZStack {
+                XiangqiPieceView(piece: XPiece(.red, .king), diameter: 30).offset(x: -9, y: 3)
+                XiangqiPieceView(piece: XPiece(.black, .king), diameter: 30).offset(x: 9, y: -3)
+            }
+            .frame(width: 62, height: 62)
+            .background(Circle().fill(Palette.sky.opacity(0.4)))
+            .overlay(Circle().strokeBorder(.white, lineWidth: 4))
         } else {
             ZStack {
                 StoneView(stone: .black, diameter: 28).offset(x: -9, y: 3)
@@ -445,18 +464,22 @@ private struct RecordRow: View {
 
     private var title: String {
         guard let level else { return "和家人下" }
-        return "第 \(level.number) 档 · \(level.character.name)"
+        return "第 \(level) 档 · \(Opponent.forLevel(level).name)"
     }
 
     private var subtitle: String {
-        var parts = [record.date.shortChinese, "共 \(record.moves.count) 手"]
-        if let c = record.playerColor { parts.append(c == 1 ? "执黑" : "执白") }
+        var parts = [record.date.shortChinese, xiangqi ? "共 \(record.moves.count) 步" : "共 \(record.moves.count) 手"]
+        if let c = record.playerColor {
+            parts.append(xiangqi ? (c == 1 ? "执红" : "执黑") : (c == 1 ? "执黑" : "执白"))
+        }
         return parts.joined(separator: " · ")
     }
 
     private var result: (text: String, tint: Color) {
-        guard let w = record.winner else { return ("平局", Palette.sky) }
-        guard let me = record.playerColor else { return (w == 1 ? "黑棋赢" : "白棋赢", Palette.lilac) }
+        guard let w = record.winner else { return (xiangqi ? "和棋" : "平局", Palette.sky) }
+        guard let me = record.playerColor else {
+            return (xiangqi ? (w == 1 ? "红方赢" : "黑方赢") : (w == 1 ? "黑棋赢" : "白棋赢"), Palette.lilac)
+        }
         return w == me ? ("赢了", Palette.sage) : ("输了", Palette.blush)
     }
 }

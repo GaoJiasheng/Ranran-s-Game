@@ -36,6 +36,11 @@ enum Opponent: String, CaseIterable, Identifiable, Hashable {
 
     var image: String { "avatar_\(rawValue)" }
 
+    /// 第 n 档（1…10）由哪位小伙伴来下；五子棋和象棋用同一套
+    static func forLevel(_ n: Int) -> Opponent {
+        allCases.first { $0.levels.contains(n) } ?? .bunny
+    }
+
     var emoji: String {
         switch self {
         case .bunny:  "🐰"

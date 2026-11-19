@@ -244,3 +244,36 @@ struct PulseRing: View {
             .allowsHitTesting(false)
     }
 }
+
+/// 教学里"点这里 / 走到这里"的提示点：白底、珊瑚色圈，外面一圈波纹往外扩散。在木头棋盘上也看得很清楚。
+struct TargetBeacon: View {
+    var color: Color = Palette.coral
+    @State private var ripple = false
+
+    var body: some View {
+        GeometryReader { g in
+            let d = min(g.size.width, g.size.height)
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.7), lineWidth: max(2, d * 0.05))
+                    .scaleEffect(ripple ? 1.45 : 0.9)
+                    .opacity(ripple ? 0 : 0.9)
+                Circle()
+                    .fill(.white.opacity(0.6))
+                    .frame(width: d * 0.62, height: d * 0.62)
+                Circle()
+                    .strokeBorder(color, lineWidth: max(3, d * 0.09))
+                    .frame(width: d * 0.62, height: d * 0.62)
+                Circle()
+                    .fill(color)
+                    .frame(width: d * 0.16, height: d * 0.16)
+            }
+            .frame(width: d, height: d)
+            .frame(width: g.size.width, height: g.size.height)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.2).repeatForever(autoreverses: false)) { ripple = true }
+        }
+        .allowsHitTesting(false)
+    }
+}

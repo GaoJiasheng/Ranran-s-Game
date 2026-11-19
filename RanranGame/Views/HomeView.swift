@@ -3,6 +3,7 @@ import SwiftUI
 /// 合集里的游戏。以后新游戏加在这里。
 enum GameEntry: String, Hashable, CaseIterable {
     case gomoku
+    case xiangqi
     case story
 }
 
@@ -36,19 +37,19 @@ struct HomeView: View {
                                     .padding(.top, 4)
                             }
 
-                            let gomoku = GameHeroCard(game: .gomoku) { open(.gomoku) }
-                            let story = GameHeroCard(game: .story) { open(.story) }
                             Group {
                                 if wide {
-                                    HStack(spacing: 28) {
-                                        gomoku.frame(maxWidth: .infinity)
-                                        story.frame(maxWidth: .infinity)
+                                    HStack(spacing: 24) {
+                                        ForEach(GameEntry.allCases, id: \.self) { g in
+                                            GameHeroCard(game: g) { open(g) }.frame(maxWidth: .infinity)
+                                        }
                                     }
-                                    .frame(minHeight: 280, maxHeight: 540)
+                                    .frame(minHeight: 280, maxHeight: 560)
                                 } else {
-                                    VStack(spacing: 24) {
-                                        gomoku.frame(minHeight: 250, maxHeight: 560)
-                                        story.frame(minHeight: 250, maxHeight: 560)
+                                    VStack(spacing: 20) {
+                                        ForEach(GameEntry.allCases, id: \.self) { g in
+                                            GameHeroCard(game: g) { open(g) }.frame(minHeight: 200, maxHeight: 400)
+                                        }
                                     }
                                 }
                             }
@@ -69,6 +70,8 @@ struct HomeView: View {
                 switch route {
                 case .game(.gomoku):
                     GomokuSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.xiangqi):
+                    XiangqiSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.story):
                     StorySetupView().toolbar(.hidden, for: .navigationBar)
                 case .profile:
@@ -82,6 +85,7 @@ struct HomeView: View {
             // 调试截图用：启动参数 -route gomoku / story / profile 直接打开那一页
             switch UserDefaults.standard.string(forKey: "route") {
             case "gomoku":  path = [.game(.gomoku)]
+            case "xiangqi": path = [.game(.xiangqi)]
             case "story":   path = [.game(.story)]
             case "profile": path = [.profile]
             default: break
@@ -145,20 +149,68 @@ private struct GameHeroCard: View {
     let game: GameEntry
     let action: () -> Void
 
-    private var title: String { game == .gomoku ? "五子棋" : "加减乘除" }
-    private var subtitle: String { game == .gomoku ? "十档难度，从小兔打到龙宝宝" : "英文应用题，演一演、画一画、算一算" }
-    private var art: String { game == .gomoku ? "card_gomoku" : "card_math" }
-    private var base: Color { game == .gomoku ? Color(hex: 0xF8DCCB) : Color(hex: 0xDCEBF5) }
-    private var fade: Color { game == .gomoku ? Color(hex: 0xFBE9DD) : Color(hex: 0xEAF3F8) }
-    private var button: Color { game == .gomoku ? Palette.coral : Color(hex: 0x5FA3C9) }
+    private var title: String {
+        switch game {
+        case .gomoku: "五子棋"
+        case .xiangqi: "象棋"
+        case .story: "加减乘除"
+        }
+    }
+    private var subtitle: String {
+        switch game {
+        case .gomoku: "十档难度，从小兔打到龙宝宝"
+        case .xiangqi: "跟猫头鹰老师学，再挑战小伙伴"
+        case .story: "英文应用题，演一演、画一画、算一算"
+        }
+    }
+    private var art: String {
+        switch game {
+        case .gomoku: "card_gomoku"
+        case .xiangqi: "card_xiangqi"
+        case .story: "card_math"
+        }
+    }
+    private var base: Color {
+        switch game {
+        case .gomoku: Color(hex: 0xF8DCCB)
+        case .xiangqi: Color(hex: 0xF9DDD2)
+        case .story: Color(hex: 0xDCEBF5)
+        }
+    }
+    private var fade: Color {
+        switch game {
+        case .gomoku: Color(hex: 0xFBE9DD)
+        case .xiangqi: Color(hex: 0xFBE6DE)
+        case .story: Color(hex: 0xEAF3F8)
+        }
+    }
+    private var button: Color {
+        switch game {
+        case .gomoku: Palette.coral
+        case .xiangqi: Color(hex: 0xC9624F)
+        case .story: Color(hex: 0x5FA3C9)
+        }
+    }
 
     var body: some View {
         Button(action: action) {
             GeometryReader { g in
+            if g.size.width < 560 {
+                tall(g.size)
+            } else {
             ZStack(alignment: .leading) {
                 base
                     .overlay(alignment: .trailing) {
-                        ArtImage(name: art, fallback: game == .gomoku ? "⚫️⚪️" : "🍎", contentMode: .fill)
+                        // 卡片比插画还扁（竖屏三张叠放）时，按高度放下整张插画、靠右，免得把角色的头裁掉
+                        if g.size.width / max(g.size.height, 1) > 1.5 {
+                            ArtImage(name: art, fallback: "🎲", contentMode: .fit)
+                                .frame(width: g.size.height * 1.5, height: g.size.height)
+                                .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
+                                                             .init(color: .black, location: 0.25)],
+                                                     startPoint: .leading, endPoint: .trailing))
+                        } else {
+                            ArtImage(name: art, fallback: "🎲", contentMode: .fill)
+                        }
                     }
                     .clipped()
 
@@ -179,10 +231,53 @@ private struct GameHeroCard: View {
             }
             .frame(width: g.size.width, height: g.size.height)
             }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
             .softCard(radius: 44, fill: .clear)
         }
         .buttonStyle(PressableStyle(scale: 0.97))
+    }
+
+    /// 卡片很窄（横屏三张并排）时：插画在上，文字在下
+    private func tall(_ size: CGSize) -> some View {
+        VStack(spacing: 0) {
+            ArtImage(name: art, fallback: "🎲", contentMode: .fill)
+                .frame(width: size.width, height: size.height * 0.5, alignment: .trailing)
+                .clipped()
+                .overlay(alignment: .bottom) {
+                    LinearGradient(colors: [fade.opacity(0), fade], startPoint: .top, endPoint: .bottom)
+                        .frame(height: size.height * 0.12)
+                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.kid(46, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(subtitle)
+                    .font(.kid(19, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                HStack(spacing: 10) {
+                    Image(systemName: "play.fill")
+                    Text("开始玩")
+                }
+                .font(.kid(22, weight: .heavy))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 26)
+                .padding(.vertical, 13)
+                .background(button, in: Capsule())
+                .shadow(color: button.opacity(0.45), radius: 14, y: 8)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 10)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(fade)
+        }
+        .frame(width: size.width, height: size.height)
     }
 
     private func content(accessory show: Bool) -> some View {
@@ -216,7 +311,7 @@ private struct GameHeroCard: View {
     }
 
     @ViewBuilder private var accessory: some View {
-        if game == .gomoku {
+        if game == .gomoku || game == .xiangqi {
             HStack(spacing: -14) {
                 ForEach(Opponent.allCases) { o in
                     Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 54)
