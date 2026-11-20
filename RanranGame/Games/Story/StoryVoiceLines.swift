@@ -10,8 +10,10 @@ enum StoryVoiceLines {
     static let drawIt = "Let's draw a model!"
     static func answerIs(_ n: Int) -> String { "The answer is \(n)." }
     static let lookTogether = "Let's look at it together."
+    /// 一关做完以后，第一次答错的题再做一遍之前说
+    static let retryIntro = "Let's try the tricky ones again."
 
     static var all: [String] {
-        firstTry + laterTry + (3...20).map(streak) + [actIt, drawIt, lookTogether] + (0...120).map(answerIs)
+        firstTry + laterTry + (3...20).map(streak) + [actIt, drawIt, lookTogether, retryIntro] + (0...120).map(answerIs)
     }
 }

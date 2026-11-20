@@ -5,28 +5,44 @@ struct StoryPlayView: View {
     @Environment(PlayerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @AppStorage(Narrator.voiceKey) private var voiceOn = true
+    @AppStorage(StoryLevel.unlockAllKey) private var unlockAll = false
 
     @State private var session: StorySession
     @State private var outcome: StoryOutcome?
-    /// 正在飞向右上角的星星
+    /// 正在飞向右上角的星星（星星答对时就已经记上了，计数器先不算还在飞的，落地才跳）
     @State private var flying: [UUID] = []
-    /// 从错题本进来时的那道错题
-    private let mistake: StoryMistake?
+    /// 一次就答对、但这道题的星星以前拿过了：不飞星星，只冒一个小勾
+    @State private var acks: [UUID] = []
+    /// 这一轮里每道题拿没拿到新星星（和 session.firstTry 一一对应）
+    @State private var earned: [Bool] = []
+    /// 错题练习：正在练的那道错题，和后面排着的
+    @State private var mistake: StoryMistake?
+    @State private var queue: [StoryMistake] = []
+    @State private var practiceTotal = 0
     private let onNextLevel: ((StoryLevel) -> Void)?
 
     init(level: StoryLevel, onNextLevel: ((StoryLevel) -> Void)? = nil) {
         _session = State(initialValue: StorySession(level: level))
-        mistake = nil
         self.onNextLevel = onNextLevel
     }
 
     init(mistake: StoryMistake) {
-        _session = State(initialValue: StorySession(practice: mistake.problem))
-        self.mistake = mistake
+        self.init(mistakes: [mistake])
+    }
+
+    /// 一道接一道练错题（加减乘除首页的 "Tricky ones"）
+    init(mistakes: [StoryMistake]) {
+        let first = mistakes[0]
+        _session = State(initialValue: StorySession(practice: first.problem))
+        _mistake = State(initialValue: first)
+        _queue = State(initialValue: Array(mistakes.dropFirst()))
+        _practiceTotal = State(initialValue: mistakes.count)
         onNextLevel = nil
     }
 
     private var tint: Color { session.level?.chapter.tint ?? Palette.lilac }
+    /// 星星记在哪一关上：错题记回那道题原来的关
+    private var starLevel: StoryLevel? { session.level ?? mistake.map { StoryLevel($0.level) } }
 
     var body: some View {
         GeometryReader { geo in
@@ -61,18 +77,23 @@ struct StoryPlayView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 22)
 
+                let launch = CGPoint(x: geo.size.width - 210, y: geo.size.height - 330)
                 ForEach(flying, id: \.self) { id in
-                    FlyingStar(from: CGPoint(x: geo.size.width - 210, y: geo.size.height - 330),
-                               to: CGPoint(x: geo.size.width - 96, y: 52)) {
+                    FlyingStar(from: launch, to: CGPoint(x: geo.size.width - 96, y: 52)) {
                         land(id)
                     }
                     .allowsHitTesting(false)
                     .zIndex(20)
                 }
+                ForEach(acks, id: \.self) { id in
+                    AlreadyCollected(at: launch) { acks.removeAll { $0 == id } }
+                        .allowsHitTesting(false)
+                        .zIndex(20)
+                }
 
                 if let outcome {
                     StoryResultOverlay(outcome: outcome,
-                                       onNext: outcome.level.next.map { next in { goNext(next) } },
+                                       onNext: outcome.canGoNext ? outcome.level.next.map { next in { goNext(next) } } : nil,
                                        onAgain: playAgain,
                                        onLeave: { dismiss() })
                         .transition(.opacity)
@@ -81,49 +102,79 @@ struct StoryPlayView: View {
             }
         }
         .onAppear {
-            session.player = store.name
-            session.onFirstAnswer = { problem, right, answer in
-                store.recordStoryAnswer(problem.schema, correct: right)
-                if right {
-                    store.recordStorySolved()
-                    // 一次就答对：一颗星星飞到右上角
-                    withAnimation(.spring(duration: 0.3)) { flying.append(UUID()) }
-                } else if let level = session.level {
-                    store.saveMistake(StoryMistake(level: level.number, problem: problem, answer: answer))
-                }
-            }
+            configure(session)
             if session.phase == .telling && session.sentence == nil { session.start() }
             #if DEBUG
-            // 调试截图用：启动参数 -result 4 直接弹出"答对 4 题"的结算
+            // 调试截图用：启动参数 -result 4 直接弹出"第一下就答对 4 题"的结算
             let shown = UserDefaults.standard.integer(forKey: "result")
             if shown > 0, let level = session.level {
                 session.stop()
-                outcome = StoryOutcome(level: level, stars: shown >= session.problems.count ? 3 : 2,
-                                       correct: min(shown, session.problems.count),
-                                       total: session.problems.count, isRecord: true)
+                let total = session.mainCount, correct = min(shown, total)
+                let rating = correct >= total ? 3 : correct * 4 >= total * 3 ? 2 : 1
+                outcome = makeOutcome(level: level, rating: rating, correct: correct,
+                                      slots: (0..<total).map { $0 < correct ? ($0 % 3 == 2 ? .had : .new) : .missed },
+                                      isRecord: true, wasUnlocked: false)
             }
             #endif
         }
         .onDisappear { session.stop() }
         .onChange(of: session.phase) { _, phase in
             guard phase == .finished, let level = session.level else { return }
-            let stars = session.stars
-            let record = store.recordStoryLevel(level, stars: stars)
+            let rating = session.stars
+            let nextWasOpen = level.next.map { store.storyUnlocked($0, unlockAll: unlockAll) } ?? true
+            let record = store.recordStoryLevel(level, stars: rating)
+            let slots: [StoryOutcome.Slot] = session.firstTry.indices.map { i in
+                guard session.firstTry[i] else { return .missed }
+                return i < earned.count && earned[i] ? .new : .had
+            }
             Sound.fanfare()
             withAnimation(.spring(duration: 0.5)) {
-                outcome = StoryOutcome(level: level, stars: stars, correct: session.correctCount,
-                                       total: session.problems.count, isRecord: record)
+                outcome = makeOutcome(level: level, rating: rating, correct: session.correctCount,
+                                      slots: slots, isRecord: record, wasUnlocked: nextWasOpen)
             }
         }
     }
 
-    /// 星星落到计数器上，才真的加上去（数字跟着跳）
+    private func makeOutcome(level: StoryLevel, rating: Int, correct: Int, slots: [StoryOutcome.Slot],
+                             isRecord: Bool, wasUnlocked: Bool) -> StoryOutcome {
+        let next = level.next
+        let nextOpen = next.map { store.storyUnlocked($0, unlockAll: unlockAll) } ?? false
+        return StoryOutcome(level: level, stars: rating, correct: correct, total: slots.count, isRecord: isRecord,
+                            slots: slots, levelStars: store.storyStars(level), levelMax: level.maxStars,
+                            passed: store.storyPassed(level),
+                            opened: !wasUnlocked && nextOpen ? next : nil,
+                            canGoNext: store.storyPassed(level) && nextOpen)
+    }
+
+    /// 把这一轮的作答接到存档上：星星、统计、错题本
+    private func configure(_ s: StorySession) {
+        s.player = store.name
+        let runLevel = s.level
+        s.onFirstAnswer = { problem, right, answer in
+            store.recordStoryAnswer(problem.schema, correct: right)
+            if right {
+                store.recordStorySolved()
+                // 一次就答对：这道题的星星还没拿过，就飞一颗到右上角；拿过了只冒一个小勾
+                let got = starLevel.map { store.collectStoryStar(problem, level: $0) } ?? false
+                if runLevel != nil { earned.append(got) }
+                withAnimation(.spring(duration: 0.3)) {
+                    if got { flying.append(UUID()) } else { acks.append(UUID()) }
+                }
+            } else if let level = runLevel {
+                earned.append(false)
+                store.saveMistake(StoryMistake(level: level.number, problem: problem, answer: answer))
+            }
+        }
+        // 再练一轮：不算成绩、不给星星，第一下就答对的话错题本里这道题算练会了
+        s.onRetryAnswer = { problem, right in
+            guard right, let level = runLevel else { return }
+            store.markStoryProblemFixed(problem, level: level.number)
+        }
+    }
+
+    /// 星星落到计数器上，计数器才跳（星星本身答对时就已经记上了）
     private func land(_ id: UUID) {
         flying.removeAll { $0 == id }
-        // 记在这一关上；错题本里重做对了，记回那道题原来的关
-        if let level = session.level ?? mistake.map({ StoryLevel($0.level) }) {
-            store.earnStoryStar(level)
-        }
         Sound.step(min(4 + session.streak, 10))
     }
 
@@ -135,9 +186,18 @@ struct StoryPlayView: View {
         }
     }
 
+    /// 再玩一次：换下一套题，刚做过的那套不会原样再来
     private func playAgain() {
-        withAnimation(.easeOut(duration: 0.25)) { outcome = nil }
-        session.restartLevel()
+        guard let level = session.level else { return }
+        session.stop()
+        let fresh = StorySession(level: level, avoiding: session.problemKeys)
+        configure(fresh)
+        earned = []
+        withAnimation(.easeOut(duration: 0.25)) {
+            outcome = nil
+            session = fresh
+        }
+        fresh.start()
     }
 
     // MARK: 顶栏
@@ -151,7 +211,11 @@ struct StoryPlayView: View {
                     Text(title)
                         .font(.kid(30, weight: .heavy))
                         .foregroundStyle(Palette.ink)
-                    if let level = session.level {
+                    if session.isRetry {
+                        Label("Tricky ones again", systemImage: "arrow.counterclockwise")
+                            .font(.kid(16, weight: .bold))
+                            .foregroundStyle(Palette.coral)
+                    } else if let level = session.level {
                         Label(level.mode.title, systemImage: level.mode.icon)
                             .font(.kid(16, weight: .bold))
                             .foregroundStyle(Palette.inkSoft)
@@ -193,11 +257,15 @@ struct StoryPlayView: View {
             voiceOn.toggle()
             if !voiceOn { Narrator.shared.stop() }
         }
-        StarCounter(value: store.storyStarTotal)
+        StarCounter(value: store.storyStarTotal - flying.count)
     }
 
     private var title: String {
-        guard let level = session.level else { return "Try Again" }
+        guard let level = session.level else {
+            // 错题练习：几道题一道接一道时显示做到第几道
+            let n = practiceTotal - queue.count
+            return practiceTotal > 1 ? "Tricky ones · \(n) of \(practiceTotal)" : "Tricky ones"
+        }
         return "Level \(level.number) · \(level.chapter.title)"
     }
 
@@ -219,25 +287,59 @@ struct StoryPlayView: View {
         .accessibilityLabel("\(session.streak) in a row")
     }
 
+    /// 一关的进度：每道题一个点，第一下就答对是绿的、答错是粉的。
+    /// 再练一轮时，前面那一轮收成一个"✓ 7/10"，后面跟着 ↻ 和要再做的那几道题的点。
     private var progress: some View {
         HStack(spacing: 8) {
-            ForEach(0..<session.problems.count, id: \.self) { i in
-                let current = i == session.index && session.phase != .finished
-                Capsule()
-                    .fill(dotColor(i))
-                    .frame(width: current ? 30 : 14, height: 14)
-                    .overlay(Capsule().strokeBorder(.white, lineWidth: current ? 3 : 0))
+            if session.isRetry {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .black))
+                    Text("\(session.correctCount)/\(session.mainCount)")
+                        .font(.kid(16, weight: .heavy))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(Palette.sage)
+                .transition(.scale.combined(with: .opacity))
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(Palette.coral)
+                    .padding(.leading, 4)
+                ForEach(0..<session.retryCount, id: \.self) { j in
+                    let current = session.mainCount + j == session.index && session.phase != .finished
+                    Capsule()
+                        .fill(retryColor(j))
+                        .frame(width: current ? 30 : 14, height: 14)
+                        .overlay(Capsule().strokeBorder(.white, lineWidth: current ? 3 : 0))
+                }
+            } else {
+                ForEach(0..<session.mainCount, id: \.self) { i in
+                    let current = i == session.index && session.phase != .finished
+                    Capsule()
+                        .fill(dotColor(i))
+                        .frame(width: current ? 30 : 14, height: 14)
+                        .overlay(Capsule().strokeBorder(.white, lineWidth: current ? 3 : 0))
+                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .softCard(radius: 24)
         .animation(.spring(duration: 0.4), value: session.index)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(session.isRetry
+            ? "Tricky ones again: \(session.index - session.mainCount + 1) of \(session.retryCount)"
+            : "Problem \(session.index + 1) of \(session.mainCount)")
     }
 
     private func dotColor(_ i: Int) -> Color {
         if i < session.firstTry.count { return session.firstTry[i] ? Palette.sage : Palette.blush }
         return i == session.index ? Palette.honey : Palette.ink.opacity(0.1)
+    }
+
+    private func retryColor(_ j: Int) -> Color {
+        if j < session.retryResults.count { return session.retryResults[j] ? Palette.sage : Palette.blush }
+        return session.mainCount + j == session.index ? Palette.coral : Palette.blush.opacity(0.35)
     }
 
     // MARK: 故事
@@ -424,8 +526,7 @@ struct StoryPlayView: View {
                     Button {
                         if session.isLast, mistake != nil { finishPractice() } else { session.next() }
                     } label: {
-                        Label(session.isLast ? (mistake != nil ? "Done" : "See my stars") : "Next",
-                              systemImage: session.isLast ? "flag.checkered" : "arrow.right")
+                        Label(nextTitle, systemImage: session.isLast && (mistake == nil || queue.isEmpty) ? "flag.checkered" : "arrow.right")
                     }
                     .buttonStyle(PillButtonStyle(color: Palette.coral, size: 21))
                 }
@@ -447,12 +548,29 @@ struct StoryPlayView: View {
         }
     }
 
+    private var nextTitle: String {
+        guard session.isLast else { return "Next" }
+        if mistake != nil { return queue.isEmpty ? "Done" : "Next" }
+        return "See my stars"
+    }
+
+    /// 一道错题练完：第一下就做对了就算练会了（同一道题错过几次的记录都算）；后面还有就接着下一道
     private func finishPractice() {
         if let mistake, !session.revealed, session.firstTry.first == true {
             store.markMistakeFixed(mistake.id)
+            store.markStoryProblemFixed(mistake.problem, level: mistake.level)
         }
         Sound.tap()
-        dismiss()
+        guard !queue.isEmpty else { dismiss(); return }
+        session.stop()
+        let next = queue.removeFirst()
+        let fresh = StorySession(practice: next.problem)
+        configure(fresh)
+        withAnimation(.easeOut(duration: 0.25)) {
+            mistake = next
+            session = fresh
+        }
+        fresh.start()
     }
 
     // MARK: 答题板
@@ -498,11 +616,34 @@ struct StoryPlayView: View {
 
 /// 一关做完的结果
 struct StoryOutcome: Equatable {
+    /// 结算上每道题一个星位
+    enum Slot: Equatable {
+        /// 第一下就答对，拿到这道题的星星
+        case new
+        /// 第一下就答对，但这道题的星星以前就拿过了
+        case had
+        /// 第一下答错了
+        case missed
+    }
+
     let level: StoryLevel
+    /// 这一轮做得怎么样（1~3）：3 = 全对（皇冠），2 = 过关
     let stars: Int
     let correct: Int
     let total: Int
     let isRecord: Bool
+    let slots: [Slot]
+    /// 这一关现在一共拿到的星星和上限
+    let levelStars: Int
+    let levelMax: Int
+    /// 这一关过关了（这一轮或者以前）
+    let passed: Bool
+    /// 这一轮刚刚打开的下一关
+    let opened: StoryLevel?
+    /// 能不能直接去下一关
+    let canGoNext: Bool
+
+    var newStars: Int { slots.filter { $0 == .new }.count }
 }
 
 // MARK: - 数字键盘
@@ -583,7 +724,7 @@ struct StoryResultOverlay: View {
             Color.black.opacity(0.12).ignoresSafeArea()
             if outcome.correct == outcome.total { ConfettiView() }
 
-            VStack(spacing: 18) {
+            VStack(spacing: 16) {
                 Avatar(image: "avatar_owl", fallback: "🦉", tint: Palette.honey, size: 150)
                     .shadow(color: Palette.honey.opacity(0.4), radius: 18, y: 8)
                     .padding(.top, -100)
@@ -594,42 +735,24 @@ struct StoryResultOverlay: View {
                     .font(.kid(23, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
 
-                // 这一关几道题就有几个星位，第一下就答对的那几个亮起来 —— 和飞到右上角的星星一一对应
-                let size: CGFloat = outcome.total <= 6 ? 54 : outcome.total <= 8 ? 46 : 40
-                HStack(spacing: outcome.total <= 6 ? 16 : 10) {
-                    ForEach(0..<outcome.total, id: \.self) { i in
-                        ZStack {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: size, weight: .bold))
-                                .foregroundStyle(Palette.ink.opacity(0.08))
-                            Image(systemName: "star.fill")
-                                .font(.system(size: size, weight: .bold))
-                                .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
-                                                                startPoint: .top, endPoint: .bottom))
-                                .shadow(color: Palette.honey.opacity(0.6), radius: 10)
-                                .scaleEffect(i < lit ? 1 : 0.2)
-                                .opacity(i < lit ? 1 : 0)
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
+                slots.padding(.vertical, 4)
+                levelTally
 
                 Text(advice)
                     .font(.kid(19, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 520)
 
                 HStack(spacing: 18) {
-                    if let onNext {
-                        Button { Sound.tap(); onNext() } label: {
-                            Label("Next level", systemImage: "arrow.right")
-                        }
-                        .buttonStyle(PillButtonStyle(color: Palette.coral, size: 24))
-                    }
+                    // 这一轮过关了"下一关"在前；没过关"再玩一次（换一套题）"在前
+                    if let onNext, outcome.stars >= 2 { nextButton(onNext, color: Palette.coral) }
                     Button { Sound.tap(); onAgain() } label: {
                         Label("Play again", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(PillButtonStyle(color: Palette.sage, size: 24))
+                    .buttonStyle(PillButtonStyle(color: outcome.stars >= 2 && onNext != nil ? Palette.sage : Palette.coral, size: 24))
+                    if let onNext, outcome.stars < 2 { nextButton(onNext, color: Palette.sage) }
                 }
                 .padding(.top, 6)
 
@@ -639,8 +762,8 @@ struct StoryResultOverlay: View {
                 .font(.kid(19, weight: .bold))
                 .foregroundStyle(Palette.inkSoft)
             }
-            .padding(.horizontal, 60)
-            .padding(.bottom, 36)
+            .padding(.horizontal, 56)
+            .padding(.bottom, 32)
             .padding(.top, 20)
             .frame(minWidth: 540)
             .softCard(radius: 44)
@@ -663,9 +786,12 @@ struct StoryResultOverlay: View {
         }
         .task {
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { appeared = true }
-            for i in 0..<outcome.correct {
-                try? await Task.sleep(for: .milliseconds(i == 0 ? 500 : 180))
-                Sound.step(min(4 + i, 10))
+            // 第一下就答对的那几个星位依次亮起来；只有新星星才响
+            var step = 0
+            for (i, slot) in outcome.slots.enumerated() where slot != .missed {
+                try? await Task.sleep(for: .milliseconds(step == 0 ? 500 : 180))
+                if slot == .new { Sound.step(min(4 + step, 10)) }
+                step += 1
                 withAnimation(.spring(duration: 0.45, bounce: 0.6)) { lit = i + 1 }
             }
             if outcome.isRecord {
@@ -676,21 +802,139 @@ struct StoryResultOverlay: View {
         }
     }
 
+    private func nextButton(_ action: @escaping () -> Void, color: Color) -> some View {
+        Button { Sound.tap(); action() } label: {
+            Label("Next level", systemImage: "arrow.right")
+        }
+        .buttonStyle(PillButtonStyle(color: color, size: 24))
+    }
+
+    /// 这一轮每道题一个星位：拿到新星星的亮金色（= 这一轮飞到右上角的星星）；
+    /// 答对了但星星以前就拿过的，是一颗淡淡的星星里一个勾；答错的空着。
+    private var slots: some View {
+        let size: CGFloat = outcome.total <= 6 ? 54 : outcome.total <= 8 ? 46 : 40
+        return HStack(spacing: outcome.total <= 6 ? 16 : 10) {
+            ForEach(Array(outcome.slots.enumerated()), id: \.offset) { i, slot in
+                let on = i < lit
+                ZStack {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: size, weight: .bold))
+                        .foregroundStyle(Palette.ink.opacity(0.08))
+                    switch slot {
+                    case .new:
+                        Image(systemName: "star.fill")
+                            .font(.system(size: size, weight: .bold))
+                            .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
+                                                            startPoint: .top, endPoint: .bottom))
+                            .shadow(color: Palette.honey.opacity(0.6), radius: 10)
+                            .scaleEffect(on ? 1 : 0.2)
+                            .opacity(on ? 1 : 0)
+                    case .had:
+                        ZStack {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: size, weight: .bold))
+                                .foregroundStyle(Palette.honey.opacity(0.32))
+                            Image(systemName: "checkmark")
+                                .font(.system(size: size * 0.34, weight: .black))
+                                .foregroundStyle(.white)
+                                .offset(y: size * 0.04)
+                        }
+                        .scaleEffect(on ? 1 : 0.6)
+                        .opacity(on ? 1 : 0)
+                    case .missed:
+                        EmptyView()
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(outcome.newStars) new stars")
+    }
+
+    /// "★ 14 / 24 in this level  +3 new"
+    private var levelTally: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Palette.honey)
+            Text("\(outcome.levelStars) / \(outcome.levelMax)")
+                .font(.kid(22, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .monospacedDigit()
+            Text(outcome.levelStars >= outcome.levelMax ? "All stars in this level!" : "in this level")
+                .font(.kid(18, weight: .bold))
+                .foregroundStyle(Palette.inkSoft)
+            if outcome.newStars > 0 {
+                Text("+\(outcome.newStars) new")
+                    .font(.kid(17, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Palette.coral, in: Capsule())
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 9)
+        .background(Palette.honey.opacity(0.16), in: Capsule())
+    }
+
     private var title: String {
         switch outcome.stars {
         case 3: "Perfect!"
         case 2: "Great job!"
-        default: "Finished!"
+        default: "Good try!"
         }
     }
 
     private var advice: String {
-        let got = outcome.correct == 1 ? "+1 star" : "+\(outcome.correct) stars"
-        switch outcome.stars {
-        case 3: return "You understood every story. \(got) and a crown!"
-        case 2: return "\(got)! The tricky ones are saved for practice."
-        default: return "\(got). Play again to collect more!"
+        let had = outcome.newStars == 0 && outcome.correct > 0 && outcome.levelStars < outcome.levelMax
+            ? " You had these stars already. A new set has new ones!" : ""
+        if outcome.stars >= 3 {
+            if let opened = outcome.opened { return "You understood every story and earned a crown! Level \(opened.number) is open now." }
+            return "You understood every story and earned a crown!" + had
         }
+        if outcome.stars == 2 {
+            if let opened = outcome.opened { return "You passed! Level \(opened.number) is open now." }
+            return "You passed this level!" + had
+        }
+        let need = "\(outcome.level.passMark) of \(outcome.total)"
+        if outcome.passed { return "Get \(need) right the first time to beat this round. Try a new set!" }
+        if let next = outcome.level.next {
+            return "Get \(need) right the first time to open Level \(next.number). Let's try a new set!"
+        }
+        return "Get \(need) right the first time to pass. Let's try a new set!"
+    }
+}
+
+/// 一次就答对、但这道题的星星以前拿过了：答题板上冒出一个小勾，往上飘一下就没了（没有星星飞走）
+private struct AlreadyCollected: View {
+    let at: CGPoint
+    let done: () -> Void
+
+    @State private var shown = false
+    @State private var rise: CGFloat = 0
+
+    var body: some View {
+        Label("Star already yours", systemImage: "checkmark.circle.fill")
+            .font(.kid(19, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(Palette.sage, in: Capsule())
+            .overlay(Capsule().strokeBorder(.white, lineWidth: 3))
+            .shadow(color: Palette.sage.opacity(0.4), radius: 10, y: 4)
+            .fixedSize()
+            .scaleEffect(shown ? 1 : 0.5)
+            .opacity(shown ? 1 : 0)
+            .position(x: at.x, y: at.y - rise)
+            .task {
+                withAnimation(.spring(duration: 0.35, bounce: 0.5)) { shown = true }
+                withAnimation(.easeOut(duration: 1.4)) { rise = 60 }
+                try? await Task.sleep(for: .milliseconds(1100))
+                withAnimation(.easeIn(duration: 0.3)) { shown = false }
+                try? await Task.sleep(for: .milliseconds(320))
+                done()
+            }
     }
 }
 

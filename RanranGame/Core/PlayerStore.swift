@@ -77,7 +77,7 @@ final class PlayerStore {
     static let defaultName = "冉冉"
     static let maxNameLength = 8
     /// 跟着存档一起导出的设置项
-    private static let settingKeys = ["gomoku.level", "gomoku.humanFirst", "story.voice"]
+    private static let settingKeys = ["gomoku.level", "gomoku.humanFirst", "story.voice", "story.unlockAll"]
     private static let maxMistakes = 300
 
     private let defaults: UserDefaults
@@ -105,6 +105,7 @@ final class PlayerStore {
         records = (try? Self.decoder.decode([GameRecord].self, from: Data(contentsOf: recordsURL))) ?? []
         storyMistakes = (try? Self.decoder.decode([StoryMistake].self, from: Data(contentsOf: mistakesURL))) ?? []
         migrateStarLedger()
+        migrateStoryProgress()
     }
 
     // MARK: 名字
@@ -228,6 +229,7 @@ final class PlayerStore {
         persistRecords()
         persistMistakes()
         migrateStarLedger()
+        migrateStoryProgress()
     }
 
     static let encoder: JSONEncoder = {

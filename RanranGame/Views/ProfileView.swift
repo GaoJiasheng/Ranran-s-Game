@@ -497,6 +497,7 @@ private struct StoryReportCard: View {
     @Environment(PlayerStore.self) private var store
     let practice: (StoryMistake) -> Void
     @State private var showAll = false
+    @AppStorage(StoryLevel.unlockAllKey) private var unlockAll = false
 
     var body: some View {
         let stats = StorySchema.allCases.map { ($0, store.storyStats($0)) }.filter { $0.1.right + $0.1.wrong > 0 }
@@ -575,6 +576,21 @@ private struct StoryReportCard: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            // 平时要前一关过关（第一下就答对 75%）才能进下一关；家长可以全部打开
+            Toggle(isOn: $unlockAll) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("数学关卡全部解锁")
+                        .font(.kid(19, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    Text("关掉时，前一关过关（第一次就答对 75%）才能进下一关")
+                        .font(.kid(15, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Palette.sage)
+            .padding(.top, 4)
         }
         .padding(28)
         .frame(maxWidth: .infinity, alignment: .leading)

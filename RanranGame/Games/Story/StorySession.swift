@@ -18,6 +18,7 @@ enum StoryHelp: Equatable { case model, act }
 
 /// 一关（或者错题本里的一道题）的流程：
 /// 讲故事（边读边摆 / 边读边画）→ 演一演（孩子拖动）→ 答一答 → 答错了就针对这种错法解释，再画一画、演一演。
+/// 一关的题做完以后，第一次答错的题按顺序再做一遍（"再练一轮"），然后才结算；再练一轮不算成绩、不给星星。
 @Observable
 @MainActor
 final class StorySession {
@@ -25,7 +26,10 @@ final class StorySession {
 
     let level: StoryLevel?
     let mode: StoryMode
-    let problems: [StoryProblem]
+    /// 要做的题：先是这一关的题，再练一轮开始后，后面接上要再做一遍的题
+    private(set) var problems: [StoryProblem]
+    /// 这一关本来有几道题（不算再练一轮）
+    let mainCount: Int
     let stage: StoryStage
 
     private(set) var index = 0
@@ -40,18 +44,20 @@ final class StorySession {
     private(set) var modelStep = 0
     private(set) var help: StoryHelp?
     private(set) var revealed = false
-    /// 每道题第一次答得对不对
+    /// 每道题第一次答得对不对（只算这一关本来的题）
     private(set) var firstTry: [Bool] = []
+    /// 再练一轮里每道题第一次答得对不对
+    private(set) var retryResults: [Bool] = []
     /// 连续一次就答对几道
     private(set) var streak = 0
-    /// 每答对一道就 +1，界面用它放星星飞过去的动画
-    private(set) var starBurst = 0
     private(set) var wrongShake = 0
     var input = ""
 
     var player = PlayerStore.defaultName
-    /// 每道题第一次作答：题、对不对、答的数
+    /// 每道题第一次作答：题、对不对、答的数（再练一轮里的不算）
     var onFirstAnswer: ((StoryProblem, Bool, Int) -> Void)?
+    /// 再练一轮里每道题第一次作答：题、对不对
+    var onRetryAnswer: ((StoryProblem, Bool) -> Void)?
 
     private var flow: Task<Void, Never>?
     private var waiter: CheckedContinuation<Void, Never>?
@@ -59,11 +65,14 @@ final class StorySession {
     private var answered = false
     private var wrongAfterHelp = 0
 
-    init(level: StoryLevel) {
+    /// avoiding：刚做完那套题的 starKey，"Play again"时换一套
+    init(level: StoryLevel, avoiding: Set<String> = []) {
         self.level = level
         mode = level.mode
-        problems = StoryBank.problems(for: level) ?? level.makeProblems()
-        stage = StoryStage(problem: problems[0])
+        let set = StoryBank.problems(for: level, avoiding: avoiding) ?? level.makeProblems()
+        problems = set
+        mainCount = set.count
+        stage = StoryStage(problem: set[0])
     }
 
     /// 错题本里再练一道：能演就演，不能演就画线段图
@@ -71,15 +80,26 @@ final class StorySession {
         level = nil
         mode = problem.canAct ? .act : .model
         problems = [problem]
+        mainCount = 1
         stage = StoryStage(problem: problem)
     }
 
     var problem: StoryProblem { problems[index] }
-    var isLast: Bool { index == problems.count - 1 }
+    /// 正在再练一轮
+    var isRetry: Bool { index >= mainCount }
+    /// 再练一轮有几道题（还没开始时是 0）
+    var retryCount: Int { problems.count - mainCount }
+    /// 这一关的题做完了，接下来要再练一轮
+    var retryPending: Bool { level != nil && index == mainCount - 1 && !StoryRetry.indices(firstTry).isEmpty }
+    var isLast: Bool { index == problems.count - 1 && !retryPending }
     var correctCount: Int { firstTry.filter { $0 }.count }
+    /// 这一关本来那几道题的 starKey（"Play again"时避开）
+    var problemKeys: Set<String> {
+        Set(problems.prefix(mainCount).map { $0.starKey(level: level?.number ?? 0) })
+    }
 
     var stars: Int {
-        let n = problems.count
+        let n = mainCount
         if correctCount >= n { return 3 }
         if correctCount * 4 >= n * 3 { return 2 }
         return 1
@@ -126,17 +146,13 @@ final class StorySession {
             Narrator.shared.stop()
             phase = .finished
         } else {
+            if retryPending {
+                let main = problems
+                problems += StoryRetry.indices(firstTry).map { main[$0] }
+            }
             index += 1
             start()
         }
-    }
-
-    func restartLevel() {
-        stop()
-        index = 0
-        firstTry = []
-        streak = 0
-        start()
     }
 
     private func render(_ template: String) -> String { StoryText.plain(template, problem, player: player) }
@@ -178,6 +194,13 @@ final class StorySession {
         phase = .telling
 
         try? await Task.sleep(for: .milliseconds(450))
+        if index == mainCount, isRetry {
+            // 再练一轮开始：老师先说一句
+            say(CoachLine(text: StoryVoiceLines.retryIntro), speak: false)
+            await Narrator.shared.speak(StoryVoiceLines.retryIntro)
+            if Task.isCancelled { return }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
         await tellSentences(childActs: mode == .act)
         if Task.isCancelled { return }
         beginAnswering()
@@ -413,12 +436,16 @@ final class StorySession {
         let first = !answered
         if first {
             answered = true
-            firstTry.append(right)
-            streak = right ? streak + 1 : 0
-            onFirstAnswer?(p, right, n)
+            if isRetry {
+                retryResults.append(right)
+                onRetryAnswer?(p, right)
+            } else {
+                firstTry.append(right)
+                streak = right ? streak + 1 : 0
+                onFirstAnswer?(p, right, n)
+            }
         }
         if right {
-            if first { starBurst += 1 }
             flow = Task { await solved(first: first) }
         } else {
             wrong(n)
@@ -479,7 +506,7 @@ final class StorySession {
 
     private func praise(first: Bool) -> String {
         guard first else { return StoryVoiceLines.laterTry.randomElement()! }
-        if streak >= 3 { return StoryVoiceLines.streak(streak) }
+        if !isRetry, streak >= 3 { return StoryVoiceLines.streak(streak) }
         return StoryVoiceLines.firstTry.randomElement()!
     }
 

@@ -1288,20 +1288,115 @@ struct StoryMistake: Codable, Identifiable, Hashable {
     var fixed = false
 }
 
+extension StoryProblem {
+    /// 认一道题用的钥匙：关 + 每一句的原文。题库重新生成时 id 会变，文字不会变。
+    /// 用 FNV-1a 自己算，不用 Hasher（Hasher 每次启动都不一样）。
+    func starKey(level: Int) -> String {
+        var h: UInt64 = 0xcbf2_9ce4_8422_2325
+        for b in "\(level)|\(sentences.map(\.text).joined(separator: "|"))".utf8 {
+            h ^= UInt64(b)
+            h = h &* 0x0000_0100_0000_01B3
+        }
+        return String(h, radix: 36)
+    }
+}
+
+extension StoryLevel {
+    /// 家长在「我的」里打开"全部解锁"（跟着存档走，见 PlayerStore.settingKeys）
+    static let unlockAllKey = "story.unlockAll"
+
+    var previous: StoryLevel? { number > Self.range.lowerBound ? StoryLevel(number - 1) : nil }
+
+    /// 这一关最多拿几颗星：题库里这一关有几道题（每道题一颗）；没有题库时按 3 套题算
+    var maxStars: Int { StoryBank.problemCount(for: self) ?? 3 * problemCount }
+
+    /// 过关要第一下就答对几道（75%，和 StorySession.stars 的 2 星线一样）
+    var passMark: Int { (problemCount * 3 + 3) / 4 }
+}
+
+/// 一关里哪些题要在最后再做一遍：第一次答错的，按原来的顺序
+enum StoryRetry {
+    static func indices(_ firstTry: [Bool]) -> [Int] { firstTry.indices.filter { !firstTry[$0] } }
+}
+
 extension PlayerStore {
-    /// 这一关最好的一次做得怎么样（1~3，3 = 全对）；只用来判断过没过关、有没有皇冠，不当星星显示
+    /// 这一关最好的一次做得怎么样（1~3，3 = 全对）；用来判断过没过关、有没有皇冠，不当星星显示
     func storyBest(_ level: StoryLevel) -> Int { count("wp.best.\(level.number)") }
     func storyPerfect(_ level: StoryLevel) -> Bool { storyBest(level) >= 3 }
+    /// 过关 = 有一次第一下就答对了 75% 以上
+    func storyPassed(_ level: StoryLevel) -> Bool { storyBest(level) >= 2 }
 
-    /// 这一关一共拿到的星星：每次第一下就答对都加一颗，重玩也算
+    // MARK: 星星：每道题一颗，第一次"第一下就答对"时拿到
+
+    /// 这一关拿到的星星（不会超过 level.maxStars）
     func storyStars(_ level: StoryLevel) -> Int { count("wp.stars.\(level.number)") }
     func storyStars(_ chapter: StoryChapter) -> Int { chapter.levels.reduce(0) { $0 + storyStars($1) } }
+    func storyMaxStars(_ chapter: StoryChapter) -> Int { chapter.levels.reduce(0) { $0 + $1.maxStars } }
     var storyStarTotal: Int { StoryLevel.all.reduce(0) { $0 + storyStars($1) } }
-    func earnStoryStar(_ level: StoryLevel) { earnStars(1, key: "wp.stars.\(level.number)") }
 
-    /// 推荐的关：第一个还没拿到星星的关
-    var storyRecommended: StoryLevel {
-        StoryLevel.all.first { storyBest($0) == 0 } ?? StoryLevel(StoryLevel.range.upperBound)
+    private func starKey(_ p: StoryProblem, _ level: StoryLevel) -> String { "wp.got." + p.starKey(level: level.number) }
+
+    /// 这道题的星星已经拿过了
+    func storyHasStar(_ p: StoryProblem, level: StoryLevel) -> Bool {
+        count(starKey(p, level)) > 0 || storyStars(level) >= level.maxStars
+    }
+
+    /// 第一下就答对了一道题：这道题的星星还没拿过就给一颗，返回 true；拿过了返回 false
+    @discardableResult
+    func collectStoryStar(_ p: StoryProblem, level: StoryLevel) -> Bool {
+        guard !storyHasStar(p, level: level) else { return false }
+        setCount(starKey(p, level), 1)
+        earnStars(1, key: "wp.stars.\(level.number)")
+        return true
+    }
+
+    // MARK: 解锁
+
+    /// 第 1 关一直开着；后面的关要前一关过关。老存档里已经玩到的关（wp.open）保持打开。
+    func storyUnlocked(_ level: StoryLevel,
+                       unlockAll: Bool = UserDefaults.standard.bool(forKey: StoryLevel.unlockAllKey)) -> Bool {
+        if unlockAll { return true }
+        guard let prev = level.previous else { return true }
+        return level.number <= count("wp.open") || storyPassed(prev)
+    }
+
+    /// 推荐的关：第一个开着、还没过关的关
+    func storyRecommended(unlockAll: Bool = UserDefaults.standard.bool(forKey: StoryLevel.unlockAllKey)) -> StoryLevel {
+        StoryLevel.all.first { storyUnlocked($0, unlockAll: unlockAll) && !storyPassed($0) }
+            ?? StoryLevel(StoryLevel.range.upperBound)
+    }
+
+    /// 老存档升级（每次启动、导入存档后都跑，可以重复跑）：
+    /// 1. 以前重玩也能拿星星，超过上限的砍到上限，总数同样减掉，这样各关加起来还是等于总数；
+    /// 2. 以前没有过关这回事，已经玩到的最远那一关和它前面的关都保持打开（只在第一次升级时记一下）。
+    func migrateStoryProgress() {
+        var excess = 0
+        for level in StoryLevel.all where storyStars(level) > level.maxStars {
+            excess += storyStars(level) - level.maxStars
+            setCount("wp.stars.\(level.number)", level.maxStars)
+        }
+        if excess > 0 { addStars(-min(excess, totalStars)) }
+        if count("wp.v2") == 0 {
+            let played = StoryLevel.all.filter { storyBest($0) >= 1 || storyStars($0) > 0 }.map(\.number).max() ?? 0
+            setCount("wp.open", played)
+            setCount("wp.v2", 1)
+        }
+    }
+
+    // MARK: 错题
+
+    /// 还没练会的错题；同一道题错过几次只算一道，最新的在前
+    var storyOpenMistakes: [StoryMistake] {
+        var seen = Set<String>()
+        return storyMistakes.filter { !$0.fixed && seen.insert($0.problem.starKey(level: $0.level)).inserted }
+    }
+
+    /// 这道题会做了：错题本里这道题（错过几次就有几条）都标成练会了
+    func markStoryProblemFixed(_ p: StoryProblem, level: Int) {
+        let key = p.starKey(level: level)
+        for m in storyMistakes where !m.fixed && m.level == level && m.problem.starKey(level: level) == key {
+            markMistakeFixed(m.id)
+        }
     }
 
     /// 一共做对了多少道题

@@ -11,13 +11,25 @@ enum StoryBank {
         return Dictionary(uniqueKeysWithValues: raw.compactMap { k, v in Int(k).map { ($0, v) } })
     }()
 
-    /// 这一关下一套题
-    static func problems(for level: StoryLevel) -> [StoryProblem]? {
+    /// 题库里这一关一共有几道题（= 这一关最多几颗星）；没有题库就是 nil
+    static func problemCount(for level: StoryLevel) -> Int? {
+        guard let all = bank[level.number], all.count >= level.problemCount else { return nil }
+        return all.count / level.problemCount * level.problemCount
+    }
+
+    /// 这一关下一套题。avoiding：刚做完那套题的 starKey ——"Play again"时跳过那一套，绝不原样再出一遍
+    static func problems(for level: StoryLevel, avoiding: Set<String> = []) -> [StoryProblem]? {
         let n = level.problemCount
         guard let all = bank[level.number], all.count >= n else { return nil }
         let sets = all.count / n
         let key = "wp.set.\(level.number)"
-        let i = UserDefaults.standard.integer(forKey: key) % sets
+        let start = UserDefaults.standard.integer(forKey: key)
+        // 从轮到的那套往后找第一套和刚做完的不重叠的（三套题本来互不重复，一般就是轮到的那套）
+        let skip = (0..<sets).first { k in
+            let s = (start + k) % sets
+            return all[s * n ..< (s + 1) * n].allSatisfy { !avoiding.contains($0.starKey(level: level.number)) }
+        } ?? 0
+        let i = (start + skip) % sets
         UserDefaults.standard.set(i + 1, forKey: key)
         let chunk = Array(all[i * n ..< (i + 1) * n])
         // 读题关里第 3、6、9 题是复习题，位置保留；其余打乱
