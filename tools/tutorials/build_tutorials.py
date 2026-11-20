@@ -422,6 +422,45 @@ def x(**kw):
 S = fen(START)
 PALACE_RED = ["d0", "e0", "f0", "d1", "e1", "f1", "d2", "e2", "f2"]
 
+
+def opening(**kw):
+    """开局局面：在起始局面上改几个子（值为 None 表示拿走）"""
+    p = dict(START)
+    for k, v in kw.items():
+        if v is None:
+            p.pop(k, None)
+        else:
+            p[k] = v
+    return fen(p)
+
+
+# 得子战术、残局里用到的局面。每一个都用引擎核对过（见 tools/tutorials/validate/gomoku_xiangqi.swift）。
+FORK = x(e9="k", e7="b", e0="K", d0="A", f0="A", e3="P", d4="N", c7="r", g7="r")  # 马六进五，踩双车
+FORK_CHECK = x(e9="k", d9="a", f0="K", h6="N", i7="r")                           # 马二进三，将军捉车
+PIN_SHOW = x(e9="k", e0="K", e1="R", e6="n")
+PIN_PICK = x(e9="k", d0="K", e3="R", e7="n", b7="r")
+PIN = x(e9="k", e0="K", e1="R", e6="n", g7="n", d5="P")                          # 兵六进一捉死马
+DISCOVER = x(e9="k", f0="K", e2="R", e5="N", d7="r")                             # 马五进六，抽将吃车
+DISCOVER2 = x(e9="k", d0="K", a9="R", c9="N", b7="r")                            # 马七退八，抽将吃车
+GUARD_SHOW = x(d0="K", e9="k", c4="N", c0="R", c8="r")
+GUARD = x(e0="K", e1="A", e9="k", g4="C", g8="r", a0="R", d1="N")                # 车九进四 / 马六进五 保护炮
+TRADE = x(d0="K", d5="N", c1="R", e9="k", e7="r", c9="b", c5="n", a7="b")        # 马吃车划算，车吃马亏
+HANG_PAWN = opening(h2=None, e2="C", c6=None, c5="p")                            # 炮五进四打中卒
+HIT_PAWN = opening(h7=None, e7="c", c3=None, c4="P")                             # 黑方当头炮瞄中兵
+ROOK_IN_LINE = opening(h0=None, g2="N", i0=None, h1="R", h9=None, g7="n", g6=None, g5="p", i9=None, i8="r")
+GUAJIAO = x(e9="k", d9="a", f9="a", e7="P", c5="N", f0="K")                      # 马七进六，挂角马
+HORSE_TWO = x(e9="k", d9="a", f9="a", f8="P", e4="N", d0="K")                    # 马五进六，再卧槽
+ROOK_END = x(d9="k", a5="R", e0="K")                                             # 车九平六
+ROOK_END2 = x(f9="k", a3="R", d2="K")                                            # 帅六平五，再车将
+TWO_ROOKS = x(e7="k", b1="R", a0="R", d0="K")                                    # 双车错，三步
+TWO_ROOKS2 = x(d8="k", e0="K", g0="R", i0="R")                                   # 双车错，两步
+PAWN_END = x(d8="k", c7="P", f0="K")                                             # 帅占中，兵困毙
+PAWN_END2 = x(d7="k", c6="P", f0="K")
+IRON = x(e9="k", e8="a", f9="a", e7="b", d0="K", e2="C", d4="R")                  # 车六进五，铁门栓
+IRON2 = x(e9="k", e8="a", d9="a", e7="b", e0="K", e2="C", f4="R", i3="p")         # 帅五平四，再车冲进去
+SMOTHER = x(e9="k", d9="a", e8="a", f0="K", b2="C")                              # 炮八进七，闷宫
+SMOTHER2 = x(e9="k", f9="a", e8="a", d0="K", h3="C", c9="b", a6="p")             # 炮二进六，闷宫
+
 xiangqi = {
     "game": "xiangqi",
     "title": "象棋教学",
@@ -436,8 +475,32 @@ xiangqi = {
                         step("中间这一条空空的地方，叫『楚河汉界』，它把棋盘分成了两半。", marks=["river"]),
                         step("两边各有一个画着叉叉的小方框，叫『九宫』，是帅和将的家。", marks=["palace:red", "palace:black"]),
                         step("考考你：点一下红方九宫里的任意一个点。", task=pick(PALACE_RED),
-                             hint="九宫在下面正中间，就是画着两条斜线的小方框。", ok="对！这就是红帅的家。"),
+                             hint="九宫在下面正中间，就是画着两条斜线的小方框。", ok="对！这就是红帅的家。",
+                             drill="点一下红方九宫里的任意一个点。"),
                         step("棋子都走在线的交叉点上。走到对方棋子的位置上，就把它吃掉了。"),
+                    ],
+                },
+                {
+                    "id": "x16", "title": "认识棋子", "icon": "circle.grid.2x2.fill", "learned": "红方和黑方的棋子叫什么",
+                    "steps": [
+                        step("每一方都有七种棋子。红黑两边，有四种棋子写的字不一样，我们来认一认。", board=S),
+                        step("红方的『帅』，在黑方叫『将』，它们是最重要的棋子。点一下黑方的将。",
+                             marks=["ring:e0"], task=pick(["e9"]), hint="黑将在上面九宫的正中间。", ok="对！这就是黑将。",
+                             drill="点一下黑方的将。"),
+                        step("红方的『仕』，黑方写成『士』。点一下黑方的一个士。", marks=["ring:d0", "ring:f0"],
+                             task=pick(["d9", "f9"]), hint="士就站在黑将的两边。", ok="对！这是黑士。",
+                             drill="点一下黑方的一个士。"),
+                        step("红方的『相』，黑方写成『象』。点一下黑方的一个象。", marks=["ring:c0", "ring:g0"],
+                             task=pick(["c9", "g9"]), hint="象站在士的旁边。", ok="对！这是黑象。",
+                             drill="点一下黑方的一个象。"),
+                        step("红方的『兵』，黑方叫『卒』。点一下黑方的一个卒。",
+                             marks=["ring:a3", "ring:c3", "ring:e3", "ring:g3", "ring:i3"],
+                             task=pick(["a6", "c6", "e6", "g6", "i6"]), hint="卒站在河边那一排。", ok="对！这是黑卒。",
+                             drill="点一下黑方的一个卒。"),
+                        step("车、马、炮两边写的字一样，只是颜色不同。点一下黑方的一个炮。",
+                             task=pick(["b7", "h7"]), hint="黑炮在卒的上面一排。", ok="对！这是黑炮。",
+                             drill="点一下黑方的一个炮。"),
+                        step("记住：帅和将、仕和士、相和象、兵和卒，都是一样的棋子。"),
                     ],
                 },
                 {
@@ -446,14 +509,15 @@ xiangqi = {
                         step("帅只能待在九宫里，每次走一格，可以往前、往后、往左、往右。",
                              board=x(e0="K", d9="k"), marks=["glow:e1", "glow:d0", "glow:f0", "palace:red"]),
                         step("敌人跑进了九宫！用帅把黑炮吃掉。", board=x(e0="K", d0="c", f9="k"),
-                             task=move(piece="e0", accept=["d0"]), hint="帅往旁边走一格，就能吃到它。", ok="吃掉了！"),
+                             task=move(piece="e0", accept=["d0"]), hint="帅往旁边走一格，就能吃到它。", ok="吃掉了！",
+                             drill="用帅吃掉闯进九宫的黑炮！"),
                         step("九宫外面的点，帅是去不了的。把帅往前走一格吧。", board=x(e0="K", d9="k"),
                              marks=["glow:e1", "cross:e3"], task=move(piece="e0", accept=["e1"]),
-                             hint="往上走一格，走到发光的点。", ok="对！"),
+                             hint="往上走一格，走到发光的点。", ok="对！", drill="把帅往前走一格。"),
                         step("这是仕。它也待在九宫里，但只能斜着走一格。", board=x(e0="K", d0="A", f0="A", d9="k"),
                              marks=["arrow:d0:e1"]),
                         step("把左边的仕斜着走到九宫中心。", task=move(piece="d0", accept=["e1"]),
-                             hint="仕要斜着走，沿着九宫里的斜线。", ok="对，仕走斜线。"),
+                             hint="仕要斜着走，沿着九宫里的斜线。", ok="对，仕走斜线。", drill="把仕斜着走到九宫的中心。"),
                         step("仕也能吃子。用仕吃掉这个卒！", board=x(e0="K", e1="A", d2="p", f9="k"),
                              task=move(piece="e1", rule="capture"), hint="仕斜着走一格就能吃到它。", ok="吃得好！"),
                     ],
@@ -464,7 +528,7 @@ xiangqi = {
                         step("这是相。它走『田』字：斜着一下走两格。", board=x(c0="B", g0="B", e0="K", d9="k"),
                              marks=["arrow:c0:e2", "arrow:c0:a2"]),
                         step("把相走到发光的点。", marks=["glow:e2"], task=move(piece="c0", accept=["e2"]),
-                             hint="斜着走两格，像在田字格里走对角线。", ok="对！"),
+                             hint="斜着走两格，像在田字格里走对角线。", ok="对！", drill="把相走到发光的点。"),
                         step("如果田字中间有棋子挡着，叫『塞象眼』，相就走不过去了。",
                              board=x(c0="B", d1="A", e0="K", d9="k"), marks=["ring:d1", "cross:e2", "glow:a2"]),
                         step("相也能吃子。吃掉河边的这个卒！", board=x(e2="B", c4="p", e0="K", d9="k"),
@@ -479,13 +543,13 @@ xiangqi = {
                              board=x(e4="N", e0="K", d9="k"),
                              marks=["glow:c3", "glow:c5", "glow:d2", "glow:d6", "glow:f2", "glow:f6", "glow:g3", "glow:g5"]),
                         step("把马走到发光的点。", marks=["glow:g5"], task=move(piece="e4", accept=["g5"]),
-                             hint="往右走一格，再斜着往上走一格。", ok="对，这就是日字！"),
+                             hint="往右走一格，再斜着往上走一格。", ok="对，这就是日字！", drill="把马走到发光的点。"),
                         step("马的前面如果有棋子挡着，叫『蹩马腿』，那个方向就走不了。",
                              board=x(b0="N", b1="C", e0="K", d9="k"), marks=["ring:b1", "cross:a2", "cross:c2", "glow:d1"]),
                         step("这两匹马，哪一匹被蹩了马腿，一步都走不了？点一下它。",
                              board=x(b0="N", b1="C", c0="B", h0="N", e0="K", d9="k"), marks=["label:b0:A", "label:h0:B"],
                              task=pick(["b0"]), hint="看看马腿：马往哪边走，紧挨着它的那一格要空着。",
-                             ok="对！A 马前面和旁边都被挡住了。"),
+                             ok="对！A 马前面和旁边都被挡住了。", drill="哪一匹马被蹩了马腿，一步也走不了？点一下它。"),
                         step("马也能吃子。用马吃掉黑车！", board=x(e4="N", g5="r", e0="K", d9="k"),
                              task=move(piece="e4", rule="capture"), hint="黑车正好在马的一个日字上。", ok="吃掉了黑车！"),
                     ],
@@ -497,7 +561,7 @@ xiangqi = {
                              marks=["arrow:a0:a8", "arrow:a0:d0"]),
                         step("车不能跳过别的棋子，但可以一路走过去吃子。吃掉那匹黑马！",
                              board=x(a0="R", a7="n", e0="K", d9="k"), task=move(piece="a0", accept=["a7"]),
-                             hint="沿着这条竖线一直往上。", ok="一口气就吃掉了！"),
+                             hint="沿着这条竖线一直往上。", ok="一口气就吃掉了！", drill="用车一口气吃掉那匹黑马！"),
                         step("这一次，车能吃到哪一个？", board=x(e4="R", e6="P", e8="n", b4="c", g6="p", e0="K", d9="k"),
                              task=move(piece="e4", rule="capture"),
                              hint="车不能跳过棋子。上面的马被你自己的兵挡住了。", ok="对！马被兵挡住了，只能吃炮。"),
@@ -510,7 +574,8 @@ xiangqi = {
                         step("炮不吃子的时候，走法和车一样，走直线。", board=x(b2="C", e0="K", d9="k"),
                              marks=["arrow:b2:b6", "arrow:b2:e2"]),
                         step("把炮走到中间这条线上，这叫『当头炮』。", marks=["glow:e2"],
-                             task=move(piece="b2", accept=["e2"]), hint="横着走到中间那条线。", ok="当头炮！"),
+                             task=move(piece="b2", accept=["e2"]), hint="横着走到中间那条线。", ok="当头炮！",
+                             drill="把炮走到中间那条线，摆出当头炮！"),
                         step("炮吃子的时候，中间要隔着一个棋子跳过去，这个棋子叫『炮架』。",
                              board=x(b2="C", b6="p", b9="n", e0="K", d9="k"), marks=["ring:b6", "arrow:b2:b9"]),
                         step("用炮隔着炮架，吃掉黑马！", task=move(piece="b2", rule="capture"),
@@ -524,13 +589,15 @@ xiangqi = {
                     "id": "x7", "title": "兵", "icon": "figure.walk", "learned": "兵过河才能横走，永远不后退",
                     "steps": [
                         step("兵在过河之前，只能往前走一格。往前走一步吧。", board=x(e3="P", e0="K", d9="k"),
-                             marks=["glow:e4"], task=move(piece="e3", accept=["e4"]), hint="往上走一格。", ok="往前一步！"),
+                             marks=["glow:e4"], task=move(piece="e3", accept=["e4"]), hint="往上走一格。", ok="往前一步！",
+                             drill="把兵往前走一格。"),
                         step("再往前走一格，兵就过河了。", marks=["glow:e5", "river"], task=move(piece="e4", accept=["e5"]),
                              hint="继续往上走一格。", ok="过河啦！"),
                         step("过了河的兵，可以往前，也可以往左右走一格，但是永远不能往后退。",
                              marks=["glow:e6", "glow:d5", "glow:f5", "cross:e4"]),
                         step("用兵横着吃掉旁边的马！", board=x(e5="P", d5="n", e0="K", d9="k"),
-                             task=move(piece="e5", accept=["d5"]), hint="过了河的兵可以横着走一格。", ok="吃掉了！"),
+                             task=move(piece="e5", accept=["d5"]), hint="过了河的兵可以横着走一格。", ok="吃掉了！",
+                             drill="用过了河的兵，横着吃掉旁边的马！"),
                         step("兵虽然小，过了河以后也很有用，还能帮忙去将军呢。"),
                     ],
                 },
@@ -551,7 +618,8 @@ xiangqi = {
                              hint="一个车已经封住了一排，用另一个车去将军。", ok="将死了！你赢了！"),
                         step("还有一条特别的规则：帅和将不能在同一条直线上面对面，中间一定要有棋子隔着。帅走一步试试。",
                              board=x(d0="K", e9="k"), marks=["cross:e0"], task=move(piece="d0", rule="any"),
-                             hint="帅走到中间那条线，就和将面对面了，不可以。", ok="对，往前走就安全了。"),
+                             hint="帅走到中间那条线，就和将面对面了，不可以。", ok="对，往前走就安全了。",
+                             drill="帅走一步，别和黑将面对面。"),
                         step("另外，如果轮到你走，却一步也走不了，也算输哦。基础规则全部学完啦！"),
                     ],
                 },
@@ -560,18 +628,6 @@ xiangqi = {
         {
             "id": "tactics", "title": "基本杀法", "subtitle": "怎样将死对方", "art": "tutor_xiangqi_tactics",
             "lessons": [
-                {
-                    "id": "x9", "title": "棋子的价值", "icon": "scalemass.fill", "learned": "车最大，马炮次之，不要白白送子",
-                    "steps": [
-                        step("棋子的力量不一样：车最厉害，马和炮差不多，兵最小，但过了河的兵也很有用。", board=S),
-                        step("车可以吃黑马，也可以吃黑炮。吃哪一个更好？",
-                             board=x(e4="R", e7="n", b4="c", b9="r", d0="K", f9="k"), task=move(rule="bestCapture"),
-                             hint="炮后面有黑车保护着，吃了炮，你的车就会被吃掉。", ok="对！马没有人保护，吃掉它最安全。"),
-                        step("黑车要吃你的马！把马走到安全的地方。", board=x(c4="N", c8="r", e0="K", d9="k"),
-                             task=move(piece="c4", rule="safe"), hint="看看黑车能走到的地方，别停在那条线上。", ok="安全了！"),
-                        step("每走一步都想一想：我的子会不会被吃掉？能不能吃到对方没人保护的子？"),
-                    ],
-                },
                 {
                     "id": "x10", "title": "对面笑", "icon": "face.smiling.inverse", "learned": "利用帅将不能见面来杀棋",
                     "steps": [
@@ -597,16 +653,95 @@ xiangqi = {
                     ],
                 },
                 {
-                    "id": "x12", "title": "马的杀法", "icon": "bolt.fill", "learned": "卧槽马和两步杀",
+                    "id": "x12", "title": "马的杀法", "icon": "bolt.fill", "learned": "卧槽马、挂角马和两步杀",
                     "steps": [
                         step("马跳到黑将侧前方的『卧槽』位置去将军，叫『卧槽马』。找一步将死黑将！",
                              board=x(e7="P", d6="N", f1="R", d0="K", e9="k"), task=move(rule="mate"),
-                             hint="马走日字跳过去将军。左边有帅看着，右边有车守着，前面有兵守着，黑将哪儿也去不了。", ok="卧槽马！将死了！"),
-                        step("这一道要走两步：先将一军，等黑方应了以后，再将死它。",
-                             board=x(a1="R", b2="R", d0="K", e9="k"), task=move(rule="mate2"),
-                             hint="先用一个车去将军，把黑将赶到边上。", ok="好棋！", reply=["engine"],
-                             after="黑将躲开了。现在一步将死它！"),
-                        step("一步将死！", task=move(rule="mate"), hint="另一个车也来帮忙。", ok="两步杀成功！"),
+                             hint="马走日字跳过去将军。左边有帅看着，右边有车守着，前面有兵守着，黑将哪儿也去不了。", ok="卧槽马！将死了！",
+                             drill="用卧槽马将死黑将！"),
+                        step("马跳到九宫的角上将军，叫『挂角马』。找一步将死黑将！", board=GUAJIAO, task=move(rule="mate"),
+                             hint="马跳到九宫的角上，离黑将正好一个日字。两个士把将自己堵住了。", ok="挂角马！将死了！",
+                             drill="用挂角马将死黑将！"),
+                        step("这一道要走两步：马先跳近一点，下一步再卧槽将死。", board=HORSE_TWO, task=move(rule="mateIn:2"),
+                             hint="马先跳到一个地方，从那里下一步能跳到卧槽。", ok="好棋！", reply=["engine"],
+                             after="黑方只能动士。现在卧槽将死它！", drill="走两步将死黑将：马先跳近，再去卧槽！"),
+                        step("一步将死！", task=move(rule="mate"), hint="马跳到卧槽的位置，帅看着那条竖线。", ok="两步杀成功！"),
+                    ],
+                },
+            ],
+        },
+        {
+            "id": "material", "title": "得子战术", "subtitle": "怎样吃到对方的子", "art": "tutor_xiangqi_material",
+            "lessons": [
+                {
+                    "id": "x9", "title": "棋子的价值", "icon": "scalemass.fill", "learned": "车最大，马炮次之，不要白白送子",
+                    "steps": [
+                        step("棋子的力量不一样：车最厉害，马和炮差不多，兵最小，但过了河的兵也很有用。", board=S),
+                        step("车可以吃黑马，也可以吃黑炮。吃哪一个更好？",
+                             board=x(e4="R", e7="n", b4="c", b9="r", d0="K", f9="k"), task=move(rule="bestCapture"),
+                             hint="炮后面有黑车保护着，吃了炮，你的车就会被吃掉。", ok="对！马没有人保护，吃掉它最安全。"),
+                        step("黑车要吃你的马！把马走到安全的地方。", board=x(c4="N", c8="r", e0="K", d9="k"),
+                             task=move(piece="c4", rule="safe"), hint="看看黑车能走到的地方，别停在那条线上。", ok="安全了！"),
+                        step("每走一步都想一想：我的子会不会被吃掉？能不能吃到对方没人保护的子？"),
+                    ],
+                },
+                {
+                    "id": "x17", "title": "保护和兑子", "icon": "shield.fill", "learned": "保护自己的子，用小子换大子",
+                    "steps": [
+                        step("红马有红车在后面保护。黑车要是吃马，红车马上吃回来，黑方就亏了。", board=GUARD_SHOW,
+                             marks=["warn:c8", "ring:c0"]),
+                        step("黑车要吃你的炮！派一个子去保护它。", board=GUARD, marks=["warn:g8", "ring:g4"],
+                             task=move(accept=["a0a4", "d1e3"]), hint="车走到炮的那一排，或者马跳到能看住炮的地方。",
+                             ok="炮有人保护，黑车不敢吃了。", drill="黑车要吃你的炮，派一个子去保护它！"),
+                        step("红马能吃黑车，红车能吃黑马，可它们都有人保护。吃哪一个更划算？", board=TRADE,
+                             task=move(rule="bestCapture"), hint="吃了都会被吃回来。用小的马去换大的车，才划算。",
+                             ok="马换车，赚大了！", drill="两个黑子都有人保护。吃哪一个更划算？吃掉它！"),
+                        step("一样大的子一换一，叫『兑子』，谁也不吃亏。用小换大才划算，用大换小就亏了。"),
+                    ],
+                },
+                {
+                    "id": "x18", "title": "捉双", "icon": "arrow.triangle.branch", "learned": "一步棋同时捉住两个子",
+                    "steps": [
+                        step("马跳到一个地方，能同时咬住两个黑车，这叫『捉双』。找到这一步！", board=FORK,
+                             task=move(piece="d4", rule="gain:5"), hint="马走日字。找一个点，从那里两个黑车都在马的日字上。",
+                             ok="捉双！", reply=["engine"], after="两个车，黑方保不住了。",
+                             drill="马跳一步，同时捉住两个黑车！"),
+                        step("吃掉一个黑车！", task=move(piece="e6", rule="gain:5"), hint="马还咬着黑车呢。", ok="吃到一个车！"),
+                        step("这一次，马跳过去一边将军，一边捉车。被将军的时候，黑方必须先解将！", board=FORK_CHECK,
+                             task=move(rule="gain:5"), hint="找一个点，马在那里既能将军，又能咬住黑车。",
+                             ok="将军，还捉住了车！", reply=["engine"], after="黑将躲开了。",
+                             drill="马跳一步，一边将军，一边捉车！"),
+                        step("现在吃掉黑车！", task=move(piece="g8", rule="gain:5"), hint="马还咬着黑车呢。", ok="捉双成功！"),
+                        step("一步棋捉住两个子，对方只能救一个，这就是捉双。"),
+                    ],
+                },
+                {
+                    "id": "x19", "title": "牵制", "icon": "link", "learned": "被牵制的子不能动",
+                    "steps": [
+                        step("黑马挡在红车和黑将的中间。马一走开，车就能吃将，所以马不能动。", board=PIN_SHOW,
+                             marks=["ring:e6", "arrow:e1:e9"]),
+                        step("这样被拴住不能动，叫『牵制』。哪一个黑子被牵制住了？点一下它。", board=PIN_PICK,
+                             task=pick(["e7"]), hint="看看红车的那条线：黑子后面是不是黑将？",
+                             ok="对！它一动，黑将就会被吃。", drill="哪一个黑子被牵制住了，不能动？点一下它。"),
+                        step("被牵制的马跑不掉。派兵去捉它！", board=PIN, task=move(rule="gain:3"),
+                             hint="兵走一步，挨着黑马。别挡在车的那条线上。", ok="马被捉住了，它跑不掉！",
+                             reply=["engine"], after="黑马还是跑不掉。", drill="被牵制的马跑不掉，派兵去捉它！"),
+                        step("吃掉那匹马！", task=move(piece="d6", rule="gain:3"), hint="兵就在黑马的旁边。", ok="吃到一匹马！"),
+                        step("看到对方的子被牵制住了，就派一个子去捉它。"),
+                    ],
+                },
+                {
+                    "id": "x20", "title": "抽将", "icon": "bolt.horizontal.fill", "learned": "抽将：让开一步，将军又吃子",
+                    "steps": [
+                        step("红车被自己的马挡住了。马一跳开，车就将军，这叫『抽将』。", board=DISCOVER,
+                             marks=["ring:e5", "arrow:e2:e9"]),
+                        step("马跳开的时候，还能顺手吃掉一个子。抽将吃车！", task=move(rule="gain:5"),
+                             hint="马跳过去吃黑车，车就会将军。", ok="抽将吃车！黑方只能先解将。",
+                             drill="让马跳开去吃子，同时用车将军！"),
+                        step("自己来一次：让一个子跳开，抽将吃车！", board=DISCOVER2, task=move(rule="gain:5"),
+                             hint="马跳开以后，车就能横着将军。马跳到哪儿能吃到车？", ok="抽将成功！",
+                             reply=["engine"], after="黑方只能先解将，车白白丢了。", drill="跳开一个子，抽将吃车！"),
+                        step("抽将的时候，对方必须先解将，你就能顺手吃掉它的子。"),
                     ],
                 },
             ],
@@ -621,7 +756,7 @@ xiangqi = {
                         step("你来走红方的第一步吧！选一个好的开局。",
                              task=move(accept=["h2e2", "b2e2", "h0g2", "b0c2", "c3c4", "g3g4", "c0e2", "g0e2"]),
                              hint="开局先动炮、马，或者往前挺兵，不要先动帅和仕。", ok="好棋！",
-                             reply=["engine"], after="黑方也出子了。"),
+                             reply=["engine"], after="黑方也出子了。", drill="走出一个好的第一步：先动炮、马或者兵。"),
                         step("再走一步，把一个还没动过的马、炮或者车放出来。", task=move(rule="develop"),
                              hint="选一个还没动过的马、车或者炮，而且别走到会被吃掉的地方。", ok="很好，棋子越来越活了！"),
                         step("记住三件事：先出车马炮；一个棋子不要连着走好多次；帅和仕先别乱动。"),
@@ -632,7 +767,7 @@ xiangqi = {
                     "steps": [
                         step("这是最常见的开局。红方先把炮走到中间，叫『当头炮』，瞄准黑方中间的卒。", board=S,
                              marks=["arrow:h2:e2"], task=move(accept=["h2e2"]), hint="把右边的炮走到中间那条线。",
-                             ok="当头炮！", reply=["h9g7"], after="黑方跳马保护中间的卒。"),
+                             ok="当头炮！", reply=["h9g7"], after="黑方跳马保护中间的卒。", drill="把炮走到中间，摆出当头炮！"),
                         step("红方也把马跳出来，保护中间的兵。", marks=["arrow:h0:g2"], task=move(accept=["h0g2"]),
                              hint="右边的马往前跳。", ok="很好！", reply=["i9h9"], after="黑方把车放出来了。"),
                         step("红车也要出来，走到马原来的位置。", marks=["arrow:i0:h0"], task=move(accept=["i0h0"]),
@@ -649,11 +784,111 @@ xiangqi = {
                     "steps": [
                         step("也有稳一点的开局。比如先把相飞到中间，叫『飞相局』。", board=S,
                              task=move(accept=["c0e2", "g0e2"]), hint="把一个相走田字，飞到中间。",
-                             ok="飞相局！", reply=["b9c7"], after="飞相局很稳，帅的家门口被保护起来了。"),
+                             ok="飞相局！", reply=["b9c7"], after="飞相局很稳，帅的家门口被保护起来了。",
+                             drill="把一个相飞到中间，走出飞相局。"),
                         step("还有一种开局：先把兵往前挺一步，给马让出路来，叫『仙人指路』。", board=S,
                              task=move(accept=["c3c4", "g3g4"]), hint="把第三路或第七路的兵往前走一格。",
-                             ok="仙人指路！", reply=["engine"], after="这样，马以后就可以从兵后面跳出来了。"),
+                             ok="仙人指路！", reply=["engine"], after="这样，马以后就可以从兵后面跳出来了。",
+                             drill="把三路或者七路的兵往前挺一步，走出仙人指路。"),
                         step("开局没有唯一的走法。只要记住先出子、保护好帅，就是好的开局！"),
+                    ],
+                },
+                {
+                    "id": "x21", "title": "开局别犯的错", "icon": "exclamationmark.octagon.fill", "learned": "保护中兵，车别站在炮口上",
+                    "steps": [
+                        step("开局最常见的错：中间的卒没人保护，被当头炮吃掉。黑方就犯了这个错，吃掉它！", board=HANG_PAWN,
+                             task=move(rule="gain:1"), hint="当头炮隔着自己的兵，正好能打到黑方中间的卒。", ok="吃到一个卒！",
+                             drill="黑方中间的卒没人保护，用当头炮吃掉它！"),
+                        step("反过来，黑方摆了当头炮，瞄着你中间的兵。跳马保护它！", board=HIT_PAWN,
+                             marks=["warn:e7", "ring:e3"], task=move(accept=["b0c2", "h0g2"]),
+                             hint="马往前跳，正好护住中间的兵。", ok="兵有马保护，黑炮不敢吃了。",
+                             drill="黑方的当头炮瞄着你中间的兵，跳马保护它！"),
+                        step("车不要站在炮口上。黑炮隔着你的炮，瞄准了你的车！把车走开。", board=ROOK_IN_LINE,
+                             marks=["warn:h7", "ring:h1"], task=move(piece="h1", rule="hold"),
+                             hint="车横着走开。往下退一格，还在炮口上哦。", ok="车安全了！",
+                             drill="黑炮瞄准了你的车，把车走到安全的地方！"),
+                        step("开局还要小心：中兵要保护，车别站在炮口上，一个子别来回走好多次。"),
+                    ],
+                },
+            ],
+        },
+        {
+            "id": "endgame", "title": "残局", "subtitle": "快赢了，怎么收尾", "art": "tutor_xiangqi_endgame",
+            "lessons": [
+                {
+                    "id": "x22", "title": "单车杀将", "icon": "flag.checkered", "learned": "单车杀将：帅占中，车将军",
+                    "steps": [
+                        step("下到最后只剩一个车，也能赢！帅守住中间这条线，黑将就不能往中间走。", board=ROOK_END,
+                             marks=["arrow:e0:e8"]),
+                        step("走一步，用车将死黑将！", task=move(rule="mate"), hint="车走到黑将的那条竖线上将军。",
+                             ok="将死了！帅和车配合得真好。", drill="帅守住中间，用车将死黑将！"),
+                        step("这一次帅不在中间。帅先走到中间，把将关在边上，再用车将死它。", board=ROOK_END2,
+                             task=move(rule="mateIn:2"), hint="帅横着走一格，走到中间那条线。", ok="帅占中！",
+                             reply=["engine"], after="黑将被关在边上了。", drill="帅先占住中间，再用车将死黑将！"),
+                        step("用车将死它！", task=move(rule="mate"), hint="车走到黑将的那条竖线上。", ok="单车杀将成功！"),
+                    ],
+                },
+                {
+                    "id": "x23", "title": "双车错", "icon": "square.stack.3d.up.fill", "learned": "双车错：两个车轮流将军",
+                    "steps": [
+                        step("两个车杀将有个好办法，叫『双车错』：两个车轮流将军，一层一层把将往上赶。", board=TWO_ROOKS),
+                        step("先用一个车横着将军！", task=move(rule="mateIn:3:check"), hint="车走到黑将的那一条横线上。",
+                             ok="将军！", reply=["engine"], after="将往上躲了。", drill="用双车错将军，把将往上赶！"),
+                        step("换另一个车，在将的那条横线上将军！", task=move(rule="mateIn:2:check"),
+                             hint="下面那个车守着退路，另一个车去将的那一条横线。", ok="又将军！", reply=["engine"],
+                             after="将只能躲到最上面了。"),
+                        step("最后一下，将死它！", task=move(rule="mate"), hint="一个车走到黑将的那条横线将军，另一个车守住它的退路。",
+                             ok="双车错成功！"),
+                        step("自己来一遍：两个车轮流将军，把将赶到底线。", board=TWO_ROOKS2, task=move(rule="mateIn:2:check"),
+                             hint="先用一个车，在将的那条横线上将军。", ok="将军！", reply=["engine"], after="将躲到底线了。",
+                             drill="用双车错将军，把将往底线赶！"),
+                        step("换另一个车，将死它！", task=move(rule="mate"), hint="另一个车走到最上面一条横线。",
+                             ok="你学会双车错了！"),
+                    ],
+                },
+                {
+                    "id": "x24", "title": "高兵杀将", "icon": "figure.walk.motion", "learned": "兵和帅配合，困毙黑将",
+                    "steps": [
+                        step("只剩一个兵也能赢！兵站在将的家门口，帅占中间来帮忙。帅先走到中间吧。", board=PAWN_END,
+                             task=move(rule="winIn:2"), hint="帅横着走一格，走到中间那条线。", ok="帅占中！",
+                             reply=["engine"], after="将只能往角落里躲。", drill="兵和帅配合：先让帅占住中间！"),
+                        step("走一步，让黑将一步也动不了！", task=move(rule="winIn:1"),
+                             hint="兵往前或者往旁边走一格，堵住将最后的路。",
+                             ok="黑将没有被将军，可是一步也走不了，这也算你赢！这叫『困毙』。"),
+                        step("再来一盘，这次要走三步。还是帅先占中，兵再一步一步靠近。", board=PAWN_END2,
+                             task=move(rule="winIn:3"), hint="帅横着走到中间那条线。", ok="对！",
+                             reply=["engine"], after="将往上躲了。", drill="兵和帅配合：先让帅占住中间！"),
+                        step("兵往黑将身边靠一步！", task=move(rule="winIn:2"), hint="兵往前或者往将那边走一格。",
+                             ok="靠近了！", reply=["engine"], after="将躲进角落里了。"),
+                        step("最后一步，让黑将动不了！", task=move(rule="winIn:1"), hint="兵再走一格，堵住将最后的路。",
+                             ok="困毙！你赢了！"),
+                        step("兵千万别急着冲到最底下那条线。走到底线的兵，就杀不了将了。"),
+                    ],
+                },
+                {
+                    "id": "x25", "title": "铁门栓", "icon": "lock.fill", "learned": "铁门栓：炮镇中间，车冲进将门",
+                    "steps": [
+                        step("看，中间的红炮瞄着黑将。士和象只要一动，炮就能吃将，所以它们都不能动。", board=IRON,
+                             marks=["ring:e2", "ring:e7", "ring:e8"]),
+                        step("帅守住旁边这条线，车冲进将的家门将军，这叫『铁门栓』。将死它！", marks=["ring:d0"],
+                             task=move(rule="mate"), hint="车沿着帅的那条竖线，一直冲到底。", ok="铁门栓！将死了！",
+                             drill="炮守住中间，车冲进将门，将死黑将！"),
+                        step("这次帅还站在中间。帅先走到车的那一边，下一步车再冲进去。", board=IRON2,
+                             task=move(rule="mateIn:2"), hint="帅横着走一格，走到车的那条竖线上。", ok="帅守住这条线了！",
+                             reply=["engine"], after="现在车可以冲进去了！", drill="帅先守住车的那条线，再用铁门栓将死黑将！"),
+                        step("车冲进将门，将死它！", task=move(rule="mate"), hint="车沿着帅的那条竖线冲到底。",
+                             ok="你学会铁门栓了！"),
+                    ],
+                },
+                {
+                    "id": "x26", "title": "闷宫", "icon": "house.fill", "learned": "闷宫：将被自己的士堵住，炮来将死",
+                    "steps": [
+                        step("黑将的两个士，把它自己的路堵住了。炮隔着士将军，将就无路可走，这叫『闷宫』。将死它！",
+                             board=SMOTHER, task=move(rule="mate"), hint="炮沉到最上面那条横线，隔着士将军。帅看着另一边。",
+                             ok="闷宫！将死了！", drill="用炮闷宫，将死黑将！"),
+                        step("再来一个闷宫，自己找！", board=SMOTHER2, task=move(rule="mate"),
+                             hint="炮沉到黑方的底线，隔着士将军。", ok="闷宫成功！", drill="用炮闷宫，将死黑将！"),
+                        step("将的身边挤满了自己的子，最怕炮来将军。", board=SMOTHER, marks=["ring:d9", "ring:e8"]),
                     ],
                 },
             ],

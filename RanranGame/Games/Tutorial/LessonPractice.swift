@@ -134,6 +134,10 @@ enum PracticePrompts {
         "bestCapture": "吃哪一个最划算？",
         "safe": "黑方要吃你的子了，走到安全的地方！",
         "develop": "把一个还没动过的马、炮或者车放出来！",
+        "gain": "找一步能赚到子的棋！",
+        "hold": "走一步，别让自己的子白白丢掉！",
+        "mateIn": "连着将军，一直到将死！",
+        "winIn": "想办法把这盘棋赢下来！",
     ]
 
     static let go: [String: String] = [

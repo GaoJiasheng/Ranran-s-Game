@@ -61,9 +61,7 @@ struct XiangqiSetupView: View {
             XiangqiGameView(config: c).toolbar(.hidden, for: .navigationBar)
         }
         .navigationDestination(isPresented: $showTutorial) {
-            TutorialHomeView(game: "xiangqi", accent: Palette.honey,
-                             upcoming: ("残局", "单车杀将、马兵杀……", "tutor_xiangqi_endgame"),
-                             onPlay: playFromTutorial)
+            TutorialHomeView(game: "xiangqi", accent: Palette.honey, onPlay: playFromTutorial)
                 .toolbar(.hidden, for: .navigationBar)
         }
     }

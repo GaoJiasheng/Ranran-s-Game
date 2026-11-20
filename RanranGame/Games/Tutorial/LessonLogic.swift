@@ -275,7 +275,89 @@ enum XiangqiLessonLogic {
         case "safe":
             // 走完不会马上被对方白白吃掉
             return !isHanging(m, b)
-        default: return false
+        case "hold":
+            // 走完以后，不管对方怎么应，都不会丢子（换子不吃亏也算）
+            return gain(m, on: b) >= 0
+        default:
+            if rule.hasPrefix("gain"), let n = Int(rule.dropFirst(5)) ?? (rule == "gain" ? 2 : nil) {
+                // 得子："gain:4" = 走完以后，对方怎么应都挡不住，至少净赚 4 分子力（马 4、炮 5、车 9）
+                return gain(m, on: b) >= n
+            }
+            if rule.hasPrefix("mateIn:") || rule.hasPrefix("winIn:") {
+                // 连杀："mateIn:3" = 走完以后，不管对方怎么应，红方 3 步之内（算上这一步）一定将死；
+                // "mateIn:3:check" = 而且每一步都要将军（连将杀，比如双车错）；
+                // "winIn:3" = 将死或者困毙（让对方无棋可走）都算赢（单兵杀将常常是困毙）
+                let parts = rule.split(separator: ":")
+                guard parts.count >= 2, let n = Int(parts[1]) else { return false }
+                let goal: MateGoal = parts[0] == "winIn" ? .win : parts.count > 2 && parts[2] == "check" ? .checks : .mate
+                return matesWithin(m, n, on: b, goal)
+            }
+            return false
+        }
+    }
+
+    // MARK: 得子、连杀
+
+    /// 子力：红方减黑方（帅不算）
+    static func material(_ b: XBoard) -> Int {
+        b.cells.reduce(0) { s, c in
+            guard c != 0, let k = XKind(rawValue: abs(c)), k != .king else { return s }
+            return s + (c > 0 ? value(k) : -value(k))
+        }
+    }
+
+    /// 红方走 m 以后能稳稳赚到多少子力：黑方先应一步（任何走法），之后双方把能吃的子吃完
+    /// （被将军时什么都可以走）。黑方被将死算赚很多。
+    static func gain(_ m: XMove, on b: XBoard) -> Int {
+        let after = b.applying(m)
+        let red = -materialSearch(after, depth: 1, alpha: -100_000, beta: 100_000, q: 0)
+        return red - material(b)
+    }
+
+    /// 只数子力的小搜索，返回轮到走的一方看的分数
+    static func materialSearch(_ b: XBoard, depth: Int, alpha: Int, beta: Int, q: Int) -> Int {
+        let moves = b.legalMoves()
+        if moves.isEmpty { return -10_000 }
+        let sign = b.turn == .red ? 1 : -1
+        let checked = b.inCheck(b.turn)
+        var a = alpha
+        var candidates = moves
+        if depth <= 0 && !checked {
+            // 不吃子也可以（站着不动），所以分数至少是现在的子力
+            let stand = sign * material(b)
+            if stand >= beta || q >= 8 { return stand }
+            a = max(a, stand)
+            candidates = moves.filter { b[$0.to] != nil }
+        } else if depth <= 0 && q >= 8 {
+            return sign * material(b)
+        }
+        candidates.sort { (b[$0.to].map { value($0.kind) } ?? 0) > (b[$1.to].map { value($0.kind) } ?? 0) }
+        for mv in candidates {
+            let s = -materialSearch(b.applying(mv), depth: depth - 1, alpha: -beta, beta: -a, q: depth <= 0 ? q + 1 : 0)
+            if s >= beta { return s }
+            a = max(a, s)
+        }
+        return a
+    }
+
+    enum MateGoal { case mate, checks, win }
+
+    /// 红方走 m 以后，黑方怎么应都没用，红方 n 步之内（包括 m）赢下来。
+    /// .mate：最后一步要将死；.checks：每一步都要将军；.win：困毙（不将军、对方却无棋可走）也算赢。
+    static func matesWithin(_ m: XMove, _ n: Int, on b: XBoard, _ goal: MateGoal = .mate) -> Bool {
+        let after = b.applying(m)
+        let checking = after.inCheck(after.turn)
+        if goal == .checks && !checking { return false }
+        let replies = after.legalMoves()
+        if replies.isEmpty { return checking || goal == .win }
+        guard n > 1 else { return false }
+        return replies.allSatisfy { r in
+            let b2 = after.applying(r)
+            // 先试将军的着法，通常更快找到
+            let all = b2.legalMoves()
+            let checks = all.filter { b2.gives_check($0) }
+            return checks.contains { matesWithin($0, n - 1, on: b2, goal) }
+                || (goal != .checks && all.contains { !checks.contains($0) && matesWithin($0, n - 1, on: b2, goal) })
         }
     }
 

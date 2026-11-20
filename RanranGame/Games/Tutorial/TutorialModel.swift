@@ -295,7 +295,7 @@ extension TutorialCourse {
     /// 以后新加的组没写在这里的，按第几组往上加两档。
     static let playLevels: [String: [String: Int]] = [
         "gomoku": ["basic": 1, "attack": 3, "defense": 5, "master": 7],
-        "xiangqi": ["basic": 1, "tactics": 3, "opening": 4, "endgame": 6],
+        "xiangqi": ["basic": 1, "tactics": 3, "material": 4, "opening": 5, "endgame": 6],
         "go": ["basic": 1, "capture": 2, "connect": 3, "life": 4, "opening": 4, "endgame": 5],
     ]
 

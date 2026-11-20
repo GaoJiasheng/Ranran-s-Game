@@ -181,11 +181,53 @@ func checkXiangqi(_ l: TutorialLesson) {
     }
 }
 
+/// 分支检查：上面只走了"第一个答案 + 电脑的那一步"。这里把所有可能都走一遍——
+/// 红方每一种被判对的走法 × 黑方每一种应着（reply 是 "engine" 时，电脑想多久、走哪步不一定），
+/// 后面接着的题（没有新棋盘的那几步）都必须有答案；而且接着还有题的时候，这一步不能已经把棋下完。
+func xiangqiBranches(_ l: TutorialLesson) {
+    var states: [XBoard] = []
+    var worst = 0
+    for (i, s) in l.steps.enumerated() {
+        if let f = s.board, let nb = XBoard(fen: f) { states = [nb] }
+        guard let task = s.task, task.type == "move" else { continue }
+        let continues = i + 1 < l.steps.count && l.steps[i + 1].board == nil
+            && l.steps[(i + 1)...].prefix { $0.board == nil }.contains { $0.task?.type == "move" }
+        var next = Set<XBoard>()
+        for st in states {
+            var board = st
+            board.turn = .red
+            let ans = XiangqiLessonLogic.answers(task, on: board)
+            if ans.isEmpty { flag("[\(l.id)] step \(i+1) has NO answer on a reachable branch  fen=\(board.fen)"); continue }
+            guard continues else { continue }
+            for m in ans {
+                let after = board.applying(m)
+                if after.legalMoves().isEmpty {
+                    flag("[\(l.id)] step \(i+1): \(m.iccs) already ends the game, but more steps follow  fen=\(board.fen)")
+                    continue
+                }
+                guard let reply = s.reply else { var a = after; a.turn = .red; next.insert(a); continue }
+                if reply == ["engine"] {
+                    for r in after.legalMoves() { next.insert(after.applying(r)) }
+                } else {
+                    var a = after
+                    for q in XiangqiLessonLogic.reply(reply, on: after) { a.make(q) }
+                    next.insert(a)
+                }
+            }
+        }
+        if continues {
+            worst = max(worst, next.count)
+            states = Array(next)
+        }
+    }
+    if worst > 1 { print("  branches: up to \(worst) positions checked for a following step") }
+}
+
 let gc = loadCourse(root, "gomoku")
 let xc = loadCourse(root, "xiangqi")
 for l in gc.lessons { checkGomoku(l) }
 for t in gc.tracks { for l in t.lessons { exploreGomoku(l.id, l.steps, 0, nil, "") } }
-for l in xc.lessons { checkXiangqi(l) }
+for l in xc.lessons { checkXiangqi(l); xiangqiBranches(l) }
 
 // 练习题：每段 × 每种变换
 quiet = true
