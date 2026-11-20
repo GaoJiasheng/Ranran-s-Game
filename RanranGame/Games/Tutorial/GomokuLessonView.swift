@@ -12,8 +12,8 @@ final class GomokuLessonSession {
     private(set) var miss: Point?
     private var replyTask: Task<Void, Never>?
 
-    init(course: TutorialCourse, lesson: TutorialLesson) {
-        flow = LessonFlow(course: course, lesson: lesson)
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson) {
+        flow = LessonFlow(course: course, lesson: lesson, mode: mode)
         syncBoard()
         flow.onStep = { [weak self] in self?.syncBoard() }
     }
@@ -60,6 +60,8 @@ final class GomokuLessonSession {
             Sound.place(.black)
             flow.succeed()
             if let reply = flow.step.reply { playReply(reply) }
+        } else if let c = GomokuLessonLogic.consequence(task, p, on: board) {
+            showConsequence(p, c)
         } else {
             withAnimation(.spring(duration: 0.2)) { miss = p }
             Task {
@@ -88,6 +90,35 @@ final class GomokuLessonSession {
         }
     }
 
+    /// 走错了：把这颗黑棋下上去，白棋马上连五 / 做活四，说一句，再退回去
+    private func showConsequence(_ p: Point, _ c: LessonConsequence<Point>) {
+        let before = board, beforeLast = last
+        withAnimation(.spring(duration: 0.32, bounce: 0.35)) {
+            board[p] = .black
+            last = p
+        }
+        Sound.place(.black)
+        flow.beginReply()
+        replyTask = Task {
+            try? await Task.sleep(for: .milliseconds(550))
+            for q in c.moves where !Task.isCancelled {
+                withAnimation(.spring(duration: 0.32, bounce: 0.35)) {
+                    board[q] = .white
+                    last = q
+                }
+                Sound.place(.white)
+            }
+            await flow.showConsequence(c.line)
+            withAnimation(.spring(duration: 0.45)) {
+                board = before
+                last = beforeLast
+            }
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            flow.endConsequence()
+        }
+    }
+
     func stop() {
         replyTask?.cancel()
         flow.stop()
@@ -98,8 +129,9 @@ struct GomokuLessonView: View {
     @State private var session: GomokuLessonSession
     let onNextLesson: (TutorialLesson) -> Void
 
-    init(course: TutorialCourse, lesson: TutorialLesson, onNextLesson: @escaping (TutorialLesson) -> Void) {
-        _session = State(initialValue: GomokuLessonSession(course: course, lesson: lesson))
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson,
+         onNextLesson: @escaping (TutorialLesson) -> Void) {
+        _session = State(initialValue: GomokuLessonSession(course: course, lesson: lesson, mode: mode))
         self.onNextLesson = onNextLesson
     }
 

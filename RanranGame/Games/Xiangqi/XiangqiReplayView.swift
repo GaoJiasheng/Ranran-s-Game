@@ -235,6 +235,9 @@ struct XiangqiReplayView: View {
                         .font(.kid(18, weight: .bold))
                         .foregroundStyle(Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let id = lessonID(i) {
+                        ReviewLessonButton(game: "xiangqi", lessonID: id)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -242,6 +245,12 @@ struct XiangqiReplayView: View {
         .padding(16)
         .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 10, y: 5)
+    }
+
+    /// 亏了的一步：对应教学里的哪一课
+    private func lessonID(_ i: Int) -> String? {
+        guard replay.reviewed(i), let r = replay.reviews?[i], r.loss >= 90, r.best != replay.moves[i] else { return nil }
+        return XiangqiReplayLessons.lessonID(before: replay.positions[i], played: replay.moves[i])
     }
 
     private func comment(_ i: Int) -> String {

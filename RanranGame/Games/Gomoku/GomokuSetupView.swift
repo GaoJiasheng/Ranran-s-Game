@@ -56,9 +56,15 @@ struct GomokuSetupView: View {
                 .toolbar(.hidden, for: .navigationBar)
         }
         .navigationDestination(isPresented: $showTutorial) {
-            TutorialHomeView(game: "gomoku", accent: Palette.coral)
+            TutorialHomeView(game: "gomoku", accent: Palette.coral, onPlay: playFromTutorial)
                 .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    /// 教学里学完一组点「去下一盘」：回到这里，选好那一档
+    private func playFromTutorial(_ level: Int) {
+        savedLevel = level
+        showTutorial = false
     }
 
     private var header: some View {

@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// 一个游戏的「教学」课程表：几组课程排成一排（竖屏 2×2），基础一直开着，后面的学完前一组才解锁。
+/// 学完的课显示小奖杯，可以「练一练」；右上角的「复习」从学过的课里随机抽题。
 struct TutorialHomeView: View {
     @Environment(PlayerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -9,15 +10,19 @@ struct TutorialHomeView: View {
     let accent: Color
     /// 还在制作中的一组（只显示封面）
     var upcoming: (title: String, subtitle: String, art: String)? = nil
+    /// 学完一组后「去下一盘」：回到游戏首页并选好这一档
+    var onPlay: ((Int) -> Void)? = nil
 
     @State private var course: TutorialCourse?
-    @State private var playing: TutorialLesson?
+    @State private var playing: LessonRoute?
     @State private var appeared = false
 
-    init(game: String, accent: Color, upcoming: (title: String, subtitle: String, art: String)? = nil) {
+    init(game: String, accent: Color, upcoming: (title: String, subtitle: String, art: String)? = nil,
+         onPlay: ((Int) -> Void)? = nil) {
         self.game = game
         self.accent = accent
         self.upcoming = upcoming
+        self.onPlay = onPlay
         _course = State(initialValue: TutorialCourse.load(game))
     }
 
@@ -45,26 +50,32 @@ struct TutorialHomeView: View {
         }
         .onAppear {
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
+            if let course { store.rememberOpenTracks(course) }
             #if DEBUG
-            // 调试截图用：启动参数 -lesson x4 直接打开那一课
-            if let id = UserDefaults.standard.string(forKey: "lesson"), playing == nil,
-               let l = course?.lessons.first(where: { $0.id == id }) { playing = l }
+            // 调试截图用：启动参数 -lesson x4 直接打开那一课；再加 -practice YES 打开它的「练一练」；-review YES 打开「复习」
+            if playing == nil, let course {
+                let d = UserDefaults.standard
+                // -tutorCups YES：把这门课的每一课都记成学完，金银铜轮着来（看课程表、「我的」、复习用）
+                if d.bool(forKey: "tutorCups"), store.lessonsDone(course) == 0 {
+                    for (i, l) in course.lessons.enumerated() {
+                        store.recordLesson(course.game, l.id, cup: LessonCup(rawValue: 3 - i % 3) ?? .bronze)
+                    }
+                    store.rememberOpenTracks(course)
+                }
+                if d.bool(forKey: "review") {
+                    playing = LessonRoute.review(course, store: store)
+                } else if let id = d.string(forKey: "lesson"), let l = course.lesson(id) {
+                    playing = d.bool(forKey: "practice") ? LessonRoute.practice(l, game: game) : .lesson(l)
+                }
+            }
             #endif
         }
-        .navigationDestination(item: $playing) { lesson in
-            lessonView(lesson)
-                .id(lesson)
-                .toolbar(.hidden, for: .navigationBar)
-        }
-    }
-
-    @ViewBuilder
-    private func lessonView(_ lesson: TutorialLesson) -> some View {
-        if let course {
-            switch game {
-            case "xiangqi": XiangqiLessonView(course: course, lesson: lesson) { playing = $0 }
-            case "go": GoLessonView(course: course, lesson: lesson) { playing = $0 }
-            default: GomokuLessonView(course: course, lesson: lesson) { playing = $0 }
+        .navigationDestination(item: $playing) { route in
+            if let course {
+                LessonScreen(course: course, route: route) { playing = .lesson($0) }
+                    .id(route)
+                    .environment(\.lessonNavigator, LessonNavigator(open: { playing = $0 }, playGame: onPlay))
+                    .toolbar(.hidden, for: .navigationBar)
             }
         }
     }
@@ -77,18 +88,29 @@ struct TutorialHomeView: View {
                 Text(course.title)
                     .font(.kid(44, weight: .heavy))
                     .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 Text(done == 0 ? "从基础规则开始，一步一步学" : "已经学会 \(done) / \(total) 课")
                     .font(.kid(19, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
+            if course.canReview(store) {
+                ReviewButton(game: course.game, accent: accent) {
+                    Sound.start()
+                    playing = LessonRoute.review(course, store: store)
+                }
+                .fixedSize()
+            }
             if let next = store.nextLesson(course) {
                 Button {
                     Sound.start()
-                    playing = next
+                    playing = .lesson(next)
                 } label: {
                     Label(done == 0 ? "开始学：\(next.title)" : "继续学：\(next.title)", systemImage: "play.fill")
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
                 .buttonStyle(PillButtonStyle(color: Palette.coral, size: 22))
             }
@@ -109,7 +131,10 @@ struct TutorialHomeView: View {
                                 TrackCard(course: course, index: i, accent: accent,
                                           next: store.nextLesson(course)) { lesson in
                                     Sound.tap()
-                                    playing = lesson
+                                    playing = .lesson(lesson)
+                                } practice: { lesson in
+                                    Sound.start()
+                                    playing = LessonRoute.practice(lesson, game: course.game)
                                 }
                             } else if i == course.tracks.count, let upcoming {
                                 UpcomingCard(title: upcoming.title, subtitle: upcoming.subtitle, art: upcoming.art)
@@ -128,6 +153,149 @@ struct TutorialHomeView: View {
     }
 }
 
+/// 打开的一课：按游戏选对应的棋盘。课程表和复盘里的「复习这一课」共用。
+struct LessonScreen: View {
+    let course: TutorialCourse
+    let route: LessonRoute
+    let onNextLesson: (TutorialLesson) -> Void
+
+    var body: some View {
+        switch course.game {
+        case "xiangqi": XiangqiLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "go": GoLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        default: GomokuLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        }
+    }
+}
+
+/// 从别的地方（比如复盘）直接打开某一课；学完可以接着下一课，「课程表」就是关掉回去。
+struct LessonLaunchView: View {
+    @Environment(PlayerStore.self) private var store
+    let course: TutorialCourse
+    @State private var route: LessonRoute
+
+    init(course: TutorialCourse, lesson: TutorialLesson) {
+        self.course = course
+        _route = State(initialValue: .lesson(lesson))
+    }
+
+    var body: some View {
+        LessonScreen(course: course, route: route) { route = .lesson($0) }
+            .id(route)
+            .environment(\.lessonNavigator, LessonNavigator(open: { route = $0 }, leaveTitle: "回到复盘"))
+            .onAppear { store.rememberOpenTracks(course) }
+    }
+}
+
+/// 复盘里点评到一个学过的错误时的「复习这一课」按钮：全屏打开那一课
+struct ReviewLessonButton: View {
+    @Environment(PlayerStore.self) private var store
+    let game: String
+    let lessonID: String
+    @State private var showing = false
+
+    private var course: TutorialCourse? { TutorialCourse.bundled[game] }
+
+    var body: some View {
+        if let course, let lesson = course.lesson(lessonID) {
+            Button {
+                Sound.tap()
+                showing = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "graduationcap.fill")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(Palette.coral, in: Circle())
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("复习这一课")
+                            .font(.kid(17, weight: .heavy))
+                            .foregroundStyle(Palette.ink)
+                        Text("「\(lesson.title)」")
+                            .font(.kid(14, weight: .bold))
+                            .foregroundStyle(Palette.inkSoft)
+                            .lineLimit(1)
+                    }
+                    if let cup = store.lessonCup(game, lessonID) {
+                        CupBadge(cup: cup, size: 26)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(Palette.inkSoft.opacity(0.6))
+                }
+                .padding(.leading, 6)
+                .padding(.trailing, 14)
+                .padding(.vertical, 6)
+                .background(Palette.coral.opacity(0.1), in: Capsule())
+                .overlay(Capsule().strokeBorder(Palette.coral.opacity(0.35), lineWidth: 1.5))
+            }
+            .buttonStyle(PressableStyle(scale: 0.95))
+            .accessibilityLabel("复习这一课：\(lesson.title)")
+            .fullScreenCover(isPresented: $showing) {
+                LessonLaunchView(course: course, lesson: lesson)
+                    .environment(store)
+            }
+        }
+    }
+}
+
+/// 课程表右上角的「复习」：从学过的课里抽 5 道题，换个方向再做一遍
+private struct ReviewButton: View {
+    @Environment(PlayerStore.self) private var store
+    let game: String
+    let accent: Color
+    let action: () -> Void
+
+    private var days: Int? { store.daysSinceReview(game) }
+
+    /// 没复习过，或者三天没复习了：亮一个小红点
+    private var due: Bool { days.map { $0 >= 3 } ?? true }
+
+    private var caption: String {
+        guard let d = days else { return "还没复习过" }
+        let when = d == 0 ? "今天" : (d == 1 ? "昨天" : "\(d) 天前")
+        return "上次 \(when) · 第 \(store.reviewCount(game)) 次"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 20, weight: .black))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Palette.sage, in: Circle())
+                    .overlay(alignment: .topTrailing) {
+                        if due {
+                            Circle()
+                                .fill(Palette.coral)
+                                .frame(width: 14, height: 14)
+                                .overlay(Circle().strokeBorder(.white, lineWidth: 2))
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("复习")
+                        .font(.kid(22, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    Text(caption)
+                        .font(.kid(13, weight: .bold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(1)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.leading, 8)
+            .padding(.trailing, 18)
+            .padding(.vertical, 8)
+            .softCard(radius: 40)
+        }
+        .buttonStyle(PressableStyle(scale: 0.94))
+        .accessibilityLabel("复习，\(caption)")
+    }
+}
+
 /// 一组课程
 private struct TrackCard: View {
     @Environment(PlayerStore.self) private var store
@@ -136,6 +304,7 @@ private struct TrackCard: View {
     let accent: Color
     let next: TutorialLesson?
     let open: (TutorialLesson) -> Void
+    let practice: (TutorialLesson) -> Void
 
     private var track: TutorialTrack { course.tracks[index] }
     private var unlocked: Bool { store.trackUnlocked(course, index) }
@@ -169,9 +338,12 @@ private struct TrackCard: View {
             if unlocked {
                 VStack(spacing: 6) {
                     ForEach(Array(track.lessons.enumerated()), id: \.element.id) { i, lesson in
+                        let finished = store.lessonDone(course.game, lesson.id)
                         LessonRow(number: i + 1, lesson: lesson,
-                                  done: store.lessonDone(course.game, lesson.id),
-                                  isNext: lesson.id == next?.id, accent: accent) { open(lesson) }
+                                  cup: store.lessonCup(course.game, lesson.id),
+                                  isNext: lesson.id == next?.id, accent: accent,
+                                  canPractice: finished && LessonPractice.canPractice(lesson, game: course.game),
+                                  action: { open(lesson) }, practice: { practice(lesson) })
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
@@ -212,60 +384,81 @@ private struct TrackCard: View {
     }
 }
 
+/// 课程表上的一课：学完的显示拿到的小奖杯，右边可以「练一练」
 private struct LessonRow: View {
     let number: Int
     let lesson: TutorialLesson
-    let done: Bool
+    let cup: LessonCup?
     let isNext: Bool
     let accent: Color
+    let canPractice: Bool
     let action: () -> Void
+    let practice: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(done ? Palette.sage : (isNext ? Palette.coral : Palette.cream))
-                    if done {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .black))
-                            .foregroundStyle(.white)
+        HStack(spacing: 8) {
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    if let cup {
+                        CupBadge(cup: cup, size: 36)
                     } else {
                         Text("\(number)")
                             .font(.kid(17, weight: .heavy))
                             .foregroundStyle(isNext ? .white : Palette.ink.opacity(0.7))
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(isNext ? Palette.coral : Palette.cream))
+                    }
+                    Text(lesson.title)
+                        .font(.kid(19, weight: .bold))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer(minLength: 0)
+                    if isNext {
+                        Text("下一课")
+                            .font(.kid(13, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(Palette.coral, in: Capsule())
+                    } else if !canPractice {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .heavy))
+                            .foregroundStyle(Palette.inkSoft.opacity(0.5))
                     }
                 }
-                .frame(width: 36, height: 36)
-                Text(lesson.title)
-                    .font(.kid(19, weight: .bold))
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Spacer(minLength: 0)
-                if isNext {
-                    Text("下一课")
-                        .font(.kid(13, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(Palette.coral, in: Capsule())
-                } else {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .heavy))
-                        .foregroundStyle(Palette.inkSoft.opacity(0.5))
-                }
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 58)
-            .background(isNext ? Palette.coral.opacity(0.1) : Palette.paper.opacity(0.7),
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Palette.coral.opacity(isNext ? 0.6 : 0), lineWidth: 2)
-            )
+            .buttonStyle(PressableStyle(scale: 0.96))
+            .accessibilityLabel("第 \(number) 课 \(lesson.title)\(cup.map { "，已学会，\($0.name)" } ?? "")")
+
+            if canPractice && !isNext {
+                Button(action: practice) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 12, weight: .black))
+                        Text("练一练")
+                            .font(.kid(14, weight: .heavy))
+                    }
+                    .foregroundStyle(Palette.ink.opacity(0.75))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(accent.opacity(0.28), in: Capsule())
+                }
+                .buttonStyle(PressableStyle(scale: 0.9))
+                .accessibilityLabel("练一练：\(lesson.title)")
+            }
         }
-        .buttonStyle(PressableStyle(scale: 0.96))
-        .accessibilityLabel("第 \(number) 课 \(lesson.title)\(done ? "，已学会" : "")")
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
+        .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 58)
+        .background(isNext ? Palette.coral.opacity(0.1) : Palette.paper.opacity(0.7),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Palette.coral.opacity(isNext ? 0.6 : 0), lineWidth: 2)
+        )
     }
 }
 

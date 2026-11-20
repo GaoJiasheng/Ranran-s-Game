@@ -13,8 +13,8 @@ final class XiangqiLessonSession {
     private(set) var flash = 0
     private var replyTask: Task<Void, Never>?
 
-    init(course: TutorialCourse, lesson: TutorialLesson) {
-        flow = LessonFlow(course: course, lesson: lesson)
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson) {
+        flow = LessonFlow(course: course, lesson: lesson, mode: mode)
         syncBoard()
         flow.onStep = { [weak self] in self?.syncBoard() }
     }
@@ -119,9 +119,33 @@ final class XiangqiLessonSession {
             play(m)
             flow.succeed()
             if let reply = flow.step.reply { playReply(reply) }
+        } else if let c = XiangqiLessonLogic.consequence(task, m, on: b) {
+            showConsequence(m, c)
         } else {
             withAnimation(.spring(duration: 0.25)) { selected = nil }
             flow.fail()
+        }
+    }
+
+    /// 走错了：真的走过去，黑方马上吃掉 / 黑将逃走，说一句，再退回去
+    private func showConsequence(_ m: XMove, _ c: LessonConsequence<XMove>) {
+        let before = (board: board, ids: ids, last: lastMove)
+        play(m)
+        flow.beginReply()
+        replyTask = Task {
+            try? await Task.sleep(for: .milliseconds(650))
+            for r in c.moves where !Task.isCancelled { play(r) }
+            await flow.showConsequence(c.line)
+            withAnimation(.spring(duration: 0.45, bounce: 0.2)) {
+                board = before.board
+                ids = before.ids
+                lastMove = before.last
+                selected = nil
+            }
+            board.turn = .red
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            flow.endConsequence()
         }
     }
 
@@ -165,8 +189,9 @@ struct XiangqiLessonView: View {
     @State private var session: XiangqiLessonSession
     let onNextLesson: (TutorialLesson) -> Void
 
-    init(course: TutorialCourse, lesson: TutorialLesson, onNextLesson: @escaping (TutorialLesson) -> Void) {
-        _session = State(initialValue: XiangqiLessonSession(course: course, lesson: lesson))
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson,
+         onNextLesson: @escaping (TutorialLesson) -> Void) {
+        _session = State(initialValue: XiangqiLessonSession(course: course, lesson: lesson, mode: mode))
         self.onNextLesson = onNextLesson
     }
 

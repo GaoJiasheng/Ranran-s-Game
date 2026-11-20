@@ -327,6 +327,9 @@ struct GomokuReplayView: View {
                                 .foregroundStyle(Palette.inkSoft)
                         }
                     }
+                    if let id = r.lessonID, replay.playerColor == nil || r.color == replay.playerColor {
+                        ReviewLessonButton(game: "gomoku", lessonID: id)
+                    }
                 } else {
                     HStack(spacing: 10) {
                         ProgressView()

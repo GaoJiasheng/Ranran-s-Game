@@ -9,6 +9,7 @@ final class LessonFlow {
 
     let course: TutorialCourse
     let lesson: TutorialLesson
+    let mode: LessonMode
 
     private(set) var index = 0
     private(set) var line = ""
@@ -21,18 +22,25 @@ final class LessonFlow {
     /// 错了两次，把答案亮出来
     private(set) var revealed = false
     private(set) var finished = false
-    /// 对手正在应着，先别动
+    /// 对手正在应着（或者正在演示走错的后果），先别动
     private(set) var busy = false
+    /// 做错过的题（第几步）；一次就做对的题不在里面
+    private(set) var missed: Set<Int> = []
     /// 这一课以前没学完过（学完时用来判断是不是刚解锁了新的一组）
     var firstTime = true
+    /// 开始这一课之前：这一课最好的奖杯、下一组开没开、这一组学没学完
+    var cupBefore: LessonCup?
+    var nextTrackOpenBefore = true
+    var trackDoneBefore = false
     /// 进入新的一步时，棋盘那边要换局面
     var onStep: (() -> Void)?
 
     private var talkTask: Task<Void, Never>?
 
-    init(course: TutorialCourse, lesson: TutorialLesson) {
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson) {
         self.course = course
         self.lesson = lesson
+        self.mode = mode
     }
 
     var step: TutorialStep { lesson.steps[index] }
@@ -40,6 +48,15 @@ final class LessonFlow {
     var task: TutorialTask? { step.task }
     /// 现在能不能在棋盘上操作
     var awaitingAnswer: Bool { task != nil && !solved && !busy && !finished }
+
+    /// 一共几道题、几道一次就做对
+    var taskCount: Int { lesson.steps.filter { $0.task != nil }.count }
+    var firstTryCount: Int { taskCount - missed.count }
+    var cup: LessonCup { LessonCup.earned(tasks: taskCount, firstTry: firstTryCount) }
+    /// 每道题一次做对没有（按顺序），学完时画成一排小圆点
+    var taskResults: [Bool] {
+        lesson.steps.indices.filter { lesson.steps[$0].task != nil }.map { !missed.contains($0) }
+    }
 
     func begin() { enter() }
 
@@ -91,7 +108,8 @@ final class LessonFlow {
         withAnimation(.spring(duration: 0.3)) { canContinue = true }
     }
 
-    /// 循环的一步（征子、枷）：对方逃了，还没吃掉，同一步再来一次
+    /// 循环的一步（征子、枷）：对方逃了，还没吃掉，同一步再来一次。
+    /// 做错过就一直算做错过（missed 不清）。
     func rearm(_ text: String) {
         busy = false
         solved = false
@@ -111,15 +129,46 @@ final class LessonFlow {
     /// 做错了：第一次给提示，第二次亮出答案
     func fail(_ reason: String? = nil) {
         guard !solved else { return }
-        wrong += 1
-        mood = .oops
+        registerWrong()
         Sound.oops()
+        respondToWrong(reason)
+    }
+
+    private func registerWrong() {
+        wrong += 1
+        missed.insert(index)
+        mood = .oops
+    }
+
+    private func respondToWrong(_ reason: String?) {
         if wrong >= 2 {
             withAnimation(.spring(duration: 0.4)) { revealed = true }
             talk(TutorLines.showAnswer)
         } else {
             talk(reason ?? step.hint ?? TutorLines.retry)
         }
+    }
+
+    /// 走错了，先演示后果：棋盘那边把她的棋和对手的应着摆上去，这里说一句、至少停 1.5 秒。
+    /// 等这个返回以后，棋盘退回去，再调 endConsequence()。算错一次。
+    func showConsequence(_ text: String) async {
+        guard !solved else { return }
+        busy = true
+        registerWrong()
+        Sound.oops()
+        talkTask?.cancel()
+        withAnimation(.spring(duration: 0.3)) { line = text }
+        let start = ContinuousClock.now
+        await VoiceOver.shared.speak(text)
+        let left = .milliseconds(1500) - (ContinuousClock.now - start)
+        if left > .zero { try? await Task.sleep(for: left) }
+        try? await Task.sleep(for: .milliseconds(250))
+    }
+
+    /// 后果演示完、棋盘已经退回：给提示（第二次错就亮答案），可以再试
+    func endConsequence() {
+        busy = false
+        respondToWrong(nil)
     }
 
     /// 不算错，只是提醒一下（比如走了不合规则的棋）
@@ -142,6 +191,26 @@ final class LessonFlow {
     func stop() {
         talkTask?.cancel()
         VoiceOver.shared.stop()
+    }
+}
+
+/// 教学页之间跳转：再练一次、复习、学完一组去下一盘。由课程表（或者复盘里打开的一课）提供。
+struct LessonNavigator {
+    var open: (LessonRoute) -> Void = { _ in }
+    /// 回到游戏首页，选好这一档（没有就不显示「去下一盘」）
+    var playGame: ((Int) -> Void)?
+    /// 结算页上"回去"那个按钮的字
+    var leaveTitle = "课程表"
+}
+
+private struct LessonNavigatorKey: EnvironmentKey {
+    static let defaultValue = LessonNavigator()
+}
+
+extension EnvironmentValues {
+    var lessonNavigator: LessonNavigator {
+        get { self[LessonNavigatorKey.self] }
+        set { self[LessonNavigatorKey.self] = newValue }
     }
 }
 
@@ -195,12 +264,38 @@ struct LessonScaffold<Board: View>: View {
             }
         }
         .onAppear {
-            flow.firstTime = !store.lessonDone(flow.course.game, flow.lesson.id)
+            let course = flow.course
+            if flow.mode.isLesson {
+                flow.firstTime = !store.lessonDone(course.game, flow.lesson.id)
+                flow.cupBefore = store.lessonCup(course.game, flow.lesson.id)
+                if let ti = course.tracks.firstIndex(where: { $0.lessons.contains { $0.id == flow.lesson.id } }) {
+                    flow.trackDoneBefore = store.trackDone(course, course.tracks[ti])
+                    flow.nextTrackOpenBefore = ti + 1 >= course.tracks.count || store.trackUnlocked(course, ti + 1)
+                }
+            }
             flow.begin()
         }
         .onDisappear { flow.stop() }
         .onChange(of: flow.finished) { _, done in
-            if done { store.markLessonDone(flow.course.game, flow.lesson.id) }
+            guard done else { return }
+            let game = flow.course.game
+            switch flow.mode {
+            case .lesson:
+                store.recordLesson(game, flow.lesson.id, cup: flow.cup)
+                store.rememberOpenTracks(flow.course)
+            case let .practice(id):
+                store.recordPractice(game, id)
+            case .review:
+                store.recordReview(game)
+            }
+        }
+    }
+
+    private var title: String {
+        switch flow.mode {
+        case .lesson: flow.lesson.title
+        case .practice: "练一练 · \(flow.lesson.title)"
+        case .review: "复习"
         }
     }
 
@@ -208,7 +303,7 @@ struct LessonScaffold<Board: View>: View {
         HStack(spacing: 14) {
             RoundIconButton(systemName: "chevron.left", label: "返回") { dismiss() }
             VStack(alignment: .leading, spacing: 6) {
-                Text(flow.lesson.title)
+                Text(title)
                     .font(.kid(28, weight: .heavy))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
@@ -294,7 +389,7 @@ struct LessonScaffold<Board: View>: View {
         Button {
             flow.next()
         } label: {
-            Label(flow.isLast ? "学完啦" : "下一步", systemImage: flow.isLast ? "checkmark" : "arrow.right")
+            Label(flow.isLast ? (flow.mode.isLesson ? "学完啦" : "练完啦") : "下一步", systemImage: flow.isLast ? "checkmark" : "arrow.right")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(PillButtonStyle(color: flow.canContinue ? Palette.coral : Palette.inkSoft.opacity(0.35), size: 26))
@@ -321,114 +416,3 @@ struct StepDots: View {
     }
 }
 
-// MARK: - 学完一课
-
-private struct LessonDoneOverlay: View {
-    @Environment(PlayerStore.self) private var store
-    let flow: LessonFlow
-    let accent: Color
-    let onNextLesson: ((TutorialLesson) -> Void)?
-    let onLeave: () -> Void
-
-    @State private var appeared = false
-    @State private var badge = false
-
-    /// 学完这一课，下一组是不是刚刚解锁
-    private var unlockedTrack: TutorialTrack? {
-        let tracks = flow.course.tracks
-        guard flow.firstTime,
-              let i = tracks.firstIndex(where: { $0.lessons.contains { $0.id == flow.lesson.id } }),
-              i + 1 < tracks.count, store.trackDone(flow.course, tracks[i]) else { return nil }
-        return tracks[i + 1]
-    }
-
-    private var nextLesson: TutorialLesson? {
-        let all = flow.course.lessons
-        guard let i = all.firstIndex(of: flow.lesson), i + 1 < all.count else { return nil }
-        let next = all[i + 1]
-        // 下一课在还没解锁的组里就不给按钮
-        let ti = flow.course.tracks.firstIndex { $0.lessons.contains(next) } ?? 0
-        return store.trackUnlocked(flow.course, ti) ? next : nil
-    }
-
-    var body: some View {
-        ZStack {
-            Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
-            Color.black.opacity(0.12).ignoresSafeArea()
-            ConfettiView()
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [Palette.honey, Palette.coral], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 150, height: 150)
-                        .shadow(color: Palette.honey.opacity(0.6), radius: 18)
-                    Image(systemName: flow.lesson.icon)
-                        .font(.system(size: 64, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .scaleEffect(badge ? 1 : 0.3)
-                .rotationEffect(.degrees(badge ? 0 : -30))
-                .padding(.top, -96)
-
-                Text("学会啦！")
-                    .font(.kid(50, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
-                Text("「\(flow.lesson.title)」：\(flow.lesson.learned)")
-                    .font(.kid(23, weight: .semibold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .multilineTextAlignment(.center)
-
-                if let t = unlockedTrack {
-                    HStack(spacing: 14) {
-                        ArtImage(name: t.art, fallback: "🔓", contentMode: .fit)
-                            .frame(width: 70, height: 70)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("新课程解锁！")
-                                .font(.kid(17, weight: .heavy))
-                                .foregroundStyle(Palette.coral)
-                            Text(t.title)
-                                .font(.kid(24, weight: .heavy))
-                                .foregroundStyle(Palette.ink)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .transition(.scale.combined(with: .opacity))
-                }
-
-                HStack(spacing: 18) {
-                    if let next = nextLesson, let onNextLesson {
-                        Button { Sound.tap(); onNextLesson(next) } label: {
-                            Label("下一课", systemImage: "arrow.right")
-                        }
-                        .buttonStyle(PillButtonStyle(color: Palette.coral))
-                    }
-                    Button { Sound.tap(); onLeave() } label: {
-                        Label("课程表", systemImage: "list.bullet")
-                    }
-                    .buttonStyle(PillButtonStyle(color: nextLesson == nil ? Palette.coral : Palette.paper,
-                                                 foreground: nextLesson == nil ? .white : Palette.ink, size: 22))
-                }
-                .padding(.top, 6)
-            }
-            .padding(.horizontal, 60)
-            .padding(.bottom, 36)
-            .padding(.top, 20)
-            .frame(minWidth: 540)
-            .softCard(radius: 44)
-            .scaleEffect(appeared ? 1 : 0.7)
-            .opacity(appeared ? 1 : 0)
-        }
-        .task {
-            Sound.fanfare()
-            withAnimation(.spring(duration: 0.5, bounce: 0.4)) { appeared = true }
-            withAnimation(.spring(duration: 0.7, bounce: 0.55).delay(0.25)) { badge = true }
-            await VoiceOver.shared.speak(TutorLines.lessonDone(flow.lesson.learned))
-            if unlockedTrack != nil {
-                Sound.record()
-                await VoiceOver.shared.speak(TutorLines.trackUnlocked)
-            }
-        }
-    }
-}

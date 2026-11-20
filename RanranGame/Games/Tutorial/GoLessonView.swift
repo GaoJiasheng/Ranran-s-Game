@@ -14,8 +14,8 @@ final class GoLessonSession {
     private var loops = 0
     private var replyTask: Task<Void, Never>?
 
-    init(course: TutorialCourse, lesson: TutorialLesson) {
-        flow = LessonFlow(course: course, lesson: lesson)
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson) {
+        flow = LessonFlow(course: course, lesson: lesson, mode: mode)
         syncBoard()
         flow.onStep = { [weak self] in self?.syncBoard() }
     }
@@ -68,6 +68,8 @@ final class GoLessonSession {
                 play(i)
                 flow.succeed()
                 playReply(flow.step.reply ?? [])
+            } else if let c = GoLessonLogic.consequence(task, i, on: board) {
+                showConsequence(i, c)
             } else {
                 flash(i)
                 flow.fail()
@@ -120,6 +122,26 @@ final class GoLessonSession {
         }
     }
 
+    /// 走错了：真的下上去，白棋长出来逃掉 / 把黑子提掉，说一句，再退回去
+    private func showConsequence(_ i: Int, _ c: LessonConsequence<Int>) {
+        let before = board, beforeLast = last
+        play(i)
+        flow.beginReply()
+        replyTask = Task {
+            try? await Task.sleep(for: .milliseconds(600))
+            for m in c.moves where !Task.isCancelled { play(m) }
+            await flow.showConsequence(c.line)
+            withAnimation(.spring(duration: 0.45)) {
+                board = before
+                last = beforeLast
+            }
+            board.turn = .black
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            flow.endConsequence()
+        }
+    }
+
     func stop() {
         replyTask?.cancel()
         flow.stop()
@@ -130,8 +152,9 @@ struct GoLessonView: View {
     @State private var session: GoLessonSession
     let onNextLesson: (TutorialLesson) -> Void
 
-    init(course: TutorialCourse, lesson: TutorialLesson, onNextLesson: @escaping (TutorialLesson) -> Void) {
-        _session = State(initialValue: GoLessonSession(course: course, lesson: lesson))
+    init(course: TutorialCourse, lesson: TutorialLesson, mode: LessonMode = .lesson,
+         onNextLesson: @escaping (TutorialLesson) -> Void) {
+        _session = State(initialValue: GoLessonSession(course: course, lesson: lesson, mode: mode))
         self.onNextLesson = onNextLesson
     }
 
