@@ -30,6 +30,7 @@ struct ProfileView: View {
                             HStack(alignment: .top, spacing: 28) {
                                 VStack(spacing: 28) {
                                     ProfileCard()
+                                    MedalSummaryCard()
                                     saveCard
                                 }
                                 .frame(width: 420)
@@ -40,6 +41,7 @@ struct ProfileView: View {
                             }
                         } else {
                             ProfileCard()
+                            MedalSummaryCard()
                             StoryReportCard { practicing = $0 }
                             recordsCard
                             saveCard

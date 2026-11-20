@@ -19,6 +19,7 @@ struct HomeView: View {
     @Environment(PlayerStore.self) private var store
     @State private var path: [Route] = []
     @State private var appeared = false
+    @State private var showMedals = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -82,6 +83,7 @@ struct HomeView: View {
                 }
             }
         }
+        .medalLayer(atHome: path.isEmpty, showWall: $showMedals)
         .onAppear {
             withAnimation(.spring(duration: 0.7, bounce: 0.25)) { appeared = true }
             #if DEBUG
@@ -134,7 +136,10 @@ struct HomeView: View {
                     .foregroundStyle(Palette.ink)
             }
             Spacer()
-            StarCounter(size: .large)
+            VStack(alignment: .trailing, spacing: 5) {
+                StarCounter(size: .large)
+                MedalHint { showMedals = true }
+            }
         }
     }
 
