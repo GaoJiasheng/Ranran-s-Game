@@ -603,7 +603,8 @@ struct StoryPlayView: View {
                 .transition(.opacity)
 
                 if let equation = line?.equation {
-                    Text(equation)
+                    // 算式里可能带人名（"{b}: 11 − 3 = 8"），要换成名字再显示
+                    Text(StoryText.plain(equation, p, player: store.name))
                         .font(.kid(24, weight: .heavy))
                         .foregroundStyle(Palette.ink)
                         .monospacedDigit()
