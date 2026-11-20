@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 一个游戏的「教学」课程表：几组课程排成一排（竖屏 2×2），基础一直开着，后面的学完前一组才解锁。
+/// 一个游戏的「教学」课程表：几组课程分成几列（横屏尽量一组一列，竖屏两列），基础一直开着，后面的学完前一组才解锁。
 /// 学完的课显示小奖杯，可以「练一练」；右上角的「复习」从学过的课里随机抽题。
 struct TutorialHomeView: View {
     @Environment(PlayerStore.self) private var store
@@ -117,38 +117,91 @@ struct TutorialHomeView: View {
         }
     }
 
+    /// 课程表怎么排：几列、每列放哪几组、每一行多高。
+    /// 课多了以后（围棋 34 课）一屏也要放得下：先试宽松的排法，放不下就把组的封面缩小、行压矮、再多分一列。
+    private struct TrackPlan {
+        var columns: [[Int]]
+        /// 每列的"一行 + 行距"有多高
+        var units: [CGFloat]
+        var compact: Bool
+        var tightest: CGFloat { units.min() ?? 0 }
+    }
+
+    private static let gap: CGFloat = 18
+
+    private func plan(_ course: TutorialCourse, size: CGSize, landscape: Bool) -> TrackPlan {
+        let n = course.tracks.count + (upcoming == nil ? 0 : 1)
+        // 锁着的组、制作中的组只显示一把锁，按三行算
+        let rows: [Int] = (0..<n).map { i in
+            guard i < course.tracks.count, store.trackUnlocked(course, i) else { return 3 }
+            return max(course.tracks[i].lessons.count, 3)
+        }
+        func make(cols: Int, compact: Bool) -> TrackPlan {
+            let overhead = TrackCard.overhead(compact: compact)
+            var best = TrackPlan(columns: [], units: [], compact: compact)
+            // 按顺序切成几段（第 1 列放前几组……），挑最挤的那一列最宽松的切法
+            func cut(_ start: Int, _ left: Int, _ acc: [[Int]]) {
+                if left == 1 {
+                    let all = acc + [Array(start..<n)]
+                    let units = all.map { col -> CGFloat in
+                        let r = col.reduce(0) { $0 + rows[$1] }
+                        return (size.height - CGFloat(col.count - 1) * Self.gap - CGFloat(col.count) * overhead) / CGFloat(r)
+                    }
+                    if best.columns.isEmpty || (units.min() ?? 0) > best.tightest {
+                        best = TrackPlan(columns: all, units: units, compact: compact)
+                    }
+                    return
+                }
+                guard n - start >= left else { return }
+                for end in (start + 1)...(n - left + 1) { cut(end, left - 1, acc + [Array(start..<end)]) }
+            }
+            cut(0, cols, [])
+            return best
+        }
+        let widest = max(1, Int((size.width + Self.gap) / (255 + Self.gap)))
+        let low = min(2, n), high = max(low, min(n, widest))
+        // 横屏先试一组一列，竖屏先试两列
+        let counts = landscape ? Array((low...high).reversed()) : Array(low...high)
+        let options = counts.flatMap { c in [make(cols: c, compact: false), make(cols: c, compact: true)] }
+        return options.first { $0.tightest >= 46 } ?? options.max { $0.tightest < $1.tightest } ?? make(cols: low, compact: true)
+    }
+
     private func grid(_ course: TutorialCourse, landscape: Bool) -> some View {
-        let cards = course.tracks.count + (upcoming == nil ? 0 : 1)
-        let cols = landscape ? cards : 2
-        let rows = Int((Double(cards) / Double(cols)).rounded(.up))
-        return VStack(spacing: 18) {
-            ForEach(0..<rows, id: \.self) { r in
-                HStack(spacing: 18) {
-                    ForEach(0..<cols, id: \.self) { c in
-                        let i = r * cols + c
-                        Group {
-                            if i < course.tracks.count {
-                                TrackCard(course: course, index: i, accent: accent,
-                                          next: store.nextLesson(course)) { lesson in
-                                    Sound.tap()
-                                    playing = .lesson(lesson)
-                                } practice: { lesson in
-                                    Sound.start()
-                                    playing = LessonRoute.practice(lesson, game: course.game)
+        GeometryReader { geo in
+            let plan = plan(course, size: geo.size, landscape: landscape)
+            let cols = plan.columns.count
+            let width = (geo.size.width - CGFloat(cols - 1) * Self.gap) / CGFloat(max(cols, 1))
+            HStack(alignment: .top, spacing: Self.gap) {
+                ForEach(Array(plan.columns.enumerated()), id: \.offset) { c, column in
+                    let unit = plan.units[c]
+                    VStack(spacing: Self.gap) {
+                        ForEach(column, id: \.self) { i in
+                            let locked = !(i < course.tracks.count && store.trackUnlocked(course, i))
+                            let rows = locked ? 3 : max(course.tracks[i].lessons.count, 3)
+                            Group {
+                                if i < course.tracks.count {
+                                    TrackCard(course: course, index: i, accent: accent,
+                                              next: store.nextLesson(course),
+                                              compact: plan.compact, unit: unit, narrow: width < 340) { lesson in
+                                        Sound.tap()
+                                        playing = .lesson(lesson)
+                                    } practice: { lesson in
+                                        Sound.start()
+                                        playing = LessonRoute.practice(lesson, game: course.game)
+                                    }
+                                } else if let upcoming {
+                                    UpcomingCard(title: upcoming.title, subtitle: upcoming.subtitle, art: upcoming.art)
                                 }
-                            } else if i == course.tracks.count, let upcoming {
-                                UpcomingCard(title: upcoming.title, subtitle: upcoming.subtitle, art: upcoming.art)
-                            } else {
-                                Color.clear
                             }
+                            .frame(width: width, height: TrackCard.overhead(compact: plan.compact) + CGFloat(rows) * unit)
+                            .offset(y: appeared ? 0 : 40)
+                            .opacity(appeared ? 1 : 0)
+                            .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.05 * Double(i)), value: appeared)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .offset(y: appeared ? 0 : 40)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.05 * Double(i)), value: appeared)
                     }
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
         }
     }
 }
@@ -303,55 +356,70 @@ private struct TrackCard: View {
     let index: Int
     let accent: Color
     let next: TutorialLesson?
+    /// 课多的时候：封面小一点、边距窄一点
+    var compact = false
+    /// 一行 + 行距的高度（课程表算好给的）
+    var unit: CGFloat = 64
+    /// 这一列很窄：「练一练」只留图标
+    var narrow = false
     let open: (TutorialLesson) -> Void
     let practice: (TutorialLesson) -> Void
+
+    /// 卡片里除了课程行以外占的高度：上下边距 + 封面 + 封面和课程之间的空
+    static func overhead(compact: Bool) -> CGFloat { compact ? 12 * 2 + 60 + 8 : 18 * 2 + 96 + 10 }
+
+    private var art: CGFloat { compact ? 60 : 96 }
+    private var rowSpacing: CGFloat { unit < 46 ? 4 : 6 }
+    private var rowHeight: CGFloat { min(58, unit - rowSpacing) }
 
     private var track: TutorialTrack { course.tracks[index] }
     private var unlocked: Bool { store.trackUnlocked(course, index) }
     private var done: Bool { store.trackDone(course, track) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             HStack(alignment: .center, spacing: 12) {
                 ArtImage(name: track.art, fallback: "📘", contentMode: .fit)
-                    .frame(width: 96, height: 96)
-                    .background(Circle().fill(accent.opacity(0.18)).padding(6))
+                    .frame(width: art, height: art)
+                    .background(Circle().fill(accent.opacity(0.18)).padding(compact ? 3 : 6))
                     .saturation(unlocked ? 1 : 0.2)
                     .opacity(unlocked ? 1 : 0.6)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("第 \(index + 1) 组")
-                        .font(.kid(14, weight: .heavy))
+                        .font(.kid(compact ? 12 : 14, weight: .heavy))
                         .foregroundStyle(Palette.inkSoft)
                     Text(track.title)
-                        .font(.kid(26, weight: .heavy))
+                        .font(.kid(compact ? 21 : 26, weight: .heavy))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(track.subtitle)
-                        .font(.kid(15, weight: .semibold))
+                        .font(.kid(compact ? 13 : 15, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
-                        .lineLimit(2)
+                        .lineLimit(compact ? 1 : 2)
                         .minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 0)
             }
+            .frame(height: art)
             if unlocked {
-                VStack(spacing: 6) {
+                VStack(spacing: rowSpacing) {
                     ForEach(Array(track.lessons.enumerated()), id: \.element.id) { i, lesson in
                         let finished = store.lessonDone(course.game, lesson.id)
                         LessonRow(number: i + 1, lesson: lesson,
                                   cup: store.lessonCup(course.game, lesson.id),
                                   isNext: lesson.id == next?.id, accent: accent,
                                   canPractice: finished && LessonPractice.canPractice(lesson, game: course.game),
+                                  height: rowHeight, narrow: narrow,
                                   action: { open(lesson) }, practice: { practice(lesson) })
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: compact ? 6 : 12) {
                     Spacer(minLength: 0)
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 38, weight: .bold))
+                        .font(.system(size: compact ? 28 : 38, weight: .bold))
                         .foregroundStyle(Palette.inkSoft.opacity(0.55))
                     Text("学完「\(course.tracks[index - 1].title)」\n就能解锁")
                         .font(.kid(18, weight: .bold))
@@ -365,7 +433,7 @@ private struct TrackCard: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding(18)
+        .padding(compact ? 12 : 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             LinearGradient(colors: [accent.opacity(unlocked ? 0.2 : 0.06), Palette.paper.opacity(0)],
@@ -376,9 +444,9 @@ private struct TrackCard: View {
         .overlay(alignment: .topTrailing) {
             if done {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(size: compact ? 24 : 30, weight: .bold))
                     .foregroundStyle(Palette.sage)
-                    .padding(14)
+                    .padding(compact ? 10 : 14)
             }
         }
     }
@@ -392,24 +460,28 @@ private struct LessonRow: View {
     let isNext: Bool
     let accent: Color
     let canPractice: Bool
+    var height: CGFloat = 52
+    var narrow = false
     let action: () -> Void
     let practice: () -> Void
 
+    private var badge: CGFloat { min(36, height - 8) }
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: narrow ? 6 : 8) {
             Button(action: action) {
-                HStack(spacing: 12) {
+                HStack(spacing: narrow ? 8 : 12) {
                     if let cup {
-                        CupBadge(cup: cup, size: 36)
+                        CupBadge(cup: cup, size: badge)
                     } else {
                         Text("\(number)")
-                            .font(.kid(17, weight: .heavy))
+                            .font(.kid(badge < 32 ? 15 : 17, weight: .heavy))
                             .foregroundStyle(isNext ? .white : Palette.ink.opacity(0.7))
-                            .frame(width: 36, height: 36)
+                            .frame(width: badge, height: badge)
                             .background(Circle().fill(isNext ? Palette.coral : Palette.cream))
                     }
                     Text(lesson.title)
-                        .font(.kid(19, weight: .bold))
+                        .font(.kid(height < 42 ? 17 : 19, weight: .bold))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -438,21 +510,24 @@ private struct LessonRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "shuffle")
                             .font(.system(size: 12, weight: .black))
-                        Text("练一练")
-                            .font(.kid(14, weight: .heavy))
+                        if !narrow {
+                            Text("练一练")
+                                .font(.kid(14, weight: .heavy))
+                        }
                     }
                     .foregroundStyle(Palette.ink.opacity(0.75))
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, height < 42 ? 5 : 6)
                     .background(accent.opacity(0.28), in: Capsule())
                 }
                 .buttonStyle(PressableStyle(scale: 0.9))
                 .accessibilityLabel("练一练：\(lesson.title)")
             }
         }
-        .padding(.leading, 12)
+        .padding(.leading, narrow ? 8 : 12)
         .padding(.trailing, 8)
-        .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 58)
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
         .background(isNext ? Palette.coral.opacity(0.1) : Palette.paper.opacity(0.7),
                     in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
