@@ -10,7 +10,7 @@ final class PlayerStore {
     func setCount(_ k: String, _ v: Int) { c[k] = v }
     func increment(_ k: String) { c[k, default: 0] += 1 }
     func addStars(_ n: Int) { totalStars += n }
-    func earnStars(_ n: Int, key: String) {}
+    func earnStars(_ n: Int, key: String) { c[key, default: 0] += n; totalStars += n }
     func markMistakeFixed(_ id: UUID) {}
 }
 /// 生成题库时还没有题库

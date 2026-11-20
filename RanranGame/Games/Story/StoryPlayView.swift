@@ -19,6 +19,8 @@ struct StoryPlayView: View {
     @State private var mistake: StoryMistake?
     @State private var queue: [StoryMistake] = []
     @State private var practiceTotal = 0
+    /// 练一练做完了
+    @State private var mixDone = false
     private let onNextLevel: ((StoryLevel) -> Void)?
 
     init(level: StoryLevel, onNextLevel: ((StoryLevel) -> Void)? = nil) {
@@ -33,16 +35,25 @@ struct StoryPlayView: View {
     /// 一道接一道练错题（加减乘除首页的 "Tricky ones"）
     init(mistakes: [StoryMistake]) {
         let first = mistakes[0]
-        _session = State(initialValue: StorySession(practice: first.problem))
+        _session = State(initialValue: StorySession(practice: first))
         _mistake = State(initialValue: first)
         _queue = State(initialValue: Array(mistakes.dropFirst()))
         _practiceTotal = State(initialValue: mistakes.count)
         onNextLevel = nil
     }
 
-    private var tint: Color { session.level?.chapter.tint ?? Palette.lilac }
-    /// 星星记在哪一关上：错题记回那道题原来的关
-    private var starLevel: StoryLevel? { session.level ?? mistake.map { StoryLevel($0.level) } }
+    /// 练一练（加减乘除首页的 "Practice mix"）：多练做得不好的题型
+    init(mix: StoryMix.Pick) {
+        _session = State(initialValue: StorySession(mix: mix))
+        onNextLevel = nil
+    }
+
+    private var tint: Color {
+        if let level = session.level { return level.chapter.tint }
+        return session.kind == .mix ? Palette.sage : Palette.lilac
+    }
+    /// 星星记在哪一关上：错题、练一练里的题记回那道题原来的关
+    private var starLevel: StoryLevel? { session.problemLevel }
 
     var body: some View {
         GeometryReader { geo in
@@ -99,6 +110,12 @@ struct StoryPlayView: View {
                         .transition(.opacity)
                         .zIndex(10)
                 }
+                if mixDone, let pick = session.mix {
+                    StoryMixResultOverlay(headline: StoryMix.headline(pick), correct: session.correctCount,
+                                          slots: slots(), onAgain: anotherMix, onLeave: { dismiss() })
+                        .transition(.opacity)
+                        .zIndex(10)
+                }
             }
         }
         .onAppear {
@@ -119,14 +136,17 @@ struct StoryPlayView: View {
         }
         .onDisappear { session.stop() }
         .onChange(of: session.phase) { _, phase in
-            guard phase == .finished, let level = session.level else { return }
+            guard phase == .finished else { return }
+            if session.kind == .mix {
+                Sound.fanfare()
+                withAnimation(.spring(duration: 0.5)) { mixDone = true }
+                return
+            }
+            guard let level = session.level else { return }
             let rating = session.stars
             let nextWasOpen = level.next.map { store.storyUnlocked($0, unlockAll: unlockAll) } ?? true
             let record = store.recordStoryLevel(level, stars: rating)
-            let slots: [StoryOutcome.Slot] = session.firstTry.indices.map { i in
-                guard session.firstTry[i] else { return .missed }
-                return i < earned.count && earned[i] ? .new : .had
-            }
+            let slots = slots()
             Sound.fanfare()
             withAnimation(.spring(duration: 0.5)) {
                 outcome = makeOutcome(level: level, rating: rating, correct: session.correctCount,
@@ -146,30 +166,58 @@ struct StoryPlayView: View {
                             canGoNext: store.storyPassed(level) && nextOpen)
     }
 
+    /// 这一轮每道题一个星位：拿到新星星的、答对但星星以前拿过的、答错的
+    private func slots() -> [StoryOutcome.Slot] {
+        session.firstTry.indices.map { i in
+            guard session.firstTry[i] else { return .missed }
+            return i < earned.count && earned[i] ? .new : .had
+        }
+    }
+
     /// 把这一轮的作答接到存档上：星星、统计、错题本
     private func configure(_ s: StorySession) {
         s.player = store.name
-        let runLevel = s.level
-        s.onFirstAnswer = { problem, right, answer in
+        let tracked = s.kind != .mistakes
+        s.onFirstAnswer = { [weak s] problem, right, answer, step in
             store.recordStoryAnswer(problem.schema, correct: right)
+            // 星星和错题记在这道题自己的那一关（练一练里的题来自好几关）
+            let home = s?.problemLevel
             if right {
                 store.recordStorySolved()
                 // 一次就答对：这道题的星星还没拿过，就飞一颗到右上角；拿过了只冒一个小勾
-                let got = starLevel.map { store.collectStoryStar(problem, level: $0) } ?? false
-                if runLevel != nil { earned.append(got) }
+                let got = home.map { store.collectStoryStar(problem, level: $0) } ?? false
+                if tracked { earned.append(got) }
                 withAnimation(.spring(duration: 0.3)) {
                     if got { flying.append(UUID()) } else { acks.append(UUID()) }
                 }
-            } else if let level = runLevel {
+            } else if tracked, let home {
                 earned.append(false)
-                store.saveMistake(StoryMistake(level: level.number, problem: problem, answer: answer))
+                store.saveMistake(StoryMistake(level: home.number, problem: problem, answer: answer, step: step))
             }
         }
         // 再练一轮：不算成绩、不给星星，第一下就答对的话错题本里这道题算练会了
-        s.onRetryAnswer = { problem, right in
-            guard right, let level = runLevel else { return }
-            store.markStoryProblemFixed(problem, level: level.number)
+        s.onRetryAnswer = { [weak s] problem, right in
+            guard right, let home = s?.problemLevel else { return }
+            store.markStoryProblemFixed(problem, level: home.number)
         }
+        // 读题关先选算式：第一下选得对不对，按题型记下来（家长页上和算错分开显示）
+        s.onChoice = { problem, right in
+            store.recordStoryChoice(problem.schema, correct: right)
+        }
+    }
+
+    /// 练一练做完了，再来一组
+    private func anotherMix() {
+        guard let pick = store.storyMixPick(unlockAll: unlockAll) else { dismiss(); return }
+        session.stop()
+        let fresh = StorySession(mix: pick)
+        configure(fresh)
+        earned = []
+        withAnimation(.easeOut(duration: 0.25)) {
+            mixDone = false
+            session = fresh
+        }
+        fresh.start()
     }
 
     /// 星星落到计数器上，计数器才跳（星星本身答对时就已经记上了）
@@ -202,10 +250,10 @@ struct StoryPlayView: View {
 
     // MARK: 顶栏
 
-    /// 宽屏：标题居中，进度在左；窄屏（竖着的小 iPad）：标题靠左、进度放在标题下面，免得挤在一起
+    /// 横着的大屏：标题居中，进度在左；其余（竖屏、横着的小 iPad）：标题靠左、进度放在标题下面，免得挤在一起
     @ViewBuilder
     private func topBar(width: CGFloat) -> some View {
-        if width >= 1000 {
+        if width >= 1250 {
             ZStack {
                 VStack(spacing: 2) {
                     Text(title)
@@ -219,6 +267,8 @@ struct StoryPlayView: View {
                         Label(level.mode.title, systemImage: level.mode.icon)
                             .font(.kid(16, weight: .bold))
                             .foregroundStyle(Palette.inkSoft)
+                    } else if let pick = session.mix {
+                        mixLabel(pick)
                     }
                 }
                 HStack(spacing: 16) {
@@ -237,6 +287,9 @@ struct StoryPlayView: View {
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
+                    if let pick = session.mix, !session.isRetry {
+                        mixLabel(pick)
+                    }
                     if session.problems.count > 1 { progress }
                 }
                 Spacer(minLength: 8)
@@ -261,12 +314,22 @@ struct StoryPlayView: View {
     }
 
     private var title: String {
+        if session.kind == .mix { return "Practice mix" }
         guard let level = session.level else {
             // 错题练习：几道题一道接一道时显示做到第几道
             let n = practiceTotal - queue.count
             return practiceTotal > 1 ? "Tricky ones · \(n) of \(practiceTotal)" : "Tricky ones"
         }
-        return "Level \(level.number) · \(level.chapter.title)"
+        return "Level \(level.position) · \(level.chapter.title)"
+    }
+
+    /// 练一练这次多练哪几种："More practice: Who has more? and Sharing"
+    private func mixLabel(_ pick: StoryMix.Pick) -> some View {
+        Label(StoryMix.headline(pick), systemImage: "sparkles")
+            .font(.kid(16, weight: .bold))
+            .foregroundStyle(Color(hex: 0x4E8A5C))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
     }
 
     /// 连续答对
@@ -346,15 +409,18 @@ struct StoryPlayView: View {
 
     private var storyCard: some View {
         let p = session.problem
+        let rows = session.rows
+        // 分两问的时候多一行，字稍微小一点，舞台不会被挤得太小
+        let size: CGFloat = rows.count >= 5 ? 25 : 28
         return HStack(alignment: .top, spacing: 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(p.sentences.enumerated()), id: \.offset) { i, s in
-                    sentenceRow(s, index: i, isQuestion: i == p.sentences.count - 1)
+            VStack(alignment: .leading, spacing: rows.count >= 5 ? 6 : 10) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
+                    sentenceRow(row, index: i, size: size)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
-                Narrator.shared.say(p.sentences.map { StoryText.plain($0.text, p, player: store.name) })
+                Narrator.shared.say(rows.map { StoryText.plain($0.text, p, player: store.name) })
             } label: {
                 Image(systemName: "ear.fill")
                     .font(.system(size: 22, weight: .bold))
@@ -372,24 +438,32 @@ struct StoryPlayView: View {
         .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
     }
 
-    private func sentenceRow(_ s: StorySentence, index: Int, isQuestion: Bool) -> some View {
+    private func sentenceRow(_ s: StoryRow, index: Int, size: CGFloat) -> some View {
         let p = session.problem
         let on = session.sentence == index
+        // 分两问的时候，没在问的那一问调淡
+        let dim = session.activeRow.map { s.isQuestion && $0 != index } ?? false
         return Button {
             Narrator.shared.say(StoryText.plain(s.text, p, player: store.name))
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                if isQuestion {
+                if let tag = s.tag {
+                    Text("(\(tag))")
+                        .font(.kid(size * 0.85, weight: .black))
+                        .foregroundStyle(dim ? Palette.inkSoft : Palette.coral)
+                } else if s.isQuestion {
                     Image(systemName: "questionmark.circle.fill")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Palette.honey)
                 }
                 StoryText.styled(s.text, p, player: store.name)
-                    .font(.kid(28, weight: isQuestion ? .heavy : .bold))
+                    .font(.kid(size, weight: s.isQuestion ? .heavy : .bold))
                     .foregroundStyle(Palette.ink)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .opacity(dim ? 0.45 : 1)
+            .animation(.easeOut(duration: 0.3), value: dim)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background(
@@ -413,16 +487,33 @@ struct StoryPlayView: View {
                     .transition(.opacity)
             case .model:
                 BarModelView(model: session.model, problem: session.problem, player: store.name,
-                             answer: session.phase == .solved ? session.problem.answer : nil)
+                             answer: session.filled)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 16)
                     .transition(.opacity)
+            case .tens:
+                if let calc = session.problem.tensOnes {
+                    TensOnesView(calc: calc, solved: session.filled != nil)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 58)
+                        .padding(.bottom, 16)
+                        .transition(.opacity)
+                }
             case .blank:
-                readOnlyPlaceholder
+                if let choice = session.choice, session.phase == .choosing || session.chosen != nil {
+                    ChoiceBoard(choice: choice, chosen: session.chosen, wrong: session.wrongChoices,
+                                shake: session.choiceShake, enabled: session.phase == .choosing,
+                                pick: session.choose)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 58)
+                        .padding(.bottom, 20)
+                        .transition(.opacity)
+                } else {
+                    readOnlyPlaceholder
+                }
             }
             if session.display != .tokens {
-                Label(session.display == .model ? "Model" : "Just read",
-                      systemImage: session.display == .model ? StoryMode.model.icon : StoryMode.read.icon)
+                Label(stageLabel.0, systemImage: stageLabel.1)
                     .font(.kid(16, weight: .heavy))
                     .foregroundStyle(Palette.inkSoft)
                     .padding(.horizontal, 14)
@@ -462,6 +553,17 @@ struct StoryPlayView: View {
         .softCard(radius: 36)
         .animation(.spring(duration: 0.4), value: session.needsConfirm)
         .animation(.spring(duration: 0.4), value: session.display)
+    }
+
+    /// 舞台左上角的小标签
+    private var stageLabel: (String, String) {
+        switch session.display {
+        case .model:  ("Model", StoryMode.model.icon)
+        case .tens:   ("Tens and ones", "square.grid.3x3.fill")
+        default:      session.phase == .choosing || session.chosen != nil
+                        ? ("What do we do?", "questionmark.bubble.fill")
+                        : ("Just read", StoryMode.read.icon)
+        }
     }
 
     private var readOnlyPlaceholder: some View {
@@ -517,8 +619,11 @@ struct StoryPlayView: View {
                     Button {
                         session.acceptHelp()
                     } label: {
-                        Label(help == .act ? "Act it out" : "Draw a model",
-                              systemImage: help == .act ? StoryMode.act.icon : StoryMode.model.icon)
+                        switch help {
+                        case .act:   Label("Act it out", systemImage: StoryMode.act.icon)
+                        case .model: Label("Draw a model", systemImage: StoryMode.model.icon)
+                        case .tens:  Label("Tens and ones", systemImage: "square.grid.3x3.fill")
+                        }
                     }
                     .buttonStyle(PillButtonStyle(color: Palette.coral, size: 21))
                 }
@@ -564,7 +669,7 @@ struct StoryPlayView: View {
         guard !queue.isEmpty else { dismiss(); return }
         session.stop()
         let next = queue.removeFirst()
-        let fresh = StorySession(practice: next.problem)
+        let fresh = StorySession(practice: next)
         configure(fresh)
         withAnimation(.easeOut(duration: 0.25)) {
             mistake = next
@@ -578,11 +683,11 @@ struct StoryPlayView: View {
     private var answerCard: some View {
         let p = session.problem
         let enabled = session.phase == .answering
-        let done = session.phase == .solved || session.phase == .verifying
+        let done = session.filled != nil
         let filled = session.input.isEmpty ? "  ?  " : " \(session.input) "
         return VStack(spacing: 16) {
-            StoryText.styled(p.answerTemplate, p, player: store.name,
-                             filled: done ? " \(p.answer) " : filled)
+            StoryText.styled(session.answerTemplate, p, player: store.name,
+                             filled: session.filled.map { " \($0) " } ?? filled)
                 .font(.kid(26, weight: .heavy))
                 .foregroundStyle(Palette.ink)
                 .multilineTextAlignment(.center)
@@ -609,7 +714,7 @@ struct StoryPlayView: View {
         }
         .padding(20)
         .softCard(radius: 34)
-        .opacity(session.phase == .telling || session.phase == .acting ? 0.55 : 1)
+        .opacity(session.phase == .telling || session.phase == .acting || session.phase == .choosing ? 0.55 : 1)
         .animation(.easeOut(duration: 0.25), value: session.phase)
     }
 }
@@ -890,17 +995,17 @@ struct StoryResultOverlay: View {
         let had = outcome.newStars == 0 && outcome.correct > 0 && outcome.levelStars < outcome.levelMax
             ? " You had these stars already. A new set has new ones!" : ""
         if outcome.stars >= 3 {
-            if let opened = outcome.opened { return "You understood every story and earned a crown! Level \(opened.number) is open now." }
+            if let opened = outcome.opened { return "You understood every story and earned a crown! Level \(opened.position) is open now." }
             return "You understood every story and earned a crown!" + had
         }
         if outcome.stars == 2 {
-            if let opened = outcome.opened { return "You passed! Level \(opened.number) is open now." }
+            if let opened = outcome.opened { return "You passed! Level \(opened.position) is open now." }
             return "You passed this level!" + had
         }
         let need = "\(outcome.level.passMark) of \(outcome.total)"
         if outcome.passed { return "Get \(need) right the first time to beat this round. Try a new set!" }
         if let next = outcome.level.next {
-            return "Get \(need) right the first time to open Level \(next.number). Let's try a new set!"
+            return "Get \(need) right the first time to open Level \(next.position). Let's try a new set!"
         }
         return "Get \(need) right the first time to pass. Let's try a new set!"
     }

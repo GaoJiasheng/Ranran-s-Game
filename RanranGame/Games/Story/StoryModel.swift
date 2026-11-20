@@ -1,5 +1,50 @@
 import SwiftUI
 
+// MARK: - 随机数
+
+/// 出题用的随机数。App 里现场出题时随便播种；题库生成器（tools/storybank）按"关 + 第几套"播种，
+/// 这样同一关每次生成都一模一样，可以只补缺的关、不动已经录好音的题。
+struct StoryRNG: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) { state = seed }
+
+    /// SplitMix64
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
+    }
+
+    static var shared = StoryRNG(seed: UInt64.random(in: 0 ... .max))
+
+    static func reseed(_ seed: UInt64) { shared = StoryRNG(seed: seed) }
+
+    /// 用同一串随机数做一个 UUID（题库里的题 id 也要每次一样）
+    static func uuid() -> UUID {
+        var b = [UInt8](repeating: 0, count: 16)
+        for i in 0..<16 { b[i] = UInt8.random(in: 0 ... .max, using: &shared) }
+        b[6] = (b[6] & 0x0F) | 0x40
+        b[8] = (b[8] & 0x3F) | 0x80
+        return UUID(uuid: (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
+    }
+}
+
+extension Int {
+    static func r(in range: ClosedRange<Int>) -> Int { random(in: range, using: &StoryRNG.shared) }
+}
+
+extension Bool {
+    static func r() -> Bool { random(using: &StoryRNG.shared) }
+}
+
+extension Array {
+    func pick() -> Element { randomElement(using: &StoryRNG.shared)! }
+    func mixed() -> [Element] { shuffled(using: &StoryRNG.shared) }
+}
+
 // 「加减乘除」里的英文应用题，按新加坡数学的思路出题：
 // 先用实物演（Concrete）→ 再画线段图（Pictorial，bar model）→ 最后只看文字（Abstract）。
 //
@@ -138,10 +183,12 @@ enum StoryAction: Codable, Hashable {
     case share
     /// 每个盘子放几个，看能放几盘（除法：包含除）
     case group(Int)
+    /// 把所有盘子（袋子）里的都倒回给 {a}（两步题：先算几个几，再添上或拿走）
+    case gather
 
     var needsChild: Bool {
         switch self {
-        case .appear, .whole, .plates: false
+        case .appear, .whole, .plates, .gather: false
         default: true
         }
     }
@@ -244,6 +291,10 @@ struct StoryProblem: Codable, Hashable, Identifiable {
     var awayLabel = "Eaten"
     var supplyLabel = "Basket"
     var plateWord = "plate"
+    /// 两步题中间那一问（"Step by step" 关里先问它）；以前的题没有
+    var middle: StoryMiddle? = nil
+    /// 答错了又没有对应解释时说的话；不给就按问的是什么来说（以前的题都没给）
+    var generic: String? = nil
 
     var item: StoryItem { thing.art ?? .apple }
 
@@ -342,6 +393,11 @@ struct StoryProblem: Codable, Hashable, Identifiable {
             let k = c[.a, default: 0] / n
             for p in Spot.plates.prefix(k) { c[p] = n }
             c[.a] = 0
+        case .gather:
+            for p in Spot.plates where c[p] != nil {
+                c[.a, default: 0] += c[p, default: 0]
+                c[p] = nil
+            }
         }
     }
 
@@ -369,12 +425,18 @@ struct StoryProblem: Codable, Hashable, Identifiable {
 
     /// 答错了但没有对应的解释时，用这句
     var genericHint: String {
-        switch ask {
+        if let generic { return generic }
+        return switch ask {
         case .total:          "Altogether means we count both parts together."
         case .count:          "Follow the story one step at a time. How many are there at the end?"
         case .more, .less:    "Line them up one to one. How many are extra?"
         case .moved:          "Count the ones that were given."
-        case .perPlate:       "Every \(plateWord) gets the same number. How many on one \(plateWord)?"
+        case .perPlate:
+            switch plateWord {
+            case "plate":  "Every plate gets the same number. How many on one plate?"
+            case "friend": "Every friend gets the same number. How many does one friend get?"
+            default:       "Every \(plateWord) gets the same number. How many are in one \(plateWord)?"
+            }
         case .plates:         "How many \(plateWords) can we fill?"
         case .inPlates:       "Count all of them, \(plateWord) by \(plateWord)."
         }
@@ -488,6 +550,8 @@ enum StoryText {
 struct StoryCtx {
     var cap: Int
     var act: Bool
+    /// 100 以内的加减：true = 要进位 / 退位，false = 不进位不退位，nil = 都行
+    var regroup: Bool? = nil
 }
 
 /// 按题型随机出题。句子和说法参照新加坡小学一、二年级的数学课本。
@@ -495,30 +559,30 @@ enum StoryFactory {
     typealias Make = (StoryCtx) -> StoryProblem
     typealias M = BarModel
 
-    private static func pair() -> (StoryCast, StoryCast) {
-        let two = StoryCast.allCases.shuffled()
+    static func pair() -> (StoryCast, StoryCast) {
+        let two = StoryCast.allCases.mixed()
         return (two[0], two[1])
     }
 
-    private static func solo() -> StoryCast { StoryCast.allCases.randomElement()! }
+    static func solo() -> StoryCast { StoryCast.allCases.pick() }
 
     /// 实物演的题只用有插画的东西；文字题里再加一些别的东西
-    private static func thing(_ c: StoryCtx, food: Bool = false) -> StoryThing {
+    static func thing(_ c: StoryCtx, food: Bool = false) -> StoryThing {
         var pool = StoryItem.allCases.map(\.thing)
         if !c.act { pool += StoryThing.extras }
         if food { pool = pool.filter(\.food) }
-        return pool.randomElement()!
+        return pool.pick()
     }
 
-    private static func ph(_ s: Spot) -> String { s == .a ? "{a}" : "{b}" }
+    static func ph(_ s: Spot) -> String { s == .a ? "{a}" : "{b}" }
 
     /// 一段线段；label 为 nil 时写上它的数
-    private static func s(_ v: Int, _ label: String? = nil, cap caption: String = "",
+    static func s(_ v: Int, _ label: String? = nil, cap caption: String = "",
                           _ style: M.Style = .solid, _ tint: M.Tint? = nil) -> M.Seg {
         M.Seg(value: v, label: label ?? "\(v)", caption: caption, style: style, tint: tint)
     }
 
-    private struct Hints {
+    struct Hints {
         let answer: Int
         var map: [Int: String] = [:]
         mutating func add(_ k: Int, _ msg: String) {
@@ -527,7 +591,7 @@ enum StoryFactory {
         }
     }
 
-    private static func make(_ schema: StorySchema, a: StoryCast, b: StoryCast?, thing: StoryThing,
+    static func make(_ schema: StorySchema, a: StoryCast, b: StoryCast?, thing: StoryThing,
                              _ sentences: [StorySentence], ask: StoryAsk, answer template: String,
                              explain: String, models: [M], away: String = "Eaten", supply: String = "Basket",
                              plate: String = "plate", actable: Bool = true,
@@ -549,8 +613,8 @@ enum StoryFactory {
     static func combine(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
         let t = thing(c)
-        let total = Int.random(in: 4...c.cap)
-        let x = Int.random(in: 1...(total - 1)), y = total - x
+        let total = Int.r(in: 4...c.cap)
+        let x = Int.r(in: 1...(total - 1)), y = total - x
         let m1 = M(bars: [M.Bar(segs: [s(x, cap: "{a}", .solid, .a), s(y, cap: "{b}", .solid, .b)])])
         var m2 = m1
         m2.braces = [.init(bar: 0, from: 0, to: 1, label: "?")]
@@ -570,11 +634,11 @@ enum StoryFactory {
     // MARK: 部分-整体：求一部分
 
     static func partWhole(_ c: StoryCtx) -> StoryProblem {
-        if !c.act, Bool.random() { return partWholeRest(c) }
+        if !c.act, Bool.r() { return partWholeRest(c) }
         let (a, b) = pair()
         let t = thing(c)
-        let total = Int.random(in: 5...c.cap)
-        let x = Int.random(in: 1...(total - 1)), y = total - x
+        let total = Int.r(in: 5...c.cap)
+        let x = Int.r(in: 1...(total - 1)), y = total - x
         let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
         return make(.partWhole, a: a, b: b, thing: t, [
             .init(text: "{a} and {b} have \(t.n(total)) altogether.", actions: [.whole(total)]),
@@ -594,14 +658,16 @@ enum StoryFactory {
     }
 
     /// "There are 15 children. 8 are boys. The rest are girls."
-    private struct RestContext {
+    struct RestContext {
         let whole: String, place: String, one: String, two: String
         /// one / two 是颜色（要说 "yellow flowers"）还是名词（"girls"）
         let adjective: Bool
         func phrase(_ part: String) -> String { adjective ? "\(part) \(whole)" : part }
+        /// "the red ones"、"the boys"
+        func ones(_ part: String) -> String { adjective ? "\(part) ones" : part }
     }
 
-    private static let restContexts: [RestContext] = [
+    static let restContexts: [RestContext] = [
         RestContext(whole: "children", place: "at the playground", one: "boys", two: "girls", adjective: false),
         RestContext(whole: "children", place: "in the class", one: "girls", two: "boys", adjective: false),
         RestContext(whole: "flowers", place: "in a vase", one: "red", two: "yellow", adjective: true),
@@ -611,9 +677,9 @@ enum StoryFactory {
     ]
 
     private static func partWholeRest(_ c: StoryCtx) -> StoryProblem {
-        let r = restContexts.randomElement()!
-        let total = Int.random(in: 6...max(6, c.cap))
-        let x = Int.random(in: 1...(total - 1)), y = total - x
+        let r = restContexts.pick()
+        let total = Int.r(in: 6...max(6, c.cap))
+        let x = Int.r(in: 1...(total - 1)), y = total - x
         let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
         let t = StoryThing(one: r.whole, many: r.whole)
         return make(.partWhole, a: solo(), b: nil, thing: t, [
@@ -638,11 +704,11 @@ enum StoryFactory {
     static func changeLose(_ c: StoryCtx) -> StoryProblem {
         let a = solo()
         let t = thing(c)
-        let n = Int.random(in: 4...c.cap)
-        let k = Int.random(in: 1...min(n - 1, max(3, c.cap / 2)))
+        let n = Int.r(in: 4...c.cap)
+        let k = Int.r(in: 1...min(n - 1, max(3, c.cap / 2)))
         var verbs: [(String, String, String)] = [("gave away", "gave away", "Given away"), ("lost", "lost", "Lost")]
         if t.food { verbs += [("ate", "ate", "Eaten"), ("ate", "ate", "Eaten")] }
-        let (verb, caption, away) = verbs.randomElement()!
+        let (verb, caption, away) = verbs.pick()
         let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(n)")
         return make(.change, a: a, b: nil, thing: t, [
             .init(text: "{a} had \(t.n(n)).", actions: [.appear(.a, n)]),
@@ -664,10 +730,10 @@ enum StoryFactory {
     static func changeGain(_ c: StoryCtx) -> StoryProblem {
         let a = solo()
         let t = thing(c)
-        let total = Int.random(in: 4...c.cap)
-        let k = Int.random(in: 1...min(total - 1, max(3, c.cap / 2)))
+        let total = Int.r(in: 4...c.cap)
+        let k = Int.r(in: 1...min(total - 1, max(3, c.cap / 2)))
         let n = total - k
-        let giver = ["Mum", "Dad", "Grandma", "Grandpa"].randomElement()!
+        let giver = ["Mum", "Dad", "Grandma", "Grandpa"].pick()
         let m1 = M(bars: [M.Bar(segs: [s(n, cap: "at first"), s(k, cap: "more", .solid, .extra)])])
         var m2 = m1
         m2.braces = [.init(bar: 0, from: 0, to: 1, label: "?")]
@@ -690,11 +756,11 @@ enum StoryFactory {
     static func compare(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
         let t = thing(c)
-        let big = Int.random(in: 3...c.cap), small = Int.random(in: 1...(big - 1))
-        let aBig = Bool.random()
+        let big = Int.r(in: 3...c.cap), small = Int.r(in: 1...(big - 1))
+        let aBig = Bool.r()
         let (x, y) = aBig ? (big, small) : (small, big)
         let (bs, ss): (Spot, Spot) = aBig ? (.a, .b) : (.b, .a)
-        let askFewer = Bool.random()
+        let askFewer = Bool.r()
         let question = askFewer
             ? "How many fewer \(t.many) does \(ph(ss)) have than \(ph(bs))?"
             : "How many more \(t.many) does \(ph(bs)) have than \(ph(ss))?"
@@ -734,11 +800,11 @@ enum StoryFactory {
         let aBigger = r == .aMore || r == .bFewer
         let y: Int, d: Int
         if aBigger {
-            y = Int.random(in: 2...(c.cap - 2))
-            d = Int.random(in: 1...min(5, c.cap - y))
+            y = Int.r(in: 2...(c.cap - 2))
+            d = Int.r(in: 1...min(5, c.cap - y))
         } else {
-            y = Int.random(in: 4...c.cap)
-            d = Int.random(in: 1...min(5, y - 1))
+            y = Int.r(in: 4...c.cap)
+            d = Int.r(in: 1...min(5, y - 1))
         }
         let av = aBigger ? y + d : y - d
         let text: String
@@ -779,9 +845,9 @@ enum StoryFactory {
     static func transferEqual(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
         let t = thing(c)
-        let n = Int.random(in: 3...min(c.cap, 10))
-        let k = Int.random(in: 1...min(n - 1, 4))
-        let askFewer = Int.random(in: 0..<3) == 0
+        let n = Int.r(in: 3...min(c.cap, 10))
+        let k = Int.r(in: 1...min(n - 1, 4))
+        let askFewer = Int.r(in: 0...2) == 0
         let before = [M.Bar(name: "{a}", tint: .a, segs: [s(n)]), M.Bar(name: "{b}", tint: .b, segs: [s(n)])]
         let after = [M.Bar(name: "{a}", tint: .a, segs: [s(n - k), s(k, cap: "gave", .gone)]),
                      M.Bar(name: "{b}", tint: .b, segs: [s(n), s(k, cap: "got", .solid, .a)])]
@@ -810,9 +876,9 @@ enum StoryFactory {
         let top = min(c.cap, 12)
         var x = 0, y = 0, k = 0
         repeat {
-            x = Int.random(in: 4...top)
-            y = Int.random(in: 1...top)
-            k = Int.random(in: 1...min(x - 1, 4))
+            x = Int.r(in: 4...top)
+            y = Int.r(in: 1...top)
+            k = Int.r(in: 1...min(x - 1, 4))
         } while x - k == y + k || x == y
         let fa = x - k, fb = y + k
         let (bs, ss): (Spot, Spot) = fa > fb ? (.a, .b) : (.b, .a)
@@ -841,9 +907,9 @@ enum StoryFactory {
     static func transferCount(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
         let t = thing(c)
-        let n = Int.random(in: 3...min(c.cap, 10))
-        let k = Int.random(in: 1...min(n - 1, 4))
-        let askB = Bool.random()
+        let n = Int.r(in: 3...min(c.cap, 10))
+        let k = Int.r(in: 1...min(n - 1, 4))
+        let askB = Bool.r()
         let before = [M.Bar(name: "{a}", tint: .a, segs: [s(n)]), M.Bar(name: "{b}", tint: .b, segs: [s(n)])]
         var after = [M.Bar(name: "{a}", tint: .a, segs: [s(n - k, ""), s(k, cap: "gave", .gone)]),
                      M.Bar(name: "{b}", tint: .b, segs: [s(n), s(k, cap: "got", .solid, .a)])]
@@ -872,9 +938,9 @@ enum StoryFactory {
     static func equalize(_ c: StoryCtx) -> StoryProblem {
         let (a, b) = pair()
         let t = thing(c)
-        let half = Int.random(in: 1...max(1, min(4, c.cap / 4)))
+        let half = Int.r(in: 1...max(1, min(4, c.cap / 4)))
         let d = 2 * half
-        let y = Int.random(in: 1...(c.cap - d)), x = y + d
+        let y = Int.r(in: 1...(c.cap - d)), x = y + d
         let barA = M.Bar(name: "{a}", tint: .a, segs: [s(y, ""), s(half, ""), s(half, "")])
         let barB = M.Bar(name: "{b}", tint: .b, segs: [s(y, "")])
         var a2 = barA
@@ -896,83 +962,7 @@ enum StoryFactory {
         }
     }
 
-    // MARK: 两步题
-
-    static func twoStepLoseGain(_ c: StoryCtx) -> StoryProblem {
-        let a = solo()
-        let t = thing(c, food: true)
-        let n = Int.random(in: 4...(c.cap - 3))
-        let k1 = Int.random(in: 1...min(n - 1, 5))
-        let k2 = Int.random(in: 1...min(c.cap - (n - k1), 5))
-        let end = n - k1 + k2
-        let giver = ["Mum", "Dad", "Grandma"].randomElement()!
-        return make(.twoStep, a: a, b: nil, thing: t, [
-            .init(text: "{a} had \(t.n(n)).", actions: [.appear(.a, n)]),
-            .init(text: "{a} ate \(k1) of them.", actions: [.move(.a, .away, k1)]),
-            .init(text: "Then \(giver) gave {a} \(k2) more.", actions: [.move(.supply, .a, k2)]),
-            .init(text: "How many \(t.many) does {a} have now?"),
-        ], ask: .count(.a), answer: "{a} has □ \(t.many) now.",
-           explain: "\(n) − \(k1) = \(n - k1)   \(n - k1) + \(k2) = \(end)",
-           models: [
-            M(bars: [M.Bar(segs: [s(n)])]),
-            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k1, cap: "ate", .gone)])]),
-            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k2, cap: "more", .solid, .extra), s(k1, cap: "ate", .gone)])]),
-            M(bars: [M.Bar(segs: [s(n - k1, cap: "left"), s(k2, cap: "more", .solid, .extra), s(k1, cap: "ate", .gone)])],
-              braces: [.init(bar: 0, from: 0, to: 1, label: "?")]),
-           ], supply: "\(giver)'s basket") { h in
-            h.add(n - k1, "Then \(giver) gave {a} \(k2) more. Don't forget to add them.")
-            h.add(n + k2, "Don't forget: {a} ate \(k1) first.")
-            h.add(n + k1 + k2, "Eating makes fewer. Getting more makes more.")
-            h.add(n - k1 - k2, "Eating makes fewer. Getting more makes more.")
-        }
-    }
-
-    /// "There are 15 children. 9 are boys. The rest are girls. How many more boys than girls?"
-    static func restCompare(_ c: StoryCtx) -> StoryProblem {
-        let r = restContexts.randomElement()!
-        let total = Int.random(in: 7...max(7, c.cap))
-        let x = Int.random(in: (total / 2 + 1)...(total - 1)), y = total - x
-        let t = StoryThing(one: r.whole, many: r.whole)
-        let whole = M.Brace(bar: 0, from: 0, to: 1, label: "\(total)")
-        return make(.twoStep, a: solo(), b: nil, thing: t, [
-            .init(text: "There are \(total) \(r.whole) \(r.place).", actions: [.whole(total)]),
-            .init(text: "\(x) of them are \(r.one). The rest are \(r.two).", actions: [.appear(.a, x), .appear(.b, y)]),
-            .init(text: "How many more \(r.phrase(r.one)) than \(r.phrase(r.two)) are there?"),
-        ], ask: .more(.a, .b), answer: "There are □ more \(r.phrase(r.one)) than \(r.phrase(r.two)).",
-           explain: "\(total) − \(x) = \(y)   \(x) − \(y) = \(x - y)",
-           models: [
-            M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])], braces: [.init(bar: 0, from: 0, to: 0, label: "\(total)")]),
-            M(bars: [M.Bar(segs: [s(x, cap: r.one, .solid, .a), s(y, "", cap: r.two, .solid, .b)])], braces: [whole]),
-            M(bars: [M.Bar(name: r.one, tint: .a, segs: [s(x)]),
-                     M.Bar(name: r.two, tint: .b, segs: [s(y), s(x - y, "?", .gap)])], total: "\(total)"),
-           ], actable: false) { h in
-            h.add(y, "\(y) is how many \(r.two) there are. Now compare: how many more \(r.one)?")
-            h.add(x, "\(x) is the \(r.one) ones. Find the \(r.two) ones first, then compare.")
-            h.add(total - y, "First find the \(r.two) ones: \(total) − \(x) = \(y).")
-        }
-    }
-
-    /// "{b} has 3 more than {a}. How many do they have altogether?"
-    static func moreThenTotal(_ c: StoryCtx) -> StoryProblem {
-        let (a, b) = pair()
-        let t = thing(c)
-        let x = Int.random(in: 2...max(2, c.cap / 2))
-        let d = Int.random(in: 1...min(5, max(1, c.cap - x)))
-        let bv = x + d
-        let barA = M.Bar(name: "{a}", tint: .a, segs: [s(x)])
-        let barB = M.Bar(name: "{b}", tint: .b, segs: [s(x, ""), s(d, cap: "more", .solid, .extra)])
-        return make(.twoStep, a: a, b: b, thing: t, [
-            .init(text: "{a} has \(t.n(x)).", actions: [.appear(.a, x)]),
-            .init(text: "{b} has \(d) more \(t.word(d)) than {a}.", actions: [.build(.b, bv)]),
-            .init(text: "How many \(t.many) do they have altogether?"),
-        ], ask: .total, answer: "They have □ \(t.many) altogether.",
-           explain: "{b}: \(x) + \(d) = \(bv)   \(x) + \(bv) = \(x + bv)",
-           models: [M(bars: [barA]), M(bars: [barA, barB]), M(bars: [barA, barB], total: "?")]) { h in
-            h.add(bv, "\(bv) is only {b}'s. Add {a}'s \(x) too.")
-            h.add(x + d, "First find {b}'s: \(x) + \(d) = \(bv). Then put them together.")
-            h.add(2 * x, "Don't forget: {b} has \(d) more than {a}.")
-        }
-    }
+    // 两步题在 StoryTwoStep.swift
 
     // MARK: 乘法：几个几
 
@@ -982,9 +972,9 @@ enum StoryFactory {
         let t = thing(c, food: c.act)
         let g: Int, n: Int
         if c.act {
-            g = Int.random(in: 2...4); n = Int.random(in: 2...4)
+            g = Int.r(in: 2...4); n = Int.r(in: 2...4)
         } else {
-            g = Int.random(in: 2...5); n = [2, 3, 4, 5, 5, 10].randomElement()!
+            g = Int.r(in: 2...5); n = [2, 3, 4, 5, 5, 10].pick()
         }
         let total = g * n
         let units = M(bars: [M.Bar(segs: (0..<g).map { _ in s(n, "", .solid, .neutral) })])
@@ -1000,7 +990,7 @@ enum StoryFactory {
             h.add(g, "\(g) is how many groups. Count all the \(t.many).")
         }
         let actions: [[StoryAction]] = [[.plates(g)], [.fill(n)], []]
-        if c.act || (t.food && Bool.random()) {
+        if c.act || (t.food && Bool.r()) {
             return make(.multiply, a: a, b: nil, thing: t, [
                 .init(text: "There are \(g) plates.", actions: actions[0]),
                 .init(text: "Each plate has \(t.n(n)).", actions: actions[1]),
@@ -1008,7 +998,7 @@ enum StoryFactory {
             ], ask: .inPlates, answer: "There are □ \(t.many) in all.", explain: explain,
                models: [units, labelled, asked], hints: hints)
         }
-        let box = ["bag", "box", "packet"].randomElement()!
+        let box = ["bag", "box", "packet"].pick()
         return make(.multiply, a: a, b: nil, thing: t, [
             .init(text: "{a} has \(g) \(StoryText.plural(box)) of \(t.many).", actions: actions[0]),
             .init(text: "There are \(t.n(n)) in each \(box).", actions: actions[1]),
@@ -1024,9 +1014,9 @@ enum StoryFactory {
         let t = thing(c, food: c.act)
         let g: Int, q: Int
         if c.act {
-            g = Int.random(in: 2...4); q = Int.random(in: 2...4)
+            g = Int.r(in: 2...4); q = Int.r(in: 2...4)
         } else {
-            g = Int.random(in: 2...5); q = Int.random(in: 2...(c.cap >= 50 ? 10 : 5))
+            g = Int.r(in: 2...5); q = Int.r(in: 2...(c.cap >= 50 ? 10 : 5))
         }
         let total = g * q
         let wholeOnly = M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])],
@@ -1042,7 +1032,7 @@ enum StoryFactory {
             h.add(total * g, "When we share, each one gets fewer, not more.")
         }
         let explain = "\(total) ÷ \(g) = \(q)   because \(g) × \(q) = \(total)"
-        if c.act || (t.food && Bool.random()) {
+        if c.act || (t.food && Bool.r()) {
             return make(.divide, a: a, b: nil, thing: t, [
                 .init(text: "{a} has \(t.n(total)).", actions: [.appear(.a, total)]),
                 .init(text: "{a} puts them equally on \(g) plates.", actions: [.plates(g), .share]),
@@ -1063,12 +1053,12 @@ enum StoryFactory {
         let t = thing(c, food: c.act)
         let q: Int, k: Int
         if c.act {
-            q = Int.random(in: 2...5); k = Int.random(in: 2...(q >= 5 ? 4 : 5))
+            q = Int.r(in: 2...5); k = Int.r(in: 2...(q >= 5 ? 4 : 5))
         } else {
-            q = [2, 3, 4, 5, 5, 10].randomElement()!; k = Int.random(in: 2...5)
+            q = [2, 3, 4, 5, 5, 10].pick(); k = Int.r(in: 2...5)
         }
         let total = q * k
-        let box = c.act ? "plate" : (t.food ? ["bag", "box", "plate"] : ["bag", "box"]).randomElement()!
+        let box = c.act ? "plate" : (t.food ? ["bag", "box", "plate"] : ["bag", "box"]).pick()
         let boxes = StoryText.plural(box)
         let verb = box == "plate" ? "on each plate" : "in each \(box)"
         let wholeOnly = M(bars: [M.Bar(segs: [s(total, "", .solid, .neutral)])],
@@ -1085,7 +1075,7 @@ enum StoryFactory {
            explain: "\(total) ÷ \(q) = \(k)   because \(k) × \(q) = \(total)",
            models: [wholeOnly, split, asked], plate: box) { h in
             h.add(total - q, "Each \(box) gets \(q). How many \(boxes) can we fill?")
-            h.add(q, "\(q) is how many go in each \(box). Count the \(boxes).")
+            h.add(q, "\(q) is how many go \(verb). Count the \(boxes).")
             h.add(total, "\(total) is all the \(t.many). We want the number of \(boxes).")
         }
     }
@@ -1094,14 +1084,16 @@ enum StoryFactory {
 // MARK: - 关卡
 
 /// 三种玩法 = 新加坡数学的 C-P-A：先用实物演，再画线段图，最后只看文字。
+/// 两步题那一章第一关多一种：先问藏在中间的那一步（steps），再问最后的问题。
 enum StoryMode: String, Hashable {
-    case act, model, read
+    case act, model, read, steps
 
     var title: String {
         switch self {
         case .act:   "Act it out"
         case .model: "Draw a model"
         case .read:  "Just read"
+        case .steps: "Step by step"
         }
     }
 
@@ -1110,6 +1102,7 @@ enum StoryMode: String, Hashable {
         case .act:   "hand.draw.fill"
         case .model: "rectangle.split.3x1.fill"
         case .read:  "text.alignleft"
+        case .steps: "list.number"
         }
     }
 
@@ -1119,20 +1112,22 @@ enum StoryMode: String, Hashable {
         case .act:   "Act"
         case .model: "Model"
         case .read:  "Read"
+        case .steps: "Steps"
         }
     }
 
     var problemCount: Int {
         switch self {
-        case .act:   6
-        case .model: 8
-        case .read:  10
+        case .act, .steps: 6
+        case .model:       8
+        case .read:        10
         }
     }
 }
 
+/// 十章，每章三关。章的编号（rawValue）就是首页上的顺序，不存档。
 enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
-    case together = 1, partWhole, compare, moreFewer, giving, groups, sharing, challenge
+    case together = 1, partWhole, compare, moreFewer, giving, groups, sharing, hundred, twoSteps, challenge
 
     var id: Int { rawValue }
 
@@ -1145,6 +1140,8 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
         case .giving:    "Giving"
         case .groups:    "Equal Groups"
         case .sharing:   "Sharing"
+        case .hundred:   "Numbers to 100"
+        case .twoSteps:  "Two Steps"
         case .challenge: "Challenge"
         }
     }
@@ -1158,6 +1155,8 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
         case .giving:    "I give, I have fewer"
         case .groups:    "Same number in each group"
         case .sharing:   "Share equally"
+        case .hundred:   "Tens and ones, dollars, cm and m"
+        case .twoSteps:  "Find the hidden step first"
         case .challenge: "Two steps, every type"
         }
     }
@@ -1171,6 +1170,8 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
         case .giving:    Palette.coral
         case .groups:    Color(hex: 0x7DB8C9)
         case .sharing:   Palette.blush
+        case .hundred:   Color(hex: 0x6FB39B)
+        case .twoSteps:  Color(hex: 0xE0996A)
         case .challenge: Color(hex: 0xC9A15B)
         }
     }
@@ -1184,6 +1185,8 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
         case .giving:    "arrow.left.arrow.right"
         case .groups:    "multiply"
         case .sharing:   "divide"
+        case .hundred:   "textformat.123"
+        case .twoSteps:  "stairs"
         case .challenge: "flag.checkered"
         }
     }
@@ -1191,9 +1194,18 @@ enum StoryChapter: Int, CaseIterable, Identifiable, Hashable {
     var levels: [StoryLevel] { StoryLevel.all.filter { $0.chapter == self } }
 }
 
+/// 一关。`number` 是这一关的编号：存档里所有和关有关的东西（wp.best.N、wp.stars.N、wp.set.N、
+/// wp.got.<含 N 的哈希>、错题的 level、题库的键）都用它，所以它永远不变。
+/// `position` 是它在首页上排第几（孩子看到的 "Level 22"）。
+/// 1~24 号是最早的八章；后来在"大挑战"前面插进两章（25~30 号），大挑战还是 22~24 号，只是排到了最后。
 struct StoryLevel: Hashable, Identifiable {
-    static let range = 1...24
-    static let all = range.map(StoryLevel.init)
+    /// 按首页顺序排的编号
+    static let order: [Int] = Array(1...21) + Array(25...30) + [22, 23, 24]
+    /// 所有编号
+    static let range = 1...30
+    /// 最早那八章的编号（老存档里的 wp.open 只管它们）
+    static let legacy = 1...24
+    static let all = order.map { StoryLevel($0) }
 
     let number: Int
 
@@ -1201,22 +1213,51 @@ struct StoryLevel: Hashable, Identifiable {
         self.number = min(max(number, Self.range.lowerBound), Self.range.upperBound)
     }
 
+    /// 首页上的第几关（1~30）
+    init(position: Int) {
+        self.init(Self.order[min(max(position, 1), Self.order.count) - 1])
+    }
+
     var id: Int { number }
-    var chapter: StoryChapter { StoryChapter(rawValue: (number - 1) / 3 + 1) ?? .together }
-    var indexInChapter: Int { (number - 1) % 3 }
-    var next: StoryLevel? { number < Self.range.upperBound ? StoryLevel(number + 1) : nil }
+    /// 首页上的第几关，从 1 开始
+    var position: Int { (Self.order.firstIndex(of: number) ?? 0) + 1 }
+    var chapter: StoryChapter { StoryChapter(rawValue: (position - 1) / 3 + 1) ?? .together }
+    var indexInChapter: Int { (position - 1) % 3 }
+    var next: StoryLevel? { position < Self.order.count ? StoryLevel(position: position + 1) : nil }
+    var previous: StoryLevel? { position > 1 ? StoryLevel(position: position - 1) : nil }
 
     var mode: StoryMode {
-        if chapter == .challenge { return indexInChapter == 0 ? .model : .read }
-        return [.act, .model, .read][indexInChapter]
+        switch chapter {
+        case .challenge: return indexInChapter == 0 ? .model : .read
+        // 大数目没法一个一个摆出来：两关画线段图（先不进位退位，再进位退位），再只看文字
+        case .hundred:   return indexInChapter == 2 ? .read : .model
+        case .twoSteps:  return [.steps, .model, .read][indexInChapter]
+        default:         return [.act, .model, .read][indexInChapter]
+        }
+    }
+
+    /// 关卡圆圈下面的短名字
+    var short: String {
+        if chapter == .hundred { return ["Tens", "Regroup", "Read"][indexInChapter] }
+        return mode.short
     }
 
     var problemCount: Int { mode.problemCount }
 
-    /// 数的范围：用手演的在 10 以内，画图和读题到 20，大挑战到 50、100
+    /// 数的范围：用手演的在 10 以内，画图和读题到 20；100 以内那一章到 100；两步题读题关到 50；大挑战到 50、100
     var cap: Int {
-        if chapter == .challenge { return [20, 50, 100][indexInChapter] }
-        return mode == .act ? 10 : 20
+        switch chapter {
+        case .challenge: return [20, 50, 100][indexInChapter]
+        case .hundred:   return 100
+        case .twoSteps:  return [20, 20, 50][indexInChapter]
+        default:         return mode == .act ? 10 : 20
+        }
+    }
+
+    /// 100 以内那一章：第一关不进位不退位，第二关都要进位或退位，读题关混着来
+    var regroup: Bool? {
+        guard chapter == .hundred else { return nil }
+        return [false, true, nil][indexInChapter]
     }
 
     /// 这一章的主角题型
@@ -1232,6 +1273,13 @@ struct StoryLevel: Hashable, Identifiable {
         case .giving:    return [F.transferEqual, F.transferCount, F.transferUnequal, F.equalize]
         case .groups:    return [F.multiply]
         case .sharing:   return [F.sharing, F.grouping]
+        case .hundred:
+            let base: [StoryFactory.Make] = [F.bigCombine, F.bigChangeLose, F.bigChangeGain,
+                                             F.bigPartWhole, F.bigCompare, F.bigMoreFewer]
+            return mode == .read ? base + [F.bigTrap] : base
+        case .twoSteps:
+            return [F.totalThenShare, F.groupsThenMore, F.groupsThenEaten, F.fewerThenTotal,
+                    F.moreThenTotal, F.twoStepLoseGain, F.restCompare, F.spendTwo]
         case .challenge:
             return [F.twoStepLoseGain, F.restCompare, F.moreThenTotal, F.trapFewer, F.partWhole,
                     F.multiply, F.sharing, F.transferEqual, F.grouping, F.trapMore]
@@ -1249,25 +1297,36 @@ struct StoryLevel: Hashable, Identifiable {
         case .giving:    return [F.compare, F.trapFewer]
         case .groups:    return [F.combine, F.compare]
         case .sharing:   return [F.multiply, F.partWhole]
+        case .hundred:   return [F.multiply, F.grouping, F.trapFewer]
+        case .twoSteps:  return [F.trapMore, F.sharing, F.equalize]
         }
     }
 
     func makeProblems() -> [StoryProblem] {
-        let ctx = StoryCtx(cap: cap, act: mode == .act)
-        var plan: [StoryFactory.Make] = []
-        while plan.count < problemCount { plan += main.shuffled() }
+        let ctx = StoryCtx(cap: cap, act: mode == .act, regroup: regroup)
+        // 复习题用以前那几章的数目（20 以内）
+        let reviewCtx = StoryCtx(cap: min(cap, 20), act: false)
+        var plan: [(StoryFactory.Make, StoryCtx)] = []
+        while plan.count < problemCount { plan += main.mixed().map { ($0, ctx) } }
         plan = Array(plan.prefix(problemCount))
         if mode == .read, !review.isEmpty {
-            for (i, make) in zip([2, 5, 8], review.shuffled()) where i < plan.count { plan[i] = make }
+            for (i, make) in zip([2, 5, 8], review.mixed()) where i < plan.count { plan[i] = (make, reviewCtx) }
         }
         var used = Set<String>()
-        return plan.map { make in
+        // 后来加的两章，线段图每一段都要看得清
+        let strict = chapter == .hundred || chapter == .twoSteps
+        return plan.map { make, ctx in
             // 同一关里别出两道一模一样的题
             // 答案至少是 2：答案句里的名词是复数（"□ apples"）
-            for _ in 0..<30 {
+            for _ in 0..<(strict ? 200 : 30) {
                 let p = make(ctx)
                 let key = p.sentences.map(\.text).joined()
-                if p.answer >= 2, used.insert(key).inserted { return p }
+                guard p.answer >= 2, !strict || StoryCheck.proportional(p) else { continue }
+                // 分两问的时候，两问的答案一样会让她以为没变
+                if strict, let m = p.middle, m.answer == p.answer { continue }
+                // 读题关要先选算式：2 × 2 这种看不出错法的题不要
+                if strict, mode == .read, p.choice == nil, p.schema != .transfer, p.schema != .equalize { continue }
+                if used.insert(key).inserted { return p }
             }
             return make(ctx)
         }
@@ -1286,6 +1345,8 @@ struct StoryMistake: Codable, Identifiable, Hashable {
     var answer: Int
     /// 后来在错题本里重新做对了
     var fixed = false
+    /// 两步题分两问做时，错在哪一问：0 = 中间那一问（answer 是那一问答的数），nil = 最后的问题
+    var step: Int? = nil
 }
 
 extension StoryProblem {
@@ -1304,8 +1365,6 @@ extension StoryProblem {
 extension StoryLevel {
     /// 家长在「我的」里打开"全部解锁"（跟着存档走，见 PlayerStore.settingKeys）
     static let unlockAllKey = "story.unlockAll"
-
-    var previous: StoryLevel? { number > Self.range.lowerBound ? StoryLevel(number - 1) : nil }
 
     /// 这一关最多拿几颗星：题库里这一关有几道题（每道题一颗）；没有题库时按 3 套题算
     var maxStars: Int { StoryBank.problemCount(for: self) ?? 3 * problemCount }
@@ -1352,18 +1411,20 @@ extension PlayerStore {
 
     // MARK: 解锁
 
-    /// 第 1 关一直开着；后面的关要前一关过关。老存档里已经玩到的关（wp.open）保持打开。
+    /// 第 1 关一直开着；后面的关要（按首页顺序的）前一关过关。
+    /// 老存档里已经玩到的关（wp.open，只管最早的 1~24 号）和升级时已经开着的关（wp.keep.N）保持打开。
     func storyUnlocked(_ level: StoryLevel,
                        unlockAll: Bool = UserDefaults.standard.bool(forKey: StoryLevel.unlockAllKey)) -> Bool {
         if unlockAll { return true }
         guard let prev = level.previous else { return true }
-        return level.number <= count("wp.open") || storyPassed(prev)
+        if StoryLevel.legacy.contains(level.number), level.number <= count("wp.open") { return true }
+        return count("wp.keep.\(level.number)") > 0 || storyPassed(prev)
     }
 
     /// 推荐的关：第一个开着、还没过关的关
     func storyRecommended(unlockAll: Bool = UserDefaults.standard.bool(forKey: StoryLevel.unlockAllKey)) -> StoryLevel {
         StoryLevel.all.first { storyUnlocked($0, unlockAll: unlockAll) && !storyPassed($0) }
-            ?? StoryLevel(StoryLevel.range.upperBound)
+            ?? StoryLevel.all[StoryLevel.all.count - 1]
     }
 
     /// 老存档升级（每次启动、导入存档后都跑，可以重复跑）：
@@ -1377,10 +1438,34 @@ extension PlayerStore {
         }
         if excess > 0 { addStars(-min(excess, totalStars)) }
         if count("wp.v2") == 0 {
-            let played = StoryLevel.all.filter { storyBest($0) >= 1 || storyStars($0) > 0 }.map(\.number).max() ?? 0
+            let played = StoryLevel.all.filter { storyBest($0) >= 1 || storyStars($0) > 0 }.map(\.number)
+                .filter(StoryLevel.legacy.contains).max() ?? 0
             setCount("wp.open", played)
             setCount("wp.v2", 1)
         }
+        // 3. 大挑战（22~24 号）前面插进了两章：22 号的"前一关"从 21 号变成了 30 号。
+        //    升级前 22 号已经开着的（因为 21 号过关了），记下来让它继续开着；别的关的前一关都没变。
+        if count("wp.v3") == 0 {
+            for id in StoryLevel.legacy {
+                let old = id - 1
+                let level = StoryLevel(id)
+                guard old >= 1, level.previous?.number != old else { continue }
+                let wasOpen = id <= count("wp.open") || storyPassed(StoryLevel(old))
+                if wasOpen { setCount("wp.keep.\(id)", 1) }
+            }
+            setCount("wp.v3", 1)
+        }
+    }
+
+    // MARK: 列式（读题关里先选算式）
+
+    /// 读题关里"先选算式"第一下选得对不对，按题型统计（和算错分开，家长页上分开显示）
+    func recordStoryChoice(_ schema: StorySchema, correct: Bool) {
+        increment("wp.op\(correct ? "right" : "wrong").\(schema.rawValue)")
+    }
+
+    func storyChoiceStats(_ schema: StorySchema) -> (right: Int, wrong: Int) {
+        (count("wp.opright.\(schema.rawValue)"), count("wp.opwrong.\(schema.rawValue)"))
     }
 
     // MARK: 错题

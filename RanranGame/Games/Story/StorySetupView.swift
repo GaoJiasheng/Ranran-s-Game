@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 「加减乘除」首页：英文应用题。八章，每章三关（Act it out → Draw a model → Just read）。
+/// 「加减乘除」首页：英文应用题。十章，每章三关（大多是 Act it out → Draw a model → Just read）。
+/// 十张章卡一屏铺满、不滚动：横屏 5 列 × 2 行（上面一排是一年级的内容，下面一排是二年级的），竖屏 2 列 × 5 行。
 struct StorySetupView: View {
     @Environment(PlayerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -8,39 +9,48 @@ struct StorySetupView: View {
     @State private var playing: StoryLevel?
     /// 正在练的错题（一次最多 practiceBatch 道，一道接一道）
     @State private var practicing: [StoryMistake]?
+    /// 练一练挑好的题
+    @State private var mixing: MixRun?
     @State private var appeared = false
 
     private static let practiceBatch = 5
 
+    /// navigationDestination(item:) 要 Hashable
+    struct MixRun: Hashable {
+        let id = UUID()
+        let pick: StoryMix.Pick
+        static func == (l: MixRun, r: MixRun) -> Bool { l.id == r.id }
+        func hash(into h: inout Hasher) { h.combine(id) }
+    }
+
     var body: some View {
         GeometryReader { geo in
-            // 横屏：4 列 × 2 行；竖屏：2 列 × 4 行。都铺满一屏，不滚动。
             let landscape = geo.size.width > geo.size.height
-            let cols = landscape ? 4 : 2
-            // 竖屏 8 章排 4 行，只有很高的屏幕才放得下三种玩法的介绍
-            let roomy = landscape ? geo.size.height > 820 : geo.size.height > 1250
+            let cols = landscape ? 5 : 2
+            // 三种玩法的介绍只在很高的横屏（13 寸）上放得下
+            let roomy = landscape && geo.size.height > 900
             ZStack {
                 CreamBackground(accent: Palette.sky)
-                AdaptivePage {
-                    VStack(spacing: roomy ? 20 : 14) {
-                        header
-                        if roomy { intro }
-                        grid(cols: cols)
-                            .frame(maxHeight: .infinity)
-                    }
-                    .padding(.horizontal, 36)
-                    .padding(.vertical, 22)
-                    .frame(maxWidth: 1320, maxHeight: .infinity)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: roomy ? 18 : 14) {
+                    header
+                    if roomy { intro }
+                    grid(cols: cols)
+                        .frame(maxHeight: .infinity)
                 }
+                .padding(.horizontal, landscape ? 30 : 26)
+                .padding(.vertical, 20)
+                .frame(maxWidth: 1400, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
             }
         }
         .onAppear {
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
             #if DEBUG
-            // 调试截图用：启动参数 -level 16 直接打开那一关
+            // 调试截图用：启动参数 -level 22 直接打开首页上的第 22 关；-mix 1 直接打开练一练
             let n = UserDefaults.standard.integer(forKey: "level")
-            if n > 0, playing == nil { playing = StoryLevel(n) }
+            if n > 0, playing == nil { playing = StoryLevel(position: n) }
+            if UserDefaults.standard.integer(forKey: "mix") > 0, mixing == nil,
+               let pick = store.storyMixPick(unlockAll: true) { mixing = MixRun(pick: pick) }
             #endif
         }
         .navigationDestination(item: $playing) { level in
@@ -52,38 +62,53 @@ struct StorySetupView: View {
             StoryPlayView(mistakes: mistakes)
                 .toolbar(.hidden, for: .navigationBar)
         }
+        .navigationDestination(item: $mixing) { run in
+            StoryPlayView(mix: run.pick)
+                .toolbar(.hidden, for: .navigationBar)
+        }
     }
 
     private func grid(cols: Int) -> some View {
         let chapters = StoryChapter.allCases
         let rows = stride(from: 0, to: chapters.count, by: cols).map { Array(chapters[$0..<min($0 + cols, chapters.count)]) }
-        return VStack(spacing: 14) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
-                HStack(spacing: 14) {
-                    ForEach(Array(row.enumerated()), id: \.element) { c, chapter in
-                        ChapterCard(chapter: chapter,
-                                    best: { store.storyBest($0) },
-                                    stars: { store.storyStars($0) },
-                                    unlocked: { store.storyUnlocked($0, unlockAll: unlockAll) },
-                                    recommended: store.storyRecommended(unlockAll: unlockAll)) { level in
-                            Sound.tap()
-                            playing = level
+        let gap: CGFloat = 14
+        let recommended = store.storyRecommended(unlockAll: unlockAll)
+        return GeometryReader { g in
+            let cell = CGSize(width: (g.size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
+                              height: (g.size.height - gap * CGFloat(rows.count - 1)) / CGFloat(rows.count))
+            VStack(spacing: gap) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
+                    HStack(spacing: gap) {
+                        ForEach(Array(row.enumerated()), id: \.element) { c, chapter in
+                            ChapterCard(chapter: chapter, cell: cell,
+                                        best: { store.storyBest($0) },
+                                        stars: { store.storyStars($0) },
+                                        unlocked: { store.storyUnlocked($0, unlockAll: unlockAll) },
+                                        recommended: recommended) { level in
+                                Sound.tap()
+                                playing = level
+                            }
+                            .frame(width: cell.width, height: cell.height)
+                            .offset(y: appeared ? 0 : 40)
+                            .opacity(appeared ? 1 : 0)
+                            .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.04 * Double(r * cols + c)), value: appeared)
                         }
-                        .offset(y: appeared ? 0 : 40)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(.spring(duration: 0.6, bounce: 0.3).delay(0.04 * Double(r * cols + c)), value: appeared)
                     }
                 }
             }
         }
     }
 
-    /// 标题居中；左边回主页和"Tricky ones"，右边做对几题和星星。两边各占一半剩下的宽度，窄了就收成短的。
+    /// 标题居中；左边回主页、"Tricky ones"和"Practice mix"，右边做对几题和星星。两边各占一半剩下的宽度，窄了就收成短的。
     private var header: some View {
         HStack(spacing: 14) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
-                trickyButton
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { trickyButton(short: false); mixButton(short: false) }
+                    HStack(spacing: 12) { trickyButton(short: true); mixButton(short: false) }
+                    HStack(spacing: 12) { trickyButton(short: true); mixButton(short: true) }
+                }
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity)
@@ -131,21 +156,49 @@ struct StorySetupView: View {
 
     /// 还有没练会的错题时，让她自己点进去再练（一次最多 5 道）
     @ViewBuilder
-    private var trickyButton: some View {
+    private func trickyButton(short: Bool) -> some View {
         let open = store.storyOpenMistakes
         if !open.isEmpty {
             Button {
                 Sound.tap()
                 practicing = Array(open.prefix(Self.practiceBatch))
             } label: {
-                ViewThatFits(in: .horizontal) {
-                    Label("Tricky ones · \(open.count)", systemImage: "arrow.counterclockwise")
-                    Label("\(open.count)", systemImage: "arrow.counterclockwise")
+                Group {
+                    if short {
+                        Label("\(open.count)", systemImage: "arrow.counterclockwise")
+                    } else {
+                        Label("Tricky ones · \(open.count)", systemImage: "arrow.counterclockwise")
+                    }
                 }
                 .lineLimit(1)
+                .fixedSize()
             }
             .buttonStyle(PillButtonStyle(color: Palette.coral, size: 20))
             .accessibilityLabel("Tricky ones, \(open.count) to practise")
+            .transition(.scale.combined(with: .opacity))
+        }
+    }
+
+    /// 练一练：做过几道题以后出现，多练做得不好的题型
+    @ViewBuilder
+    private func mixButton(short: Bool) -> some View {
+        if store.storyMixReady {
+            Button {
+                Sound.tap()
+                if let pick = store.storyMixPick(unlockAll: unlockAll) { mixing = MixRun(pick: pick) }
+            } label: {
+                Group {
+                    if short {
+                        Image(systemName: "sparkles")
+                    } else {
+                        Label("Practice mix", systemImage: "sparkles")
+                    }
+                }
+                .lineLimit(1)
+                .fixedSize()
+            }
+            .buttonStyle(PillButtonStyle(color: Palette.sage, size: 20))
+            .accessibilityLabel("Practice mix")
             .transition(.scale.combined(with: .opacity))
         }
     }
@@ -184,13 +237,16 @@ struct StorySetupView: View {
         case .act:   "Move the things to act out the story"
         case .model: "Draw bars to see the parts and the whole"
         case .read:  "Just read and think"
+        case .steps: "Answer the hidden step first"
         }
     }
 }
 
-/// 一章：标题在上，三关横排在下。
+/// 一章：标题在上，三关横排在下。卡片的大小由首页网格算好传进来：
+/// 横屏的卡又窄又高（标题、说明各占一行），竖屏的卡又宽又矮（标题旁边放星星，矮了就不放说明）。
 private struct ChapterCard: View {
     let chapter: StoryChapter
+    let cell: CGSize
     let best: (StoryLevel) -> Int
     let stars: (StoryLevel) -> Int
     let unlocked: (StoryLevel) -> Bool
@@ -200,34 +256,60 @@ private struct ChapterCard: View {
     private var chapterStars: Int { chapter.levels.reduce(0) { $0 + stars($1) } }
     private var chapterMax: Int { chapter.levels.reduce(0) { $0 + $1.maxStars } }
 
+    /// 窄卡：标题和星星分两行
+    private var narrow: Bool { cell.width < 300 }
+    private var pad: CGFloat { narrow ? 14 : 18 }
+    /// 关卡圆圈的直径：三个圆加两段连线要放得下
+    private var dot: CGFloat {
+        let byWidth = (cell.width - 2 * pad - 2 * 8) / 3 - 6
+        let byHeight = narrow ? 64 : (cell.height - 2 * pad - 50 - 60 - (showSubtitle ? 28 : 0))
+        return max(44, min(64, byWidth, byHeight))
+    }
+    private var showSubtitle: Bool { narrow ? cell.height > 270 : cell.height > 228 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                badge(size: 50)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Chapter \(chapter.rawValue)")
-                        .font(.kid(14, weight: .heavy))
-                        .foregroundStyle(Palette.inkSoft)
-                    Text(chapter.title)
-                        .font(.kid(23, weight: .heavy))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+            if narrow {
+                HStack(spacing: 10) {
+                    badge(size: 42)
+                    Spacer(minLength: 0)
+                    tally
                 }
-                Spacer(minLength: 0)
-                if chapterStars > 0 {
-                    StarTally(count: chapterStars, max: chapterMax, size: 17)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Palette.honey.opacity(0.16), in: Capsule())
+                Text("Chapter \(chapter.rawValue)")
+                    .font(.kid(13, weight: .heavy))
+                    .foregroundStyle(Palette.inkSoft)
+                    .padding(.top, 10)
+                Text(chapter.title)
+                    .font(.kid(21, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            } else {
+                HStack(spacing: 12) {
+                    badge(size: cell.height < 215 ? 44 : 50)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Chapter \(chapter.rawValue)")
+                            .font(.kid(14, weight: .heavy))
+                            .foregroundStyle(Palette.inkSoft)
+                        Text(chapter.title)
+                            .font(.kid(23, weight: .heavy))
+                            .foregroundStyle(Palette.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    Spacer(minLength: 0)
+                    tally
                 }
             }
-            Text(chapter.subtitle)
-                .font(.kid(15, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .padding(.top, 8)
+            if showSubtitle {
+                Text(chapter.subtitle)
+                    .font(.kid(15, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(narrow ? 2 : 1)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, narrow ? 4 : 8)
+            }
             Spacer(minLength: 0)
                 .frame(maxHeight: .infinity)
             HStack(alignment: .top, spacing: 0) {
@@ -237,9 +319,9 @@ private struct ChapterCard: View {
                             .fill(link(i))
                             .frame(minWidth: 6, maxWidth: 40)
                             .frame(height: 5)
-                            .padding(.top, 30)
+                            .padding(.top, dot / 2 - 2)
                     }
-                    LevelNode(level: level, cleared: best(level) >= 2, perfect: best(level) >= 3,
+                    LevelNode(level: level, size: dot, cleared: best(level) >= 2, perfect: best(level) >= 3,
                               locked: !unlocked(level), stars: stars(level), tint: chapter.tint,
                               recommended: level == recommended && unlocked(level)) { open(level) }
                 }
@@ -250,7 +332,7 @@ private struct ChapterCard: View {
             Spacer(minLength: 0)
                 .frame(maxHeight: .infinity)
         }
-        .padding(18)
+        .padding(pad)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             LinearGradient(colors: [chapter.tint.opacity(0.2), Palette.paper.opacity(0)],
@@ -258,6 +340,16 @@ private struct ChapterCard: View {
             in: RoundedRectangle(cornerRadius: 34, style: .continuous)
         )
         .softCard(radius: 34)
+    }
+
+    @ViewBuilder
+    private var tally: some View {
+        if chapterStars > 0 {
+            StarTally(count: chapterStars, max: chapterMax, size: narrow ? 15 : 17)
+                .padding(.horizontal, narrow ? 8 : 10)
+                .padding(.vertical, 5)
+                .background(Palette.honey.opacity(0.16), in: Capsule())
+        }
     }
 
     private func link(_ i: Int) -> Color {
@@ -278,6 +370,8 @@ private struct ChapterCard: View {
 /// 前一关还没过的关是灰的、带一把锁，点了只轻轻晃一下。
 private struct LevelNode: View {
     let level: StoryLevel
+    /// 圆圈的直径
+    let size: CGFloat
     let cleared: Bool
     let perfect: Bool
     let locked: Bool
@@ -300,7 +394,7 @@ private struct LevelNode: View {
             }
         } label: {
             VStack(spacing: 5) {
-                circle(64)
+                circle(size)
                     .keyframeAnimator(initialValue: CGFloat(0), trigger: nudge) { v, x in
                         v.offset(x: x)
                     } keyframes: { _ in
@@ -311,7 +405,7 @@ private struct LevelNode: View {
                             CubicKeyframe(0, duration: 0.08)
                         }
                     }
-                Text(level.mode.short)
+                Text(level.short)
                     .font(.kid(14, weight: .bold))
                     .foregroundStyle(Palette.inkSoft)
                     .lineLimit(1)
@@ -319,11 +413,11 @@ private struct LevelNode: View {
                 StarTally(count: stars, max: level.maxStars, size: 14)
                     .opacity(stars > 0 ? 1 : 0.35)
             }
-            .frame(minWidth: 66)
+            .frame(minWidth: size + 2)
             .opacity(locked ? 0.6 : 1)
         }
         .buttonStyle(PressableStyle(scale: locked ? 0.98 : 0.92))
-        .accessibilityLabel("Level \(level.number), \(level.mode.title), \(stars) of \(level.maxStars) stars"
+        .accessibilityLabel("Level \(level.position), \(level.mode.title), \(stars) of \(level.maxStars) stars"
                             + (perfect ? ", perfect" : "") + (locked ? ", locked" : ""))
         .onAppear {
             guard recommended else { return }
@@ -340,7 +434,7 @@ private struct LevelNode: View {
             VStack(spacing: 0) {
                 Image(systemName: locked ? "lock.fill" : level.mode.icon)
                     .font(.system(size: d * 0.3, weight: .bold))
-                Text("\(level.number)")
+                Text("\(level.position)")
                     .font(.kid(d * 0.2, weight: .heavy))
             }
             .foregroundStyle(cleared ? .white : Palette.ink.opacity(locked ? 0.35 : 0.8))

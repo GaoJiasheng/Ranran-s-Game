@@ -38,3 +38,29 @@ enum StoryBank {
         return chunk.indices.map { fixed.contains($0) ? chunk[$0] : free.removeFirst() }
     }
 }
+
+extension StoryBank {
+    /// 题库里这一关的所有题（练一练从这里挑）
+    static func all(for level: StoryLevel) -> [StoryProblem] { bank[level.number] ?? [] }
+}
+
+extension PlayerStore {
+    /// 练一练：从开着的关里挑 8 道，多挑第一次总答错、列式总选错的题型，尽量挑还没拿到星星的题
+    func storyMixPick(unlockAll: Bool = UserDefaults.standard.bool(forKey: StoryLevel.unlockAllKey)) -> StoryMix.Pick? {
+        let pool = StoryLevel.all.filter { storyUnlocked($0, unlockAll: unlockAll) }
+            .flatMap { level in StoryBank.all(for: level).map { StoryMix.Entry(level: level, problem: $0) } }
+        var rng = SystemRandomNumberGenerator()
+        return StoryMix.pick(pool: pool,
+                             stats: { s in
+                                 let a = storyStats(s), c = storyChoiceStats(s)
+                                 return (a.right, a.wrong, c.wrong)
+                             },
+                             hasStar: { storyHasStar($0.problem, level: $0.level) },
+                             using: &rng)
+    }
+
+    /// 首页上要不要显示"练一练"：至少做过一关里的几道题
+    var storyMixReady: Bool {
+        StorySchema.allCases.reduce(0) { $0 + storyStats($1).right + storyStats($1).wrong } >= 6
+    }
+}

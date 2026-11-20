@@ -183,6 +183,10 @@ final class StoryStage {
                 await autoMove(from: .a, to: p, max(0, min(n - count(p), count(.a))), animated: animated)
                 i += 1
             }
+        case .gather:
+            for p in activePlates where count(p) > 0 {
+                await autoMove(from: p, to: .a, count(p), animated: animated)
+            }
         }
     }
 

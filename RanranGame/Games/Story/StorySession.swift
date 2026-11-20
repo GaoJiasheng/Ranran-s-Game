@@ -10,31 +10,49 @@ struct CoachLine: Equatable {
     var equation: String? = nil
 }
 
-/// 舞台上显示什么：实物、线段图，还是什么都不显示（只看文字）
-enum StageDisplay: Equatable { case tokens, model, blank }
+/// 舞台上显示什么：实物、线段图、十和一（100 以内的加减），还是什么都不显示（只看文字）
+enum StageDisplay: Equatable { case tokens, model, tens, blank }
 
-/// 答错以后可以给的帮助：画线段图，或者用实物演
-enum StoryHelp: Equatable { case model, act }
+/// 答错以后可以给的帮助：画线段图，用实物演，或者（数太大没法演的时候）数十和一
+enum StoryHelp: Equatable { case model, act, tens }
 
-/// 一关（或者错题本里的一道题）的流程：
-/// 讲故事（边读边摆 / 边读边画）→ 演一演（孩子拖动）→ 答一答 → 答错了就针对这种错法解释，再画一画、演一演。
+/// 故事卡上的一行：故事的一句，或者（分两问的时候）(a) (b) 两问
+struct StoryRow: Hashable {
+    var text: String
+    var isQuestion = false
+    /// "a" / "b"：分两问做时标在问题前面
+    var tag: String? = nil
+}
+
+/// 一关（或者错题本里的错题、或者"练一练"）的流程：
+/// 讲故事（边读边摆 / 边读边画）→ 演一演（孩子拖动）→（读题关）先选算式 → 答一答
+/// → 答错了就针对这种错法解释，再画一画、演一演（或者数十和一）。
+/// 两步题的 "Step by step" 关：先答中间那一问 (a)，线段图长出来，再答 (b)。
 /// 一关的题做完以后，第一次答错的题按顺序再做一遍（"再练一轮"），然后才结算；再练一轮不算成绩、不给星星。
 @Observable
 @MainActor
 final class StorySession {
-    enum Phase: Equatable { case telling, acting, answering, offerHelp, verifying, solved, finished }
+    enum Phase: Equatable { case telling, acting, choosing, answering, offerHelp, verifying, solved, finished }
+    enum Kind: Equatable { case level, mistakes, mix }
 
+    let kind: Kind
+    /// 正在玩的关（练错题、练一练的时候是 nil）
     let level: StoryLevel?
-    let mode: StoryMode
-    /// 要做的题：先是这一关的题，再练一轮开始后，后面接上要再做一遍的题
+    /// 练一练挑的题
+    let mix: StoryMix.Pick?
+    /// 要做的题：先是这一轮本来的题，再练一轮开始后，后面接上要再做一遍的题
     private(set) var problems: [StoryProblem]
-    /// 这一关本来有几道题（不算再练一轮）
+    /// 每道题算在哪一关（星星、错题记在那一关上）
+    private(set) var levels: [StoryLevel?]
+    /// 每道题怎么玩（练一练里每道题按它原来那一关的玩法）
+    private(set) var modes: [StoryMode]
+    /// 这一轮本来有几道题（不算再练一轮）
     let mainCount: Int
     let stage: StoryStage
 
     private(set) var index = 0
     private(set) var phase: Phase = .telling
-    /// 正在读、正在演的那一句
+    /// 正在读、正在演的那一行（rows 里的第几行）
     private(set) var sentence: Int?
     private(set) var coach: CoachLine?
     /// 现在等孩子演的动作
@@ -42,9 +60,19 @@ final class StorySession {
     private(set) var display: StageDisplay = .tokens
     /// 线段图画到第几句
     private(set) var modelStep = 0
+    /// 分两问的时候，线段图用中间那一问的图
+    private(set) var stepModel: BarModel?
+    /// 分两问：0 = 正在答 (a)，1 = 正在答 (b)（不分两问的题一直是 1）
+    private(set) var step = 1
+    /// 答对或揭晓以后，答题板和线段图上填出来的数
+    private(set) var filled: Int?
     private(set) var help: StoryHelp?
     private(set) var revealed = false
-    /// 每道题第一次答得对不对（只算这一关本来的题）
+    /// 读题关先选算式：选对的那个；选错过的那几个
+    private(set) var chosen: Int?
+    private(set) var wrongChoices: Set<Int> = []
+    private(set) var choiceShake = 0
+    /// 每道题第一次答得对不对（只算这一轮本来的题）
     private(set) var firstTry: [Bool] = []
     /// 再练一轮里每道题第一次答得对不对
     private(set) var retryResults: [Bool] = []
@@ -54,43 +82,70 @@ final class StorySession {
     var input = ""
 
     var player = PlayerStore.defaultName
-    /// 每道题第一次作答：题、对不对、答的数（再练一轮里的不算）
-    var onFirstAnswer: ((StoryProblem, Bool, Int) -> Void)?
+    /// 每道题第一次作答：题、对不对、答的数、错在哪一问（0 = 中间那一问；再练一轮里的不算）
+    var onFirstAnswer: ((StoryProblem, Bool, Int, Int?) -> Void)?
     /// 再练一轮里每道题第一次作答：题、对不对
     var onRetryAnswer: ((StoryProblem, Bool) -> Void)?
+    /// 读题关里第一下选的算式对不对（再练一轮里的不算）
+    var onChoice: ((StoryProblem, Bool) -> Void)?
 
     private var flow: Task<Void, Never>?
     private var waiter: CheckedContinuation<Void, Never>?
     private var actingStart: [Spot: Int] = [:]
     private var answered = false
     private var wrongAfterHelp = 0
+    private var choiceTapped = false
 
     /// avoiding：刚做完那套题的 starKey，"Play again"时换一套
     init(level: StoryLevel, avoiding: Set<String> = []) {
+        kind = .level
         self.level = level
-        mode = level.mode
+        mix = nil
         let set = StoryBank.problems(for: level, avoiding: avoiding) ?? level.makeProblems()
         problems = set
+        levels = set.map { _ in level }
+        modes = set.map { _ in level.mode }
         mainCount = set.count
         stage = StoryStage(problem: set[0])
     }
 
-    /// 错题本里再练一道：能演就演，不能演就画线段图
-    init(practice problem: StoryProblem) {
+    /// 错题本里再练一道：能演就演，不能演就画线段图；两步题那一关的错题还是分两问
+    init(practice mistake: StoryMistake) {
+        kind = .mistakes
         level = nil
-        mode = problem.canAct ? .act : .model
-        problems = [problem]
+        mix = nil
+        let home = StoryLevel(mistake.level)
+        let p = mistake.problem
+        problems = [p]
+        levels = [home]
+        modes = [home.mode == .steps && p.middle != nil ? .steps : p.canAct ? .act : .model]
         mainCount = 1
-        stage = StoryStage(problem: problem)
+        stage = StoryStage(problem: p)
+    }
+
+    /// 练一练：每道题按它原来那一关的玩法，星星也记在原来那一关
+    init(mix pick: StoryMix.Pick) {
+        kind = .mix
+        level = nil
+        mix = pick
+        let ps = pick.entries.map(\.problem)
+        problems = ps
+        levels = pick.entries.map(\.level)
+        modes = pick.entries.map(\.level.mode)
+        mainCount = ps.count
+        stage = StoryStage(problem: ps[0])
     }
 
     var problem: StoryProblem { problems[index] }
+    var mode: StoryMode { modes[index] }
+    /// 这道题的星星、错题记在哪一关
+    var problemLevel: StoryLevel? { levels[index] }
     /// 正在再练一轮
     var isRetry: Bool { index >= mainCount }
     /// 再练一轮有几道题（还没开始时是 0）
     var retryCount: Int { problems.count - mainCount }
-    /// 这一关的题做完了，接下来要再练一轮
-    var retryPending: Bool { level != nil && index == mainCount - 1 && !StoryRetry.indices(firstTry).isEmpty }
+    /// 这一轮的题做完了，接下来要再练一轮（练错题的时候没有）
+    var retryPending: Bool { kind != .mistakes && index == mainCount - 1 && !StoryRetry.indices(firstTry).isEmpty }
     var isLast: Bool { index == problems.count - 1 && !retryPending }
     var correctCount: Int { firstTry.filter { $0 }.count }
     /// 这一关本来那几道题的 starKey（"Play again"时避开）
@@ -105,8 +160,38 @@ final class StorySession {
         return 1
     }
 
+    /// 这道题分两问做
+    var asksMiddle: Bool { mode == .steps && problem.middle != nil }
+    /// 正在答 (a)
+    var onMiddle: Bool { asksMiddle && step == 0 }
+    /// 读题关：算之前先选算式
+    var choice: StoryChoice? { mode == .read ? problem.choice : nil }
+    /// 现在要填的答案句和答案
+    var answerTemplate: String { onMiddle ? problem.middle!.answerTemplate : problem.answerTemplate }
+    var currentAnswer: Int { onMiddle ? problem.middle!.answer : problem.answer }
+
+    /// 故事卡上的几行：分两问的时候，最后是 (a) (b) 两问
+    var rows: [StoryRow] {
+        let p = problem
+        let last = p.sentences.count - 1
+        guard asksMiddle, let m = p.middle else {
+            return p.sentences.enumerated().map { StoryRow(text: $1.text, isQuestion: $0 == last) }
+        }
+        return p.sentences.dropLast().map { StoryRow(text: $0.text) }
+            + [StoryRow(text: m.text, isQuestion: true, tag: "a"),
+               StoryRow(text: p.sentences[last].text, isQuestion: true, tag: "b")]
+    }
+
+    /// 分两问的时候正在问的那一行（另一问调淡）
+    var activeRow: Int? {
+        guard asksMiddle, phase != .telling else { return nil }
+        let n = rows.count
+        return step == 0 ? n - 2 : n - 1
+    }
+
     /// 线段图现在画到哪一步
     var model: BarModel {
+        if let stepModel { return stepModel }
         let models = problem.models
         return models[min(modelStep, models.count - 1)]
     }
@@ -147,8 +232,11 @@ final class StorySession {
             phase = .finished
         } else {
             if retryPending {
-                let main = problems
-                problems += StoryRetry.indices(firstTry).map { main[$0] }
+                let again = StoryRetry.indices(firstTry)
+                let (ps, ls, ms) = (problems, levels, modes)
+                problems += again.map { ps[$0] }
+                levels += again.map { ls[$0] }
+                modes += again.map { ms[$0] }
             }
             index += 1
             start()
@@ -186,14 +274,27 @@ final class StorySession {
         answered = false
         wrongAfterHelp = 0
         modelStep = 0
+        stepModel = nil
+        step = asksMiddle ? 0 : 1
+        filled = nil
+        chosen = nil
+        wrongChoices = []
+        choiceTapped = false
+        middleWrong = 0
         display = switch mode {
-        case .act:   .tokens
-        case .model: .model
-        case .read:  .blank
+        case .act:           .tokens
+        case .model, .steps: .model
+        case .read:          .blank
         }
         phase = .telling
 
         try? await Task.sleep(for: .milliseconds(450))
+        if index == 0, let mix {
+            // 练一练开始：告诉她这次多练什么、为什么（只显示，不读）
+            say(CoachLine(text: StoryMix.reason(mix)), speak: false)
+            try? await Task.sleep(for: .milliseconds(1400))
+            if Task.isCancelled { return }
+        }
         if index == mainCount, isRetry {
             // 再练一轮开始：老师先说一句
             say(CoachLine(text: StoryVoiceLines.retryIntro), speak: false)
@@ -203,13 +304,15 @@ final class StorySession {
         }
         await tellSentences(childActs: mode == .act)
         if Task.isCancelled { return }
-        beginAnswering()
+        if choice != nil { beginChoosing() } else { beginAnswering() }
     }
 
-    /// 一句一句读；舞台上同时摆物品或者画线段图
+    /// 一句一句读；舞台上同时摆物品或者画线段图。分两问的题最后读 (a) (b) 两问。
     private func tellSentences(childActs: Bool) async {
         let p = problem
-        for (i, s) in p.sentences.enumerated() {
+        let split = asksMiddle
+        let told = split ? Array(p.sentences.dropLast()) : p.sentences
+        for (i, s) in told.enumerated() {
             if Task.isCancelled { return }
             withAnimation(.easeOut(duration: 0.25)) { sentence = i }
             if display == .model { withAnimation(.spring(duration: 0.55, bounce: 0.2)) { modelStep = i } }
@@ -224,22 +327,68 @@ final class StorySession {
             }
             try? await Task.sleep(for: .milliseconds(180))
         }
-        if Task.isCancelled { return }
+        if split, let m = p.middle {
+            // (a)：线段图换成中间那一问的图，"?" 在中间那个数上
+            withAnimation(.easeOut(duration: 0.25)) { sentence = told.count }
+            withAnimation(.spring(duration: 0.55, bounce: 0.2)) { stepModel = m.model }
+            await Narrator.shared.speak(render(m.text))
+            if Task.isCancelled { return }
+            try? await Task.sleep(for: .milliseconds(180))
+            // (b)
+            withAnimation(.easeOut(duration: 0.25)) { sentence = told.count + 1 }
+            await Narrator.shared.speak(render(p.sentences[p.sentences.count - 1].text))
+            if Task.isCancelled { return }
+        }
         withAnimation(.easeOut(duration: 0.25)) { sentence = nil }
     }
 
-    private func beginAnswering() {
+    /// quiet：老师刚说过话（选对算式、进到下一问），这里不再换一句
+    private func beginAnswering(quiet: Bool = false) {
         withAnimation(.spring(duration: 0.5)) {
             if display == .tokens { stage.comparing = true }
             phase = .answering
         }
+        guard !quiet else { return }
         let text: String
         switch display {
         case .tokens: text = "Look at the glowing ones. Tap to count, then type your answer."
-        case .model:  text = "Look at the model. What number goes where the ? is?"
+        case .model:  text = onMiddle ? "First answer part (a). Look at the model: what goes where the ? is?"
+                                      : "Look at the model. What number goes where the ? is?"
+        case .tens:   text = "Count the tens, then the ones. What is the answer?"
         case .blank:  text = "Picture the story in your head. What is the answer?"
         }
         say(CoachLine(text: text), speak: false)
+    }
+
+    // MARK: 先选算式
+
+    private func beginChoosing() {
+        guard let choice else { beginAnswering(); return }
+        withAnimation(.spring(duration: 0.5)) { phase = .choosing }
+        let line = choice.first ? StoryVoiceLines.chooseFirst : StoryVoiceLines.chooseOp
+        say(CoachLine(text: line))
+    }
+
+    /// 点了一个算式
+    func choose(_ i: Int) {
+        guard phase == .choosing, let choice, choice.options.indices.contains(i), !wrongChoices.contains(i) else { return }
+        let right = i == choice.correct
+        if !choiceTapped {
+            choiceTapped = true
+            if !isRetry { onChoice?(problem, right) }
+        }
+        if right {
+            Sound.done()
+            withAnimation(.spring(duration: 0.45, bounce: 0.4)) { chosen = i }
+            say(CoachLine(text: StoryVoiceLines.chooseRight, tone: .praise))
+            beginAnswering(quiet: true)
+        } else {
+            // 选错了不扣星星：说一句这类题怎么想，再选
+            Sound.oops()
+            withAnimation(.spring(duration: 0.35)) { _ = wrongChoices.insert(i) }
+            choiceShake += 1
+            say(CoachLine(text: problem.choiceNudge, tone: .hint))
+        }
     }
 
     // MARK: 演一演
@@ -273,7 +422,7 @@ final class StorySession {
             stage.plateRule = .group(n)
             stage.beginGrouping()
             say(CoachLine(text: "Put \(n) on each \(p.plateWord) until there are none left. Drag or tap a \(p.plateWord)."), speak: false)
-        case .appear, .whole, .plates:
+        case .appear, .whole, .plates, .gather:
             return
         }
         await withCheckedContinuation { waiter = $0 }
@@ -429,22 +578,28 @@ final class StorySession {
         Sound.key()
     }
 
+    /// 这道题第一次答（对或错）的结果报上去；分两问的题，(a) 答错也算这道题第一下没答对
+    private func report(_ right: Bool, _ n: Int, step: Int?) {
+        guard !answered else { return }
+        answered = true
+        let p = problem
+        if isRetry {
+            retryResults.append(right)
+            onRetryAnswer?(p, right)
+        } else {
+            firstTry.append(right)
+            streak = right ? streak + 1 : 0
+            onFirstAnswer?(p, right, n, step)
+        }
+    }
+
     func submit() {
         guard phase == .answering, let n = Int(input) else { return }
+        if onMiddle { submitMiddle(n); return }
         let p = problem
         let right = n == p.answer
         let first = !answered
-        if first {
-            answered = true
-            if isRetry {
-                retryResults.append(right)
-                onRetryAnswer?(p, right)
-            } else {
-                firstTry.append(right)
-                streak = right ? streak + 1 : 0
-                onFirstAnswer?(p, right, n)
-            }
-        }
+        report(right, n, step: nil)
         if right {
             flow = Task { await solved(first: first) }
         } else {
@@ -454,9 +609,14 @@ final class StorySession {
 
     private var nextHelp: StoryHelp? {
         switch display {
-        case .blank:  .model
-        case .model:  problem.canAct ? .act : nil
-        case .tokens: nil
+        case .blank:  return .model
+        // 分两问的关本来就在画图，不再往下换
+        case .model:
+            if mode == .steps { return nil }
+            if problem.canAct { return .act }
+            // 大数目没法演：数十和一
+            return problem.tensOnes != nil ? .tens : nil
+        case .tokens, .tens: return nil
         }
     }
 
@@ -468,7 +628,11 @@ final class StorySession {
         if let next = nextHelp {
             help = next
             withAnimation(.spring(duration: 0.4)) { phase = .offerHelp }
-            let offer = next == .act ? StoryVoiceLines.actIt : StoryVoiceLines.drawIt
+            let offer = switch next {
+            case .act:   StoryVoiceLines.actIt
+            case .model: StoryVoiceLines.drawIt
+            case .tens:  StoryVoiceLines.tensIt
+            }
             say(CoachLine(text: hint + " " + offer, tone: .hint), parts: [hint, offer])
             return
         }
@@ -479,13 +643,19 @@ final class StorySession {
         say(CoachLine(text: hint, tone: .hint))
     }
 
-    /// 答错以后接受帮助：画线段图，或者亲手演一遍
+    /// 答错以后接受帮助：画线段图，亲手演一遍，或者数十和一
     func acceptHelp() {
         guard phase == .offerHelp, let help else { return }
         Sound.tap()
         input = ""
         wrongAfterHelp = 0
         self.help = nil
+        if help == .tens {
+            // 十和一不用再讲一遍故事：直接摆出来，接着答
+            withAnimation(.spring(duration: 0.45)) { display = .tens }
+            beginAnswering()
+            return
+        }
         flow = Task {
             withAnimation(.spring(duration: 0.4)) {
                 if help == .act {
@@ -516,6 +686,7 @@ final class StorySession {
         phase = .verifying
         // 只看文字的题，答对后把线段图画出来给她看
         withAnimation(.spring(duration: 0.5)) {
+            filled = p.answer
             if display == .blank {
                 display = .model
                 modelStep = p.models.count - 1
@@ -534,8 +705,9 @@ final class StorySession {
         revealed = true
         input = "\(p.answer)"
         withAnimation(.spring(duration: 0.5)) {
+            filled = p.answer
             if display == .tokens { stage.comparing = true }
-            if display != .tokens {
+            if display == .blank || display == .model {
                 display = .model
                 modelStep = p.models.count - 1
             }
@@ -543,5 +715,74 @@ final class StorySession {
         }
         say(CoachLine(text: StoryVoiceLines.answerIs(p.answer) + " " + StoryVoiceLines.lookTogether, tone: .reveal, equation: p.explain),
             parts: [StoryVoiceLines.answerIs(p.answer), StoryVoiceLines.lookTogether])
+    }
+
+    // MARK: 分两问：先答 (a)
+
+    private var middleWrong = 0
+
+    private func submitMiddle(_ n: Int) {
+        guard let m = problem.middle else { return }
+        if n == m.answer {
+            let clean = middleWrong == 0
+            flow = Task { await middleSolved(praise: clean ? StoryVoiceLines.firstTry.randomElement()! : StoryVoiceLines.laterTry.randomElement()!) }
+            return
+        }
+        report(false, n, step: 0)
+        Sound.oops()
+        wrongShake += 1
+        middleWrong += 1
+        if middleWrong >= 2 {
+            flow = Task { await revealMiddle() }
+            return
+        }
+        input = ""
+        say(CoachLine(text: m.hints[n] ?? StoryVoiceLines.stepGeneric, tone: .hint))
+    }
+
+    private func middleSolved(praise: String) async {
+        guard let m = problem.middle else { return }
+        Sound.correct()
+        withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
+            phase = .verifying
+            filled = m.answer
+        }
+        say(CoachLine(text: praise, tone: .praise, equation: m.explain), speak: false)
+        await Narrator.shared.speak([praise, StoryText.plain(m.answerTemplate, problem, player: player, blank: "\(m.answer)")])
+        if Task.isCancelled { return }
+        await nextQuestion()
+    }
+
+    private func revealMiddle() async {
+        guard let m = problem.middle else { return }
+        input = "\(m.answer)"
+        withAnimation(.spring(duration: 0.5)) {
+            phase = .verifying
+            filled = m.answer
+        }
+        say(CoachLine(text: StoryVoiceLines.answerIs(m.answer) + " " + StoryVoiceLines.lookTogether, tone: .reveal, equation: m.explain),
+            speak: false)
+        await Narrator.shared.speak([StoryVoiceLines.answerIs(m.answer), StoryVoiceLines.lookTogether])
+        if Task.isCancelled { return }
+        try? await Task.sleep(for: .milliseconds(600))
+        await nextQuestion()
+    }
+
+    /// (a) 答完了：线段图长出来（中间那个数写上，"?" 挪到最后的答案上），接着问 (b)
+    private func nextQuestion() async {
+        guard let m = problem.middle else { return }
+        try? await Task.sleep(for: .milliseconds(350))
+        if Task.isCancelled { return }
+        withAnimation(.spring(duration: 0.6, bounce: 0.2)) {
+            stepModel = m.after
+            step = 1
+            filled = nil
+            input = ""
+            wrongAfterHelp = 0
+        }
+        let question = problem.sentences[problem.sentences.count - 1].text
+        say(CoachLine(text: StoryVoiceLines.nextQuestion), speak: false)
+        beginAnswering(quiet: true)
+        await Narrator.shared.speak([StoryVoiceLines.nextQuestion, render(question)])
     }
 }

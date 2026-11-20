@@ -527,7 +527,9 @@ private struct StoryReportCard: View {
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 12)], spacing: 12) {
                     ForEach(stats, id: \.0) { schema, s in
+                        let op = store.storyChoiceStats(schema)
                         SchemaTile(schema: schema, right: s.right, wrong: s.wrong,
+                                   opRight: op.right, opWrong: op.wrong,
                                    weakest: schema == weakest(stats))
                     }
                 }
@@ -602,7 +604,12 @@ private struct StoryReportCard: View {
     private func summary(_ stats: [(StorySchema, (right: Int, wrong: Int))]) -> String? {
         let right = stats.reduce(0) { $0 + $1.1.right }, total = stats.reduce(0) { $0 + $1.1.right + $1.1.wrong }
         guard total > 0 else { return nil }
-        return "答了 \(total) 题 · 一次就对 \(Int((Double(right) / Double(total) * 100).rounded()))%"
+        var text = "答了 \(total) 题 · 一次就对 \(Int((Double(right) / Double(total) * 100).rounded()))%"
+        // 读题关里先选算式：选对的比例（和算对分开看）
+        let ops = StorySchema.allCases.map { store.storyChoiceStats($0) }
+        let opRight = ops.reduce(0) { $0 + $1.right }, opTotal = ops.reduce(0) { $0 + $1.right + $1.wrong }
+        if opTotal > 0 { text += " · 列式选对 \(Int((Double(opRight) / Double(opTotal) * 100).rounded()))%" }
+        return text
     }
 
     /// 错得最多（且至少做过 3 题）的题型，提示家长重点练
@@ -616,7 +623,13 @@ private struct SchemaTile: View {
     let schema: StorySchema
     let right: Int
     let wrong: Int
+    /// 读题关里先选算式：第一下选对 / 选错几次（和算错分开看：选错 = 不知道该加还是该减）
+    let opRight: Int
+    let opWrong: Int
     let weakest: Bool
+
+    /// 选算式错得多：做过 3 次以上，错了三分之一以上
+    private var opWeak: Bool { opRight + opWrong >= 3 && opWrong * 3 >= opRight + opWrong }
 
     var body: some View {
         let total = max(right + wrong, 1)
@@ -631,7 +644,14 @@ private struct SchemaTile: View {
                         .foregroundStyle(Palette.inkSoft)
                 }
                 Spacer()
-                if weakest {
+                if opWeak {
+                    Text("常选错算法")
+                        .font(.kid(13, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Palette.lilac, in: Capsule())
+                } else if weakest {
                     Text("多练练")
                         .font(.kid(13, weight: .heavy))
                         .foregroundStyle(.white)
@@ -651,6 +671,11 @@ private struct SchemaTile: View {
             Text("对 \(right) 题 · 错 \(wrong) 题")
                 .font(.kid(15, weight: .semibold))
                 .foregroundStyle(Palette.inkSoft)
+            if opRight + opWrong > 0 {
+                Text(opWrong > 0 ? "列式：选对 \(opRight) 次 · 选错 \(opWrong) 次" : "列式：选对 \(opRight) 次")
+                    .font(.kid(14, weight: .semibold))
+                    .foregroundStyle(opWeak ? Color(hex: 0x7D68B8) : Palette.inkSoft)
+            }
         }
         .padding(14)
         .background(schema.tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -683,7 +708,9 @@ private struct MistakeRow: View {
                         .foregroundStyle(Palette.ink)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
-                    Text("当时答 \(mistake.answer) · 正确答案 \(p.answer)")
+                    Text(mistake.step == 0 && p.middle != nil
+                         ? "第 (a) 问答 \(mistake.answer) · 正确 \(p.middle!.answer)（最后答案 \(p.answer)）"
+                         : "当时答 \(mistake.answer) · 正确答案 \(p.answer)")
                         .font(.kid(15, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
                 }
