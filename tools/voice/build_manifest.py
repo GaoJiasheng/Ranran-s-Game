@@ -12,7 +12,8 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 COMMON = ["对啦！", "真棒！", "就是这样！", "太厉害了！", "完全正确！",
           "再想一想。", "看，亮起来的就是答案，你来试一下。", "不是这个哦，再看看。",
           "这个子不能这样走哦。", "这一步要动发光的那个子。", "新的一组课程解锁啦！",
-          "帅走到这里会被吃掉，或者和将面对面，不可以。", "走了这一步，帅就会被吃掉，不可以。"]
+          "帅走到这里会被吃掉，或者和将面对面，不可以。", "走了这一步，帅就会被吃掉，不可以。",
+          "找到一个，还有呢？", "打劫的时候，被提的一方要先在别处下一手，才能提回来。", "这里下进去一口气都没有，是禁入点。"]
 
 
 def lesson_done(learned):
@@ -26,6 +27,13 @@ def xiangqi_spoken(t):
     return t
 
 
+def go_spoken(t):
+    # 围棋术语：长（往外长）读 cháng；曲三 qū；刀把五 bà；数子 shǔ；倒扑 dào；粘 zhān
+    for a, b in [("刀把五", "刀霸五"), ("曲三", "屈三"), ("数子", "属子"), ("倒扑", "到扑"), ("粘", "沾"), ("长", "常")]:
+        t = t.replace(a, b)
+    return t
+
+
 def fname(text):
     return "vo_" + hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
 
@@ -36,11 +44,11 @@ items = {}
 def add(text, game):
     if not text or text in items:
         return
-    speak = xiangqi_spoken(text) if game == "xiangqi" else text
+    speak = xiangqi_spoken(text) if game == "xiangqi" else go_spoken(text) if game == "go" else text
     items[text] = {"file": fname(text), "text": text, "speak": speak}
 
 
-for game in ("gomoku", "xiangqi"):
+for game in ("gomoku", "xiangqi", "go"):
     with open(os.path.join(ROOT, "RanranGame", "Tutorials", game + ".json"), encoding="utf-8") as f:
         course = json.load(f)
     for track in course["tracks"]:

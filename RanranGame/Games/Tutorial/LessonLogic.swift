@@ -275,3 +275,137 @@ enum XiangqiLessonLogic {
         return out
     }
 }
+
+// MARK: - 围棋
+
+/// 围棋教学题：冉冉执黑。规则里的 P 是棋盘上的一个点，指那颗子所在的整块棋。
+enum GoLessonLogic {
+    static func point(_ s: String, _ b: GoBoard) -> Int? { b.index(s) }
+
+    static func check(_ task: TutorialTask, _ m: Int, on b: GoBoard) -> Bool {
+        if task.type == "pick" || task.type == "pickAll" {
+            return (task.accept ?? []).compactMap { b.index($0) }.contains(m)
+        }
+        guard b.isLegal(m), let after = b.playing(m) else { return false }
+        if let accept = task.accept { return accept.compactMap { b.index($0) }.contains(m) }
+        let parts = (task.rule ?? "any").split(separator: ":").map(String.init)
+        let arg = { (k: Int) in parts.count > k ? b.index(parts[k]) : nil }
+        let caught = after.prisoners[0] - b.prisoners[0]
+        switch parts[0] {
+        case "any":
+            return true
+        case "capture":
+            return caught >= (parts.count > 1 ? Int(parts[1]) ?? 1 : 1)
+        case "atari":
+            // 叫吃，而且自己这颗不能只剩一口气（不往对方嘴里送）
+            return ataris(after).count >= 1 && after.libertyCount(m, limit: 2) >= 2
+        case "doubleAtari":
+            return ataris(after).count >= 2 && after.libertyCount(m, limit: 2) >= 2
+        case "escape":
+            // 走完以后，这块黑棋怎么也不会被吃
+            guard let p = arg(1) else { return false }
+            return after[p] == .black && after.libertyCount(p, limit: 2) >= 2 && !after.canCapture(p, attackerToMove: true)
+        case "kill":
+            // 走完以后，这块白棋已经被提掉，或者不管白棋怎么逃都会被吃
+            guard let p = arg(1) else { return false }
+            return after[p] != .white || after.canCapture(p, attackerToMove: false)
+        case "chase":
+            // 征子追杀：每一步都要叫吃（或者直接提掉），而且一直追得死
+            guard let p = arg(1) else { return false }
+            if after[p] != .white { return true }
+            return after.libertyCount(m, limit: 2) >= 2
+                && after.libertyCount(p, limit: 2) == 1 && after.canCapture(p, attackerToMove: false)
+        case "netChase":
+            // 枷住以后关门：白棋最多两口气，而且跑不掉
+            guard let p = arg(1) else { return false }
+            if after[p] != .white { return true }
+            return after.libertyCount(m, limit: 2) >= 2
+                && after.libertyCount(p, limit: 3) <= 2 && after.canCapture(p, attackerToMove: false, wide: true)
+        case "net":
+            // 枷：要算得更宽（白棋冲出来有三口气时也接着算）
+            guard let p = arg(1) else { return false }
+            return after[p] != .white || after.canCapture(p, attackerToMove: false, wide: true)
+        case "corner":
+            // 布局：下在一个还空着的角上（离两边三、四路）
+            return isCornerPoint(m, b) && cornerEmpty(m, b)
+        case "connect":
+            guard let p = arg(1), let q = arg(2) else { return false }
+            return after.group(p).stones.contains(q)
+        case "safe":
+            // 不是自己往对方嘴里送
+            return after.libertyCount(m, limit: 2) >= 2
+        default:
+            return false
+        }
+    }
+
+    static func isCornerPoint(_ m: Int, _ b: GoBoard) -> Bool {
+        let s = b.size, x = b.x(m), y = b.y(m)
+        let near = { (v: Int) in v == 2 || v == 3 || v == s - 3 || v == s - 4 }
+        return near(x) && near(y)
+    }
+
+    /// 这个点所在的角（靠边 5 路以内）还没有任何棋子
+    static func cornerEmpty(_ m: Int, _ b: GoBoard) -> Bool {
+        let s = b.size, left = b.x(m) < s / 2, top = b.y(m) < s / 2
+        for i in b.cells.indices where b.cells[i] != 0 {
+            let x = b.x(i), y = b.y(i)
+            let inX = left ? x < 5 : x >= s - 5, inY = top ? y < 5 : y >= s - 5
+            if inX && inY { return false }
+        }
+        return true
+    }
+
+    /// 只剩一口气的白棋块（每块取一颗代表）
+    static func ataris(_ b: GoBoard) -> [Int] {
+        var seen = Set<Int>(), out: [Int] = []
+        for i in b.cells.indices where b.cells[i] == GoStone.white.rawValue && !seen.contains(i) {
+            let g = b.group(i)
+            seen.formUnion(g.stones)
+            if g.liberties.count == 1 { out.append(i) }
+        }
+        return out
+    }
+
+    static func answers(_ task: TutorialTask, on b: GoBoard) -> [Int] {
+        if task.type == "pick" || task.type == "pickAll" {
+            return (task.accept ?? []).compactMap { b.index($0) }
+        }
+        if task.accept != nil {
+            return (task.accept ?? []).compactMap { b.index($0) }.filter { b.isLegal($0) }
+        }
+        return b.cells.indices.filter { check(task, $0, on: b) }
+    }
+
+    /// 白棋接着下："e5"、"d6|f6"（第一个能下的）、"escape:P"（救 P 这块）、"capture:P"（提掉 P 这块黑棋）、"pass"
+    static func reply(_ spec: [String], on start: GoBoard) -> [Int?] {
+        var b = start
+        var out: [Int?] = []
+        for s in spec {
+            let parts = s.split(separator: ":").map(String.init)
+            var m: Int?
+            switch parts[0] {
+            case "pass":
+                b.pass(); out.append(nil); continue
+            case "escape":
+                if let p = b.index(parts[1]) { m = b.rescueMoves(p).first { b.isLegal($0) } }
+            case "extend":
+                // 只往外长（不吃子），挑长完以后气最多的那一点：征子、枷的标准逃法
+                if let p = b.index(parts[1]), b[p] != nil {
+                    m = b.group(p).liberties.compactMap { l in b.playing(l).map { (l, $0.libertyCount(p, limit: 9)) } }
+                        .max { $0.1 < $1.1 }?.0
+                }
+            case "capture":
+                if let p = b.index(parts[1]), b[p] != nil {
+                    m = b.group(p).liberties.first { b.libertyCount(p, limit: 2) == 1 && b.isLegal($0) }
+                }
+            default:
+                m = s.split(separator: "|").compactMap { b.index(String($0)) }.first { b.isLegal($0) }
+            }
+            guard let mv = m else { break }
+            b.play(mv)
+            out.append(mv)
+        }
+        return out
+    }
+}

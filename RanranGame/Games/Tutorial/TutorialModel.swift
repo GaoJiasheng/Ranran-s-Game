@@ -57,6 +57,8 @@ struct TutorialStep: Codable, Hashable {
     var reply: [String]?
     /// 对手走完之后老师再说一句
     var after: String?
+    /// 围棋：循环这一步（叫吃 → 对方逃），直到这个点上的白棋被吃掉才往下走（征子、枷这种步数不固定的）
+    var loop: String?
 }
 
 struct TutorialTask: Codable, Hashable {
@@ -80,12 +82,16 @@ enum TutorLines {
     static let notThisPiece = "这一步要动发光的那个子。"
     static func lessonDone(_ learned: String) -> String { "这一课学完啦！你学会了\(learned)。" }
     static let trackUnlocked = "新的一组课程解锁啦！"
+    static let foundOne = "找到一个，还有呢？"
+    static let goKo = "打劫的时候，被提的一方要先在别处下一手，才能提回来。"
+    static let goNoLiberty = "这里下进去一口气都没有，是禁入点。"
     static let kingUnsafe = "帅走到这里会被吃掉，或者和将面对面，不可以。"
     static let exposesKing = "走了这一步，帅就会被吃掉，不可以。"
 
     /// 需要预先生成配音的全部固定台词
     static var all: [String] {
-        praise + [retry, showAnswer, wrongPick, illegal, notThisPiece, trackUnlocked, kingUnsafe, exposesKing]
+        praise + [retry, showAnswer, wrongPick, illegal, notThisPiece, trackUnlocked, kingUnsafe, exposesKing,
+                  foundOne, goKo, goNoLiberty]
     }
 }
 

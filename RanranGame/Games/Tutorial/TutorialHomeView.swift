@@ -63,6 +63,7 @@ struct TutorialHomeView: View {
         if let course {
             switch game {
             case "xiangqi": XiangqiLessonView(course: course, lesson: lesson) { playing = $0 }
+            case "go": GoLessonView(course: course, lesson: lesson) { playing = $0 }
             default: GomokuLessonView(course: course, lesson: lesson) { playing = $0 }
             }
         }

@@ -82,13 +82,30 @@ final class LessonFlow {
     /// 对手应着开始 / 结束
     func beginReply() { busy = true }
 
-    func endReply() {
+    func endReply(speakAfter: Bool = true) {
         busy = false
-        if let after = step.after {
+        if speakAfter, let after = step.after {
             mood = .talk
             talk(after, after: 0.15)
         }
         withAnimation(.spring(duration: 0.3)) { canContinue = true }
+    }
+
+    /// 循环的一步（征子、枷）：对方逃了，还没吃掉，同一步再来一次
+    func rearm(_ text: String) {
+        busy = false
+        solved = false
+        wrong = 0
+        revealed = false
+        mood = .talk
+        talk(text, after: 0.15)
+    }
+
+    /// 找全部答案的题（点出所有的气）：找到一个，夸一句
+    func found(_ remaining: Int) {
+        Sound.pop()
+        mood = .happy
+        if remaining > 0 { talk(TutorLines.foundOne) }
     }
 
     /// 做错了：第一次给提示，第二次亮出答案

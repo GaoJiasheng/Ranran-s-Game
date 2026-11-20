@@ -67,7 +67,11 @@ struct ProfileView: View {
         }
         .navigationDestination(item: $selected) { record in
             Group {
-                if record.game == "xiangqi" { XiangqiReplayView(record: record) } else { GomokuReplayView(record: record) }
+                switch record.game {
+                case "xiangqi": XiangqiReplayView(record: record)
+                case "go": GoReplayView(record: record)
+                default: GomokuReplayView(record: record)
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -132,9 +136,10 @@ struct ProfileView: View {
                 Picker("游戏", selection: $recordGame) {
                     Text("五子棋").tag("gomoku")
                     Text("象棋").tag("xiangqi")
+                    Text("围棋").tag("go")
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 200)
+                .frame(width: 270)
                 if !records.isEmpty {
                     Text("\(records.count) 盘")
                         .font(.kid(18, weight: .bold))

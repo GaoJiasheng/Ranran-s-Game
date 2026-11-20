@@ -4,6 +4,7 @@ import SwiftUI
 enum GameEntry: String, Hashable, CaseIterable {
     case gomoku
     case xiangqi
+    case go
     case story
 }
 
@@ -72,6 +73,8 @@ struct HomeView: View {
                     GomokuSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.xiangqi):
                     XiangqiSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.go):
+                    GoSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.story):
                     StorySetupView().toolbar(.hidden, for: .navigationBar)
                 case .profile:
@@ -86,6 +89,7 @@ struct HomeView: View {
             switch UserDefaults.standard.string(forKey: "route") {
             case "gomoku":  path = [.game(.gomoku)]
             case "xiangqi": path = [.game(.xiangqi)]
+            case "go":      path = [.game(.go)]
             case "story":   path = [.game(.story)]
             case "profile": path = [.profile]
             default: break
@@ -153,6 +157,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: "五子棋"
         case .xiangqi: "象棋"
+        case .go: "围棋"
         case .story: "加减乘除"
         }
     }
@@ -160,6 +165,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: "十档难度，从小兔打到龙宝宝"
         case .xiangqi: "跟猫头鹰老师学，再挑战小伙伴"
+        case .go: "从吃子棋开始，一步步学会围棋"
         case .story: "英文应用题，演一演、画一画、算一算"
         }
     }
@@ -167,6 +173,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: "card_gomoku"
         case .xiangqi: "card_xiangqi"
+        case .go: "card_go"
         case .story: "card_math"
         }
     }
@@ -174,6 +181,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: Color(hex: 0xF8DCCB)
         case .xiangqi: Color(hex: 0xF9DDD2)
+        case .go: Color(hex: 0xDDEEDF)
         case .story: Color(hex: 0xDCEBF5)
         }
     }
@@ -181,6 +189,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: Color(hex: 0xFBE9DD)
         case .xiangqi: Color(hex: 0xFBE6DE)
+        case .go: Color(hex: 0xEAF4EA)
         case .story: Color(hex: 0xEAF3F8)
         }
     }
@@ -188,6 +197,7 @@ private struct GameHeroCard: View {
         switch game {
         case .gomoku: Palette.coral
         case .xiangqi: Color(hex: 0xC9624F)
+        case .go: Color(hex: 0x6FA07A)
         case .story: Color(hex: 0x5FA3C9)
         }
     }
@@ -311,7 +321,7 @@ private struct GameHeroCard: View {
     }
 
     @ViewBuilder private var accessory: some View {
-        if game == .gomoku || game == .xiangqi {
+        if game == .gomoku || game == .xiangqi || game == .go {
             HStack(spacing: -14) {
                 ForEach(Opponent.allCases) { o in
                     Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 54)
