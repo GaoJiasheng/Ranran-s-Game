@@ -48,6 +48,52 @@ for t in gc.tracks { for l in t.lessons {
     }
 }}
 
+// MARK: gomoku: 每一种正确答案都走一遍（答案不止一个时，后面的步骤也必须接得上、白棋不能抢先赢）
+func exploreGomoku(_ lid: String, _ steps: [TutorialStep], _ start: Int, _ board0: GLessonBoard?, _ path: String) {
+    var i = start
+    var board = board0
+    while i < steps.count {
+        let s = steps[i]
+        if let spec = s.board { board = GLessonBoard(spec: spec) }
+        guard let cur = board else { return }
+        guard let task = s.task else { i += 1; continue }
+        if task.type == "pick" { i += 1; continue }
+        let ans = GomokuLessonLogic.answers(task, on: cur)
+        // 答案很多（如 block）时只试头尾两个
+        let tries = ans.count <= 6 ? ans : [ans[0], ans[ans.count - 1]]
+        for a in tries {
+            var b = cur
+            b[a] = .black
+            let tag = "\(path)\(lid)#\(i + 1)=\(cur.name(a))"
+            if task.rule == "doubleThree" {
+                // 三三：白棋无论怎么下（只要自己没有先连成四），黑棋接着都能靠活四 / 连续冲四赢
+                var bad: [String] = []
+                for w in b.empties {
+                    let after = b.placing(w, .white)
+                    if !after.winningPoints(.white).isEmpty { continue }
+                    if !after.empties.contains(where: { after.winsByThreats($0, depth: 2) }) { bad.append(b.name(w)) }
+                }
+                if !bad.isEmpty { flag("\(tag) 三三 can be defended by white at \(bad)") }
+                else { print("     \(tag): 三三 holds against every white reply") }
+            }
+            var after = b
+            if let reply = s.reply {
+                let r = GomokuLessonLogic.reply(reply, on: b)
+                if r.isEmpty { flag("\(tag) reply produced nothing") }
+                for q in r { after[q] = .white }
+                if r.contains(where: { after.line(at: $0) != nil }) { flag("\(tag) white wins with reply") }
+                // 对手被迫堵的那一手，不能顺手做出四（活四）：那样这一课就教错了
+                if !after.winningPoints(.white).isEmpty { flag("\(tag) after the reply white has a winning point \(after.winningPoints(.white).map(after.name))") }
+            }
+            if ans.count > 1 { print("     branch \(tag) ok") }
+            exploreGomoku(lid, steps, i + 1, after, path + "\(lid)#\(i + 1)=\(cur.name(a)) ")
+            if ans.count > 1 && tries.count > 1 { /* 继续试下一个答案 */ }
+        }
+        return
+    }
+}
+for t in gc.tracks { for l in t.lessons { exploreGomoku(l.id, l.steps, 0, nil, "") } }
+
 // MARK: xiangqi
 let xc = load("xiangqi")
 for t in xc.tracks { for l in t.lessons {

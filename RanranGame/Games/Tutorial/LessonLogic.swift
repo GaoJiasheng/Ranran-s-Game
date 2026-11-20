@@ -115,6 +115,54 @@ struct GLessonBoard: Hashable {
     }
 }
 
+extension GLessonBoard {
+    /// q 上有黑棋时，沿 (dx,dy) 方向连成五个吗
+    private func fiveAlong(_ q: Point, _ dx: Int, _ dy: Int) -> Bool {
+        var n = 1
+        var x = q.x + dx, y = q.y + dy
+        while inside(x, y), self[Point(x: x, y: y)] == .black { n += 1; x += dx; y += dy }
+        x = q.x - dx; y = q.y - dy
+        while inside(x, y), self[Point(x: x, y: y)] == .black { n += 1; x -= dx; y -= dy }
+        return n >= 5
+    }
+
+    /// 经过 p、沿 (dx,dy) 这一条线上，下一颗就能连成五的空点
+    private func fivePoints(through p: Point, _ dx: Int, _ dy: Int) -> [Point] {
+        (-8...8).compactMap { k -> Point? in
+            let x = p.x + k * dx, y = p.y + k * dy
+            guard inside(x, y) else { return nil }
+            let q = Point(x: x, y: y)
+            return self[q] == nil && placing(q, .black).fiveAlong(q, dx, dy) ? q : nil
+        }
+    }
+
+    /// 黑棋下在 p 之后，有几条线上多出了一个活三（只算这一条线自己，而且离不开 p）
+    func openThreeLines(_ p: Point) -> Int {
+        guard self[p] == nil else { return 0 }
+        let b = placing(p, .black)
+        var n = 0
+        for (dx, dy) in Board.directions {
+            guard b.fivePoints(through: p, dx, dy).isEmpty else { continue }
+            let live = { (bd: GLessonBoard, q: Point) -> Bool in
+                (-4...4).contains { k in
+                    let x = q.x + k * dx, y = q.y + k * dy
+                    guard bd.inside(x, y), bd[Point(x: x, y: y)] == nil else { return false }
+                    return bd.placing(Point(x: x, y: y), .black).fivePoints(through: q, dx, dy).count >= 2
+                }
+            }
+            if live(b, p) && !live(self, p) { n += 1 }
+        }
+        return n
+    }
+
+    /// 下在 p 是不是做出了「四」（下一颗就能连五），而且自己这颗还没有连成五、白棋也没有马上赢的点
+    func makesFour(_ p: Point) -> Bool {
+        guard self[p] == nil, !makesFive(p, .black) else { return false }
+        let b = placing(p, .black)
+        return !b.winningPoints(.black).isEmpty && b.winningPoints(.white).isEmpty
+    }
+}
+
 enum GomokuLessonLogic {
     /// 这一手（黑棋下在 p）对不对
     static func check(_ task: TutorialTask, _ p: Point, on b: GLessonBoard) -> Bool {
@@ -132,6 +180,12 @@ enum GomokuLessonLogic {
             return b.placing(p, .black).winningPoints(.white).isEmpty
         }
         if rule == "openThree" { return b.makesOpenThree(p) }
+        // 冲四（或活四）：这一手做出了「四」，对手必须马上堵
+        if rule == "four" { return b.makesFour(p) }
+        // 三三：一步同时做出两个活三，而且这一步本身还不是四
+        if rule == "doubleThree" {
+            return b.openThreeLines(p) >= 2 && !b.makesFour(p) && b.placing(p, .black).winningPoints(.white).isEmpty
+        }
         if rule == "stopOpenFour" {
             // 堵完以后，白棋再下一颗也做不出活四（两个连五点）
             let after = b.placing(p, .black)
