@@ -53,6 +53,11 @@ func walk(_ l: TutorialLesson, _ i: Int, _ board: GoBoard?, _ path: String, _ pr
             if bd.index(a) == nil { flag("\(l.id) step \(i+1) mark \(m) bad point") }
         }
     }
+    // 练习题说明：局面会随机旋转、镜像，所以不能说方向，也不能提 A/B 标签
+    if loopIter == 0, let d = s.drill, d.range(of: "[左右]|上面|下面|上方|下方|上边|下边|[A-Za-z]", options: .regularExpression) != nil {
+        flag("step \(i+1) drill mentions a direction or label: \(d)")
+    }
+    if s.drill != nil && s.task == nil { flag("step \(i+1) has a drill but no task") }
     guard let task = s.task else { walk(l, i + 1, bd, path, &printed); return }
     let ans = GoLessonLogic.answers(task, on: bd)
     if !printed.contains(i) {

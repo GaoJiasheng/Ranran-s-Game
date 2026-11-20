@@ -385,6 +385,9 @@ enum GoLessonLogic {
         case "connect":
             guard let p = arg(1), let q = arg(2) else { return false }
             return after.group(p).stones.contains(q)
+        case "dame":
+            // 单官：这个空点挨着黑白两边，谁也围不到（下完以后自己这颗子也不会只剩一口气）
+            return isDame(m, b) && after.libertyCount(m, limit: 2) >= 2
         case "safe":
             // 不是自己往对方嘴里送
             return after.libertyCount(m, limit: 2) >= 2
@@ -399,15 +402,29 @@ enum GoLessonLogic {
         return near(x) && near(y)
     }
 
-    /// 这个点所在的角（靠边 5 路以内）还没有任何棋子
+    /// 这个点所在的角还没有任何棋子（大棋盘看靠边 5 路以内；9 路看不含中线的四分之一块）
     static func cornerEmpty(_ m: Int, _ b: GoBoard) -> Bool {
-        let s = b.size, left = b.x(m) < s / 2, top = b.y(m) < s / 2
+        let s = b.size, left = b.x(m) < s / 2, top = b.y(m) < s / 2, r = s >= 13 ? 5 : s / 2
         for i in b.cells.indices where b.cells[i] != 0 {
             let x = b.x(i), y = b.y(i)
-            let inX = left ? x < 5 : x >= s - 5, inY = top ? y < 5 : y >= s - 5
+            let inX = left ? x < r : x >= s - r, inY = top ? y < r : y >= s - r
             if inX && inY { return false }
         }
         return true
+    }
+
+    /// 单官：m 所在的那片空地，同时挨着黑子和白子
+    static func isDame(_ m: Int, _ b: GoBoard) -> Bool {
+        guard b.cells[m] == 0 else { return false }
+        var region = [m], seen: Set<Int> = [m], border = Set<Int8>()
+        var k = 0
+        while k < region.count {
+            for n in b.neighbors(region[k]) {
+                if b.cells[n] == 0 { if seen.insert(n).inserted { region.append(n) } } else { border.insert(b.cells[n]) }
+            }
+            k += 1
+        }
+        return border.count == 2
     }
 
     /// 只剩一口气的白棋块（每块取一颗代表）
