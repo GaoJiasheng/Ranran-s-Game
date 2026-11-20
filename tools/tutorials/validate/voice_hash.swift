@@ -13,7 +13,7 @@ for g in ["gomoku", "xiangqi", "go"] {
     let c = try! JSONDecoder().decode(TutorialCourse.self, from: Data(contentsOf: URL(fileURLWithPath: root + "/RanranGame/Tutorials/\(g).json")))
     for l in c.lessons {
         needed.append(TutorLines.lessonDone(l.learned))
-        for s in l.steps { needed += [s.say, s.hint, s.ok, s.after].compactMap { $0 } }
+        for s in l.steps { needed += [s.say, s.hint, s.ok, s.after, s.drill].compactMap { $0 } }
     }
 }
 var bad = 0

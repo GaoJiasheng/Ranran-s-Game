@@ -17,8 +17,9 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 OUT = os.path.join(ROOT, "RanranGame", "Tutorials")
 
 
-def step(say, board=None, marks=None, task=None, hint=None, ok=None, reply=None, after=None, loop=None):
+def step(say, board=None, marks=None, task=None, hint=None, ok=None, reply=None, after=None, loop=None, drill=None):
     s = {"say": say}
+    if drill: s["drill"] = drill
     if loop: s["loop"] = loop
     if board is not None: s["board"] = board
     if marks: s["marks"] = marks

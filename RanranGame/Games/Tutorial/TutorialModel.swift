@@ -59,6 +59,9 @@ struct TutorialStep: Codable, Hashable {
     var after: String?
     /// 围棋：循环这一步（叫吃 → 对方逃），直到这个点上的白棋被吃掉才往下走（征子、枷这种步数不固定的）
     var loop: String?
+    /// 练习模式里的题目说明（有配音）。练习时局面会随机镜像、旋转，所以这句话不能提方向（左右上下）和 A/B 标签。
+    /// 不写就用按 task.rule 配的通用说法；没有 rule 又没写这句的题，练习模式里不出。
+    var drill: String?
 }
 
 struct TutorialTask: Codable, Hashable {

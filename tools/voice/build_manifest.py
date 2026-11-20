@@ -55,7 +55,7 @@ for game in ("gomoku", "xiangqi", "go"):
         for lesson in track["lessons"]:
             add(lesson_done(lesson["learned"]), game)
             for s in lesson["steps"]:
-                for k in ("say", "hint", "ok", "after"):
+                for k in ("say", "hint", "ok", "after", "drill"):
                     add(s.get(k), game)
 for t in COMMON:
     add(t, "xiangqi" if ("帅" in t or "将" in t) else "common")
