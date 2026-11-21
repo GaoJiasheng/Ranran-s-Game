@@ -452,6 +452,8 @@ private struct RecordRow: View {
     }
 
     private var xiangqi: Bool { record.game == "xiangqi" }
+    /// 国际象棋：1 是白方（先走），2 是黑方
+    private var chess: Bool { record.game == "chess" }
     private var level: Int? { record.opponentLevel }
 
     @ViewBuilder private var leading: some View {
@@ -465,6 +467,14 @@ private struct RecordRow: View {
             }
             .frame(width: 62, height: 62)
             .background(Circle().fill(Palette.sky.opacity(0.4)))
+            .overlay(Circle().strokeBorder(.white, lineWidth: 4))
+        } else if chess {
+            ZStack {
+                ArtImage(name: "chess_bk", fallback: "♚").frame(width: 34, height: 34).offset(x: 9, y: -2)
+                ArtImage(name: "chess_wk", fallback: "♔").frame(width: 34, height: 34).offset(x: -9, y: 3)
+            }
+            .frame(width: 62, height: 62)
+            .background(Circle().fill(Palette.lilac.opacity(0.4)))
             .overlay(Circle().strokeBorder(.white, lineWidth: 4))
         } else {
             ZStack {
@@ -483,16 +493,17 @@ private struct RecordRow: View {
     }
 
     private var subtitle: String {
-        var parts = [record.date.shortChinese, xiangqi ? "共 \(record.moves.count) 步" : "共 \(record.moves.count) 手"]
+        var parts = [record.date.shortChinese, xiangqi || chess ? "共 \(record.moves.count) 步" : "共 \(record.moves.count) 手"]
         if let c = record.playerColor {
-            parts.append(xiangqi ? (c == 1 ? "执红" : "执黑") : (c == 1 ? "执黑" : "执白"))
+            parts.append(chess ? (c == 1 ? "执白" : "执黑") : xiangqi ? (c == 1 ? "执红" : "执黑") : (c == 1 ? "执黑" : "执白"))
         }
         return parts.joined(separator: " · ")
     }
 
     private var result: (text: String, tint: Color) {
-        guard let w = record.winner else { return (xiangqi ? "和棋" : "平局", Palette.sky) }
+        guard let w = record.winner else { return (xiangqi || chess ? "和棋" : "平局", Palette.sky) }
         guard let me = record.playerColor else {
+            if chess { return (w == 1 ? "白方赢" : "黑方赢", Palette.lilac) }
             return (xiangqi ? (w == 1 ? "红方赢" : "黑方赢") : (w == 1 ? "黑棋赢" : "白棋赢"), Palette.lilac)
         }
         return w == me ? ("赢了", Palette.sage) : ("输了", Palette.blush)
