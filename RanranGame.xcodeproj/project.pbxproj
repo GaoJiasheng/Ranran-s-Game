@@ -2207,6 +2207,7 @@
 		71CBCBDAC10BFC19BBB1F9E4 /* en_03e4b9ffc6.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FADD8D529976150285ACEB8A /* en_03e4b9ffc6.mp3 */; };
 		71E3D3074AF943626241E6B8 /* en_c78a240675.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6DE24505B79CD8DB103FA71F /* en_c78a240675.mp3 */; };
 		71E85809CBB308EF6C184876 /* vo_8b79f519c0.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 57490558C772D8AB0092A1BC /* vo_8b79f519c0.mp3 */; };
+		720445295FBBA3CBCC0D1B90 /* ChessGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966FA2C127402DE9136833CA /* ChessGameView.swift */; };
 		7207D59CDA440CB2E731FAB5 /* en_222311fa14.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = DE0D65DFE46A9B8C0E0BBC21 /* en_222311fa14.mp3 */; };
 		7211C427AB5D965B01FD5A02 /* en_78632746c8.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8D521D6F3D7067C772282323 /* en_78632746c8.mp3 */; };
 		722448BB4E593D5B0FBA2FBC /* en_42c7d653a3.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = EC11D3BF29000938DDB2C178 /* en_42c7d653a3.mp3 */; };
@@ -2320,6 +2321,7 @@
 		77CCB8761F02AFDA7B5FDA9C /* en_38a0f11a53.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3F67ABD49A0089A9E95150FC /* en_38a0f11a53.mp3 */; };
 		77D691E50AE09604B2C63581 /* en_86615aa6cb.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 6835D1A7E9D122238A896784 /* en_86615aa6cb.mp3 */; };
 		77D73D10737F8FF26FDF7355 /* en_181af6c0b4.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3D983C43FDB0903DCB89C632 /* en_181af6c0b4.mp3 */; };
+		77D9903B4A0BFCB29469FBEA /* ChessBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7B507533F4C2590226E38E /* ChessBoard.swift */; };
 		77DED6A3D53070E3AB8F7700 /* vo_5cea74c56e.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0FD54C9734C1C4E96D3ABEF9 /* vo_5cea74c56e.mp3 */; };
 		77E0CA6F7ADDC3B0860529DD /* en_258302f709.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5C2EA624D9C2A045FD151DEB /* en_258302f709.mp3 */; };
 		77F1823A1066F930A0DE7C9C /* en_b83c28a3ed.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5E55E2C736F8663E000D42F7 /* en_b83c28a3ed.mp3 */; };
@@ -4178,6 +4180,7 @@
 		D694849500832AA29B5C716B /* en_8feaa62720.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A89F43651740271148B45AF8 /* en_8feaa62720.mp3 */; };
 		D6949246B15DD08529B188D3 /* en_8952edce94.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A7D14667899E21BB2C11215C /* en_8952edce94.mp3 */; };
 		D6953A314F81A299DEE59D0B /* en_a2f2361764.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 318276F6BD905B4397F0C9F0 /* en_a2f2361764.mp3 */; };
+		D6974CA890C469469F6B49D6 /* ChessLessonLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812121D0AE51025425F38BF7 /* ChessLessonLogic.swift */; };
 		D6A0A229600A31D6B96735A1 /* SudokuGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24E929577020FCEDB4569B6F /* SudokuGrid.swift */; };
 		D6AE0E3EE90445925E45AC0B /* en_825d5a956a.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F92C663545FE1A16EECBC371 /* en_825d5a956a.mp3 */; };
 		D6DC8A837EE905B39D97E0B9 /* vo_3b5d85d92c.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 611EC900199C50FA609F92CB /* vo_3b5d85d92c.mp3 */; };
@@ -4275,6 +4278,7 @@
 		DC458BFC22A97E6F0B06F628 /* vo_f4bbe43d36.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 31D219630C9C8629831D0E0A /* vo_f4bbe43d36.mp3 */; };
 		DC6F2C9C7AE54F0122EA2500 /* en_f9da366e0a.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FD0B8C4F184A43E128CEB216 /* en_f9da366e0a.mp3 */; };
 		DC6F585622536F2CB6BE4DD8 /* vo_c31e119d22.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0DA79C3A2AF9D2B220986757 /* vo_c31e119d22.mp3 */; };
+		DC7892D679E5B637167D764C /* ChessBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA4DE37504ED9FDA69B3601 /* ChessBoardView.swift */; };
 		DC7E95A578CE2CC4550BE8B4 /* lose.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9F0045309D79A734DDEACF31 /* lose.wav */; };
 		DC7E98B66F9B00967AEA9B57 /* vo_c6b3ce81dd.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4D36C6962E36D069381B3298 /* vo_c6b3ce81dd.mp3 */; };
 		DCB35F1C88F1C53025B2662C /* en_a12b172313.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8869C7D34F388A0847BC6236 /* en_a12b172313.mp3 */; };
@@ -4356,6 +4360,7 @@
 		DFFACF57B93296B9B37089F8 /* en_9d65eec99e.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 61CCEBD02B7289C53BD94874 /* en_9d65eec99e.mp3 */; };
 		E0009FC61C2060B88F085AE4 /* en_374c80e22a.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = DB52A06F765295D8A287F4B0 /* en_374c80e22a.mp3 */; };
 		E0093691090DFCBF204F5864 /* en_aef173e9a5.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D5FBFBBD85CCF756CDDE0E65 /* en_aef173e9a5.mp3 */; };
+		E00CE98160920852A078EE12 /* ChessGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74D6AFD7EFA40E17E6AAF7C /* ChessGame.swift */; };
 		E01A6420D999F9A2F9AF3496 /* vo_1057495f1f.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3E56398B8179115E8ED8E062 /* vo_1057495f1f.mp3 */; };
 		E0209D3FA088535D01505201 /* vo_f7cc13953f.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B332422EA709E91479212361 /* vo_f7cc13953f.mp3 */; };
 		E03838DADEA7B974C103429A /* en_e1bd133052.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D381F3A5EBB67362C153442F /* en_e1bd133052.mp3 */; };
@@ -4960,6 +4965,7 @@
 		FE0C825DBE62AAA591A27984 /* vo_3f3e28066c.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = E6A8E344A91BCDBBB9E45825 /* vo_3f3e28066c.mp3 */; };
 		FE134F061B53F58DF568C8CD /* en_be2b482e08.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FC65F11A0DE05437026B6792 /* en_be2b482e08.mp3 */; };
 		FE14865BC37BCEA4640EB74A /* en_8a2a7b066d.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 395C256042B66BF257C1B76C /* en_8a2a7b066d.mp3 */; };
+		FE154A0C7D362849E40DABC7 /* ChessAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9DCED1A1EFCB73F66CE3677 /* ChessAI.swift */; };
 		FE1C618A6F3BFCB622759392 /* en_b994ec39c5.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0F1A3C7F63ACB33E8102661E /* en_b994ec39c5.mp3 */; };
 		FE2B50B82FDB61BF70D4686E /* en_f3d57e4911.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D7ECDCDC594A64CFCE055AB9 /* en_f3d57e4911.mp3 */; };
 		FE371C039D50DF4C3B8AA947 /* en_81bd16e626.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0F4B3AB87D31B6104B7F31F7 /* en_81bd16e626.mp3 */; };
@@ -7517,6 +7523,7 @@
 		8117005CC61FFA38E626E12A /* en_7006e43aee.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_7006e43aee.mp3; sourceTree = "<group>"; };
 		811A04A4133BE9B140DA9A2E /* en_20c98076d9.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_20c98076d9.mp3; sourceTree = "<group>"; };
 		811CD73CE77CB8A6BAD06719 /* en_efe5f30403.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_efe5f30403.mp3; sourceTree = "<group>"; };
+		812121D0AE51025425F38BF7 /* ChessLessonLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessLessonLogic.swift; sourceTree = "<group>"; };
 		8132542513F4693F4BB98D4D /* en_dbc2af0a33.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_dbc2af0a33.mp3; sourceTree = "<group>"; };
 		81663C1DC6B03B0448316E54 /* en_da1e2f600b.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_da1e2f600b.mp3; sourceTree = "<group>"; };
 		816C8D45FF60B2F843CFCA51 /* en_29c9c31b07.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_29c9c31b07.mp3; sourceTree = "<group>"; };
@@ -7937,6 +7944,7 @@
 		962FCA0D92EB11E9C9E4C781 /* en_cd8ab8ac40.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_cd8ab8ac40.mp3; sourceTree = "<group>"; };
 		964DEBEF84FEF829387E175D /* en_7dcc6f2db8.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_7dcc6f2db8.mp3; sourceTree = "<group>"; };
 		965A11A94E6049D2DE4862F5 /* en_351f1cedbe.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_351f1cedbe.mp3; sourceTree = "<group>"; };
+		966FA2C127402DE9136833CA /* ChessGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessGameView.swift; sourceTree = "<group>"; };
 		9675566F0533FF0AEC424874 /* en_c3282e272a.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_c3282e272a.mp3; sourceTree = "<group>"; };
 		9677D7AFC39B07E2FEA6FE1E /* vo_9327708b20.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_9327708b20.mp3; sourceTree = "<group>"; };
 		967ECE0AE9F54ABD75B9B7E8 /* en_f0e9a9b338.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_f0e9a9b338.mp3; sourceTree = "<group>"; };
@@ -8236,6 +8244,7 @@
 		A702BA9B0C0E4B0F356E8402 /* en_0c78443ff7.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_0c78443ff7.mp3; sourceTree = "<group>"; };
 		A730299E75CAA5F8F8BC9B9E /* en_278cd4ae5b.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_278cd4ae5b.mp3; sourceTree = "<group>"; };
 		A73ADED7CB45D5A5A23A194F /* en_22a129d025.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_22a129d025.mp3; sourceTree = "<group>"; };
+		A74D6AFD7EFA40E17E6AAF7C /* ChessGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessGame.swift; sourceTree = "<group>"; };
 		A75899934724E1C0FA1C9744 /* vo_350897e827.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_350897e827.mp3; sourceTree = "<group>"; };
 		A75C6228C0A9DC0FE6E0F468 /* en_559648e508.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_559648e508.mp3; sourceTree = "<group>"; };
 		A75F52D74B6DE8F3E88217E9 /* vo_bdcc0e5b76.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_bdcc0e5b76.mp3; sourceTree = "<group>"; };
@@ -9027,6 +9036,7 @@
 		CF3728580C5C39A5B0154448 /* en_e95c04b6f3.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_e95c04b6f3.mp3; sourceTree = "<group>"; };
 		CF9713CE9C4F458ACDC88618 /* en_e77c22d875.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_e77c22d875.mp3; sourceTree = "<group>"; };
 		CFA2FADD917B162CB99B4DBF /* en_44bfdbd6f9.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_44bfdbd6f9.mp3; sourceTree = "<group>"; };
+		CFA4DE37504ED9FDA69B3601 /* ChessBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBoardView.swift; sourceTree = "<group>"; };
 		CFB2C5E8E3E5A9718E8A9149 /* vo_bbc7bd4fc9.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_bbc7bd4fc9.mp3; sourceTree = "<group>"; };
 		CFB75740C33FA372EE967ED2 /* en_abee8e3e18.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_abee8e3e18.mp3; sourceTree = "<group>"; };
 		CFC6BF5A4A98D4D4FEF9D822 /* en_dba5e7569c.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_dba5e7569c.mp3; sourceTree = "<group>"; };
@@ -9231,6 +9241,7 @@
 		D9C8574337FFE34F6CD7F5E2 /* en_86aa799b4c.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_86aa799b4c.mp3; sourceTree = "<group>"; };
 		D9D123EC864A88C240775341 /* en_14357b68c1.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_14357b68c1.mp3; sourceTree = "<group>"; };
 		D9DADCDC239908AB36587F4E /* en_37737327b2.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_37737327b2.mp3; sourceTree = "<group>"; };
+		D9DCED1A1EFCB73F66CE3677 /* ChessAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessAI.swift; sourceTree = "<group>"; };
 		D9DDFFCF5A8D3387EEAA2F9E /* vo_ce996d4d27.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_ce996d4d27.mp3; sourceTree = "<group>"; };
 		D9E9D8DC794E6C60FE9F904B /* en_5a382a003c.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_5a382a003c.mp3; sourceTree = "<group>"; };
 		D9EA9E231DED7A865A4EA305 /* en_f2baf9fca1.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_f2baf9fca1.mp3; sourceTree = "<group>"; };
@@ -9950,6 +9961,7 @@
 		FE6FB0B3B554910018CC1024 /* en_705fddb8ee.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_705fddb8ee.mp3; sourceTree = "<group>"; };
 		FE724956178B0BB03FA823AE /* vo_9b3b7319e8.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = vo_9b3b7319e8.mp3; sourceTree = "<group>"; };
 		FE74CAB9B514275794FFB850 /* PuzzleDoneOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuzzleDoneOverlay.swift; sourceTree = "<group>"; };
+		FE7B507533F4C2590226E38E /* ChessBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBoard.swift; sourceTree = "<group>"; };
 		FE7F2D0B0A2DD8CAC807D132 /* en_5205df2106.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_5205df2106.mp3; sourceTree = "<group>"; };
 		FE8323AF2A0B5C0A91A4FF47 /* en_b7ef346d83.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_b7ef346d83.mp3; sourceTree = "<group>"; };
 		FE900C991A3599885F672A7B /* en_0923a2da09.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = en_0923a2da09.mp3; sourceTree = "<group>"; };
@@ -10037,6 +10049,9 @@
 		1EF07711A2DA1B38C8892D3A /* Logic */ = {
 			isa = PBXGroup;
 			children = (
+				D9DCED1A1EFCB73F66CE3677 /* ChessAI.swift */,
+				FE7B507533F4C2590226E38E /* ChessBoard.swift */,
+				812121D0AE51025425F38BF7 /* ChessLessonLogic.swift */,
 				1B556D968CDFAFF75BC889F4 /* ChessTutorialKit.swift */,
 			);
 			path = Logic;
@@ -14148,6 +14163,9 @@
 		E9724CEA6114800A64031FA7 /* Chess */ = {
 			isa = PBXGroup;
 			children = (
+				CFA4DE37504ED9FDA69B3601 /* ChessBoardView.swift */,
+				A74D6AFD7EFA40E17E6AAF7C /* ChessGame.swift */,
+				966FA2C127402DE9136833CA /* ChessGameView.swift */,
 				81AEEB21BD5942FD89C6E414 /* ChessLessonView.swift */,
 				E5257C3BD8629C2B3849C7C9 /* ChessReplayView.swift */,
 				B1CA314215C414C59C3CC670 /* ChessSetupView.swift */,
@@ -20158,6 +20176,12 @@
 				A871425BBCA83EDF94273362 /* BarModel.swift in Sources */,
 				5199B084B0B23A2BA848701E /* BoardView.swift in Sources */,
 				BA728C970EFC623CF3EA42D1 /* Celebrations.swift in Sources */,
+				FE154A0C7D362849E40DABC7 /* ChessAI.swift in Sources */,
+				77D9903B4A0BFCB29469FBEA /* ChessBoard.swift in Sources */,
+				DC7892D679E5B637167D764C /* ChessBoardView.swift in Sources */,
+				E00CE98160920852A078EE12 /* ChessGame.swift in Sources */,
+				720445295FBBA3CBCC0D1B90 /* ChessGameView.swift in Sources */,
+				D6974CA890C469469F6B49D6 /* ChessLessonLogic.swift in Sources */,
 				35E3D439F23C2472AEC9462A /* ChessLessonView.swift in Sources */,
 				E948F1632561808D4EF17505 /* ChessReplayView.swift in Sources */,
 				CBB9CC564E8CDBF6B3B9CBE0 /* ChessSetupView.swift in Sources */,
