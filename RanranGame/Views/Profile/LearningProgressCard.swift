@@ -45,7 +45,9 @@ private struct SubjectTile: View {
                     .foregroundStyle(Palette.honey)
             }
             HStack(spacing: 10) {
-                ProgressBar(fraction: progress.fraction, tint: subject.tint)
+                // 进度条和奖章墙上用的是同一个（Views/Rewards/ProgressPieces.swift）
+                ProgressBar(fraction: progress.fraction, tint: subject.tint, track: Palette.ink.opacity(0.08))
+                    .frame(height: 12)
                 Text("\(Int((progress.fraction * 100).rounded()))%")
                     .font(.kid(16, weight: .heavy))
                     .foregroundStyle(Palette.ink)
@@ -76,22 +78,6 @@ private struct SubjectTile: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(subject.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-}
-
-private struct ProgressBar: View {
-    let fraction: Double
-    let tint: Color
-
-    var body: some View {
-        GeometryReader { g in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Palette.ink.opacity(0.08))
-                Capsule().fill(tint)
-                    .frame(width: max(g.size.height, g.size.width * fraction))
-            }
-        }
-        .frame(height: 12)
     }
 }
 

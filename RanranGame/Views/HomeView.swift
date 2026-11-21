@@ -19,7 +19,8 @@ struct HomeView: View {
     @Environment(PlayerStore.self) private var store
     @State private var path: [Route] = []
     @State private var appeared = false
-    @State private var showMedals = false
+    /// 奖章墙开在哪一页；nil 是没开
+    @State private var wall: WallTab?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -50,13 +51,14 @@ struct HomeView: View {
                                 } else {
                                     VStack(spacing: 20) {
                                         ForEach(GameEntry.allCases, id: \.self) { g in
-                                            GameHeroCard(game: g) { open(g) }.frame(minHeight: 200, maxHeight: 400)
+                                            // 11 寸竖屏放四张卡，每张只有 180 左右；最小高度定得太大，底下的「今天的三颗星」会被挤出屏幕
+                                            GameHeroCard(game: g) { open(g) }.frame(minHeight: 150, maxHeight: 400)
                                         }
                                     }
                                 }
                             }
                             .frame(maxHeight: .infinity)
-                            ComingSoonCard().frame(height: roomy ? 110 : 84)
+                            DailyStarsCard { wall = .daily }.frame(height: roomy ? 110 : 84)
                         }
                         .padding(.horizontal, 48)
                         .padding(.vertical, roomy ? 36 : 24)
@@ -83,7 +85,7 @@ struct HomeView: View {
                 }
             }
         }
-        .medalLayer(atHome: path.isEmpty, showWall: $showMedals)
+        .medalLayer(atHome: path.isEmpty, wall: $wall)
         .onAppear {
             withAnimation(.spring(duration: 0.7, bounce: 0.25)) { appeared = true }
             #if DEBUG
@@ -138,7 +140,7 @@ struct HomeView: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 5) {
                 StarCounter(size: .large)
-                MedalHint { showMedals = true }
+                MedalHint { wall = .stars }
             }
         }
     }
@@ -234,13 +236,16 @@ private struct GameHeroCard: View {
                                        .init(color: .clear, location: 0.62)],
                                startPoint: .leading, endPoint: .trailing)
 
-                // 卡片矮的时候先省掉小头像那一行
+                // 卡片矮的时候依次省掉：小头像那一行 → 副标题 → 标题变小 → 学会了多少
                 ViewThatFits(in: .vertical) {
-                    content(accessory: true)
-                    content(accessory: false)
+                    content(subtitle: true, accessory: true)
+                    content(subtitle: true, accessory: false)
+                    content(subtitle: false, accessory: false)
+                    content(subtitle: false, accessory: false, compact: true)
+                    content(subtitle: false, accessory: false, compact: true, pill: false)
                 }
                 .padding(.horizontal, 40)
-                .padding(.vertical, 24)
+                .padding(.vertical, min(24, g.size.height * 0.08))
                 // 文字只占卡片左边一部分，窄卡片上也不压到插画
                 .frame(width: min(420, g.size.width * 0.6), alignment: .leading)
             }
@@ -253,7 +258,11 @@ private struct GameHeroCard: View {
         .buttonStyle(PressableStyle(scale: 0.97))
     }
 
-    /// 卡片很窄（横屏三张并排）时：插画在上，文字在下
+    /// 这张卡片对应的科目（学会了多少）
+    private var subject: Subject? { Subjects.all.first { $0.entry == game } }
+
+    /// 卡片很窄（横屏三张并排）时：插画在上，文字在下。
+    /// "学会了多少"放在文字区、开始玩按钮的上面，不压插画；放不下先省副标题，最后才省它。
     private func tall(_ size: CGSize) -> some View {
         VStack(spacing: 0) {
             ArtImage(name: art, fallback: "🎲", contentMode: .fill)
@@ -263,66 +272,85 @@ private struct GameHeroCard: View {
                     LinearGradient(colors: [fade.opacity(0), fade], startPoint: .top, endPoint: .bottom)
                         .frame(height: size.height * 0.12)
                 }
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.kid(46, weight: .heavy))
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(subtitle)
-                    .font(.kid(19, weight: .semibold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-                HStack(spacing: 10) {
-                    Image(systemName: "play.fill")
-                    Text("开始玩")
-                }
-                .font(.kid(22, weight: .heavy))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 26)
-                .padding(.vertical, 13)
-                .background(button, in: Capsule())
-                .shadow(color: button.opacity(0.45), radius: 14, y: 8)
+            ViewThatFits(in: .vertical) {
+                tallText(subtitleLines: 2, pill: true)
+                tallText(subtitleLines: 1, pill: true)
+                tallText(subtitleLines: 0, pill: true)
+                tallText(subtitleLines: 0, pill: true, titleSize: 36)
+                tallText(subtitleLines: 2, pill: false)
             }
             .padding(.horizontal, 28)
             .padding(.top, 10)
-            .padding(.bottom, 24)
+            .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(fade)
         }
         .frame(width: size.width, height: size.height)
     }
 
-    private func content(accessory show: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func tallText(subtitleLines: Int, pill: Bool, titleSize: CGFloat = 46) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.kid(60, weight: .heavy))
+                .font(.kid(titleSize, weight: .heavy))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(subtitle)
-                .font(.kid(22, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+            if subtitleLines > 0 {
+                Text(subtitle)
+                    .font(.kid(19, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(subtitleLines)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 4)
+            if pill, let subject {
+                SubjectProgressPill(subject: subject, height: 44)
+            }
+            playButton(size: 22)
+        }
+    }
+
+    private func content(subtitle showSubtitle: Bool, accessory show: Bool, compact: Bool = false, pill: Bool = true) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 8 : 14) {
+            Text(title)
+                .font(.kid(compact ? 46 : 60, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if showSubtitle {
+                Text(subtitle)
+                    .font(.kid(22, weight: .semibold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
             if show {
                 accessory
                     .padding(.top, 6)
             }
-            Spacer().frame(height: 10)
-            HStack(spacing: 10) {
-                Image(systemName: "play.fill")
-                Text("开始玩")
+            Spacer().frame(height: compact ? 2 : 10)
+            // 开始玩 + 学会了多少，并排一行
+            HStack(spacing: 14) {
+                playButton(size: compact ? 22 : 24)
+                if pill, let subject {
+                    SubjectProgressPill(subject: subject, height: compact ? 46 : 52)
+                }
             }
-            .font(.kid(24, weight: .heavy))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 30)
-            .padding(.vertical, 15)
-            .background(button, in: Capsule())
-            .shadow(color: button.opacity(0.45), radius: 14, y: 8)
         }
+    }
+
+    private func playButton(size: CGFloat) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "play.fill")
+            Text("开始玩")
+        }
+        .font(.kid(size, weight: .heavy))
+        .foregroundStyle(.white)
+        .padding(.horizontal, size * 1.2)
+        .padding(.vertical, size * 0.6)
+        .background(button, in: Capsule())
+        .shadow(color: button.opacity(0.45), radius: 14, y: 8)
+        .fixedSize()
     }
 
     @ViewBuilder private var accessory: some View {
@@ -343,29 +371,6 @@ private struct GameHeroCard: View {
                 }
             }
         }
-    }
-}
-
-/// 留给以后的新游戏。
-private struct ComingSoonCard: View {
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 36, weight: .semibold))
-                .foregroundStyle(Palette.lilac)
-            Text("更多游戏")
-                .font(.kid(28, weight: .heavy))
-                .foregroundStyle(Palette.ink.opacity(0.7))
-            Text("正在精心制作中…")
-                .font(.kid(20, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft.opacity(0.8))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Palette.paper.opacity(0.45), in: RoundedRectangle(cornerRadius: 44, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 44, style: .continuous)
-                .strokeBorder(Palette.inkSoft.opacity(0.25), style: StrokeStyle(lineWidth: 2.5, dash: [10, 9]))
-        )
     }
 }
 

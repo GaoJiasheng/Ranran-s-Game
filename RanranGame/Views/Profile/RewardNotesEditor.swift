@@ -33,7 +33,7 @@ struct RewardNotesEntryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .softCard(radius: 40)
         // iPad 上的 sheet 只有小小一块，一屏只放得下四行；整屏打开才好写
-        .fullScreenCover(isPresented: $showing) { RewardNotesEditor() }
+        .fullScreenCover(isPresented: $showing) { RewardNotesEditor().statusBarHidden() }
         .onAppear {
             #if DEBUG
             // 调试截图用：启动参数 -rewardNotes YES 直接打开编辑页

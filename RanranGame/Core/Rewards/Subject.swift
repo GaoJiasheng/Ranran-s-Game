@@ -112,7 +112,7 @@ enum Subjects {
     private static let chapterArt: [StoryChapter: String] = [
         .together: "item_apple", .partWhole: "item_cookie", .compare: "item_pencil", .moreFewer: "item_balloon",
         .giving: "item_candy", .groups: "item_basket", .sharing: "item_strawberry", .hundred: "item_sticker",
-        .twoSteps: "item_carrot", .challenge: "item_plate",
+        .twoSteps: "item_carrot", .challenge: "badge_math_challenge",
     ]
 
     static let math: Subject = {

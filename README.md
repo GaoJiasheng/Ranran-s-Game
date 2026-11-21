@@ -25,8 +25,27 @@
 - 学完一组可以直接「去下一盘」（自动选好合适的档位）；五子棋、象棋复盘里的失误旁边有「复习这一课」。
 - 课程规划见 `docs/tutorials.md`，以后的新游戏都按这个思路先写教学。改了内容要跑 `zsh tools/tutorials/validate.sh`（答案、分支、练习的每种变换、走错的后果、配音清单都要过）。
 
-**星星**：每颗星都记在拿到它的那一关 / 那一档上。关卡下面显示这一关拿到几颗，游戏页右上角是这个游戏的合计，主页是全部的总数。
-星星攒够了解锁**奖章**（5、15、30 … 650 颗，共 12 枚）：主页星星下面提示离下一枚还差几颗，「我的」里有奖章墙，解锁时回到主页会庆祝一次。
+**全局奖励**（全 App 一套，规矩都在 `Core/Rewards/RewardRules.swift`）：
+
+- **星星**只有一种，主页右上角是总数。每颗星都记在 `<科目>.stars.<哪里拿的>` 上，所以每一科拿了多少随时算得出来。
+  | 做什么 | 给几颗 |
+  |---|---|
+  | 学一课（棋类教学） | 铜杯 1、银杯 2、金杯 3；杯子变好了补差额 |
+  | 复习 | 每种棋每天第一次 1 颗 |
+  | 赢电脑一盘 | 1~3 颗（赢 + 没悔棋 + 没用提示）。只有在"现在的水平"附近（最高赢过的档往下一档及以上）给全额；更低的档每盘 1 颗、每天前 3 盘有，刷不了 |
+  | 第一次赢下新的一档 | 另加 5 颗 |
+  | 加减乘除 | 每道题第一次"一遍就答对"1 颗 |
+  | 今天的三颗星 | 学一课、算一组题、下一盘棋，三样都做了另加 3 颗（只记做到了多少天，断了不清零） |
+- **星星奖章**：星星攒够了解锁（5、15、30 … 800 颗，共 12 枚）。门槛以后可以调，庆祝过的不会收回。
+- **本领奖章**：和星星多少无关，学会一样具体的东西就拿到——学完一组课、打败一位小伙伴、通过数学的一章、坚持 3 / 7 / 14 / 30 天。
+- **毕业线**：每一科"学会了"的标准。棋类 = 每一课都拿到银杯以上 + 赢到第 N 档（五子棋 5、象棋 4、围棋 5）；加减乘除 = 30 关全部通过。
+  主页每张卡片上显示学会了百分之几，奖章墙每一科一页（进度环、每条目标、本领奖章），「我的」里的「学到哪了」给家长看。
+- **约好的奖励**：家长在「我的」里长按打开，给星星奖章、毕业奖章各写一句现实里的奖励，孩子拿到时会看到。跟着存档导出导入。
+- 升级到这一版时，以前学过的课、赢过的档会补发星星，主页说一次。
+- **以后加新游戏**：星星记在 `<科目>.stars.…` 上（`store.earnStars` / `recordWin` / `payLessonStars`），在 `Core/Rewards/Subject.swift` 的 `Subjects.all` 里登记一项
+  （有课程和十档对手的棋直接用 `Subject.board(...)`），主页、奖章墙、「我的」就都带上它了；它的活动调 `store.noteDaily(...)` 算进今天的三颗星。
+  改了规矩跑 `zsh tools/rewards/test.sh`。
+
 - **加减乘除** — 英文数学应用题，照新加坡小学一、二年级的思路出题（冉冉在海外上学，题目、提示、朗读全是英文）。
   十章：Altogether / Part & Whole / How Many More? / More or Fewer?（"Bunny has 3 fewer than Panda" 这类陷阱）/
   Giving / Equal Groups（乘法）/ Sharing（除法）/ Numbers to 100（不进位 → 进位退位，带 dollars、cm、m）/
@@ -53,13 +72,16 @@
 project.yml              XcodeGen 配置（改完运行 `xcodegen generate` 重新生成 .xcodeproj）
 RanranGame/
   Core/                  主题配色、音效、玩家存档（PlayerStore：名字/星星/棋谱/导入导出）
+  Core/Rewards/          全局奖励：发星星的规矩、科目登记（毕业线、本领奖章）、今天的三颗星
   Views/HomeView.swift   主页（游戏合集入口）
   Views/ProfileView.swift「我的」：名字、战绩、棋谱列表、存档
+  Views/Profile/         「我的」里的「学到哪了」和「约好的奖励」
   Games/Gomoku/          五子棋：规则、AI（十档 + 复盘分析）、棋盘、界面、复盘页
   Games/Xiangqi/         象棋：规则（XiangqiBoard，走法计数已对照标准 perft）、AI、棋盘和棋子、对局、复盘（中文记谱 + 逐手点评）
   Games/Go/              围棋：规则（GoBoard，含吃子计算）、AI（吃子棋打分 + MCTS）、棋盘、对局、复盘
   Games/Tutorial/        教学：课程数据和进度、判题逻辑、课程表、一课的流程和画面、小奖杯、练一练 / 复习、走错的后果
-  Views/Medals/          星星奖章：奖章墙、解锁庆祝
+  Views/Medals/          奖章墙（星星奖章 + 每科一页 + 好习惯）、主页上的庆祝队列
+  Views/Rewards/         本领奖章、进度环、今天的三颗星这些共用的小部件
   Games/Story/           加减乘除：出题器（题型 + 常见错法 + 线段图）、演故事的舞台（含分盘子）、线段图、做题流程、英文朗读
   Tutorials/             教学内容（gomoku.json、xiangqi.json、go.json，由 tools/tutorials/build_tutorials.py 生成）
   Content/               加减乘除题库 story_bank.json（由 tools/storybank 生成）
@@ -73,6 +95,7 @@ tools/                   重新生成音效的脚本（make_sounds.py：棋子�
 tools/tutorials/         教学内容生成脚本和校验（改完运行 build_tutorials.py、validate.sh，再重新生成配音）
 tools/storybank/         题库生成器：zsh tools/storybank/build.sh（出题 + 检查 + 写英文配音清单）。
                          已有关卡的题原样保留，只给新关卡出题（带固定种子，重跑结果不变）；test.sh 是存档迁移和出题逻辑的测试
+tools/rewards/           奖励规矩的测试：zsh tools/rewards/test.sh
 tools/voice/             配音：build_manifest.py 收集要读的句子（含象棋多音字处理：车→jū、将→jiàng），
                          generate_voice.py 生成 / 更新 mp3（只重做改过的句子；--profile en 是英文）
 ```

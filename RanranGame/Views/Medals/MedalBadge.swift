@@ -1,6 +1,6 @@
 import SwiftUI
 
-private extension Color {
+extension Color {
     /// 往另一种颜色靠 t（0...1）
     func mixed(_ other: Color, _ t: Double) -> Color {
         var a: (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
