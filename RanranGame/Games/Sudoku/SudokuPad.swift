@@ -64,7 +64,7 @@ struct SudokuPad: View {
     }
 }
 
-/// 撤销、擦掉、笔记、提示、重来这一类小按钮：图标 + 一行字
+/// 撤销、擦掉、笔记、提示、重来这一类小按钮：图标 + 字
 struct SudokuToolButton: View {
     let icon: String
     let title: String
@@ -78,14 +78,16 @@ struct SudokuToolButton: View {
             Sound.tap()
             action()
         } label: {
-            VStack(spacing: 4) {
+            // 图标和字并排：字够大，孩子一眼认得出是哪个按钮
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: height * 0.32, weight: .bold))
+                    .font(.system(size: max(17, height * 0.32), weight: .bold))
                 Text(title)
-                    .font(.kid(max(13, height * 0.2), weight: .heavy))
+                    .font(.kid(max(17, height * 0.3), weight: .heavy))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
+            .padding(.horizontal, 6)
             .foregroundStyle(active ? .white : enabled ? Palette.ink : Palette.inkSoft.opacity(0.5))
             .frame(maxWidth: .infinity)
             .frame(height: height)
