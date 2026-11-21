@@ -51,8 +51,9 @@ enum KlotskiCatalog {
                    levels: levels.filter { $0.pack == s.id }.map(\.id))
     }
 
-    /// 通过前几组算"学会了"：入门、进阶、高手。大师是最后的挑战，不挡毕业。
-    static let passPacks = 3
+    /// 通过前几组算"学会了"：入门、进阶（最少 25 步以内）。会让路、会腾空位就是会玩了；
+    /// 高手（26–50 步）和大师是给她继续挑战的，不挡毕业。
+    static let passPacks = 2
 
     static func level(_ id: String) -> KlotskiLevel? { levels.first { $0.id == id } }
 
