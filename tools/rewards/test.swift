@@ -96,5 +96,45 @@ do {
     check(s.badgeSeen("go.track.basic") && !s.badgeSeen("go.track.capture"), "奖章看过的记号")
 }
 
+// 解谜类：每关 1~3 颗，只记最好的一次，变好了补差额；过一关算"玩一局"
+do {
+    let s = PlayerStore()
+    let r1 = s.recordPuzzle(game: "sudoku", level: "a1", earned: 2, day: 20)
+    check(r1.paid == 2 && r1.best == 2 && r1.first, "第一次过关 2 颗")
+    let r2 = s.recordPuzzle(game: "sudoku", level: "a1", earned: 1, day: 20)
+    check(r2.paid == 0 && r2.best == 2 && !r2.first, "再过一次、更差：不发也不降")
+    let r3 = s.recordPuzzle(game: "sudoku", level: "a1", earned: 3, day: 20)
+    check(r3.paid == 1 && r3.best == 3, "变成三星补 1 颗")
+    check(s.recordPuzzle(game: "sudoku", level: "a1", earned: 3, day: 21).paid == 0, "三星以后重玩刷不了")
+    check(s.recordPuzzle(game: "sudoku", level: "a2", earned: 9, day: 21).paid == 3, "最多 3 颗")
+    check(s.stars(prefix: "sudoku.stars.") == 6 && s.totalStars == 6 && ledger(s) == 6, "解谜的账对得上")
+    check(s.dailyDone(.play, day: 21), "过一关算玩一局")
+    check(s.puzzleBest("sudoku", "a1") == 3 && s.puzzlesCleared("sudoku", ["a1", "a2", "a3"]) == 2, "最好成绩和过关数")
+}
+
+// 解谜类的解锁：每组最前面两关没过的开着；前一组过了三分之二才开下一组；全部解锁开关
+do {
+    let s = PlayerStore()
+    let packs = [PuzzlePack(id: "a", name: "一", subtitle: "", art: "", levels: (1...6).map { "a\($0)" }),
+                 PuzzlePack(id: "b", name: "二", subtitle: "", art: "", levels: (1...4).map { "b\($0)" })]
+    func open(_ l: String) -> Bool { s.puzzleUnlocked("p", packs, l, unlockAll: false) }
+    check(open("a1") && open("a2") && !open("a3"), "一开始开两关")
+    check(!s.packUnlocked("p", packs, 1, unlockAll: false) && !open("b1"), "第二组锁着")
+    check(s.puzzlesNeeded("p", packs, toOpen: 1, unlockAll: false) == 4, "6 关的三分之二是 4 关")
+    check(s.nextPuzzle("p", packs, unlockAll: false) == "a1", "接着玩第一关")
+    s.recordPuzzle(game: "p", level: "a2", earned: 1)
+    check(open("a1") && open("a2") && open("a3") && !open("a4"), "跳着过了第二关：第一、三关开着")
+    check(s.puzzleAfter("p", packs, "a2", unlockAll: false) == "a3", "下一关")
+    for l in ["a1", "a3", "a4"] { s.recordPuzzle(game: "p", level: l, earned: 1) }
+    check(s.packUnlocked("p", packs, 1, unlockAll: false) && open("b1") && open("b2") && !open("b3"), "过了 4 关，第二组打开")
+    check(s.puzzlesNeeded("p", packs, toOpen: 1, unlockAll: false) == 0, "打开了就不差了")
+    check(s.puzzleAfter("p", packs, "a6", unlockAll: false) == "b1", "一组的最后一关接下一组第一关")
+    check(s.puzzleAfter("p", packs, "b4", unlockAll: false) == nil, "最后一关没有下一关")
+    let t = PlayerStore()
+    check(t.puzzleUnlocked("p", packs, "b4", unlockAll: true) && t.packUnlocked("p", packs, 1, unlockAll: true), "全部解锁")
+    t.recordPuzzle(game: "p", level: "b1", earned: 1)
+    check(t.packUnlocked("p", packs, 1, unlockAll: false), "后面的组里有过了的关，就一直开着")
+}
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)
