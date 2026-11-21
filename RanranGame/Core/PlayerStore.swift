@@ -41,19 +41,22 @@ struct SaveArchive: Codable {
     var records: [GameRecord]
     /// 应用题的错题本（旧存档里没有）
     var storyMistakes: [StoryMistake]? = nil
+    /// 家长写的小字条，比如每枚奖章约好的奖励（旧存档里没有）
+    var notes: [String: String]? = nil
 
     init(playerName: String, totalStars: Int, counts: [String: Int], settings: [String: Int],
-         records: [GameRecord], storyMistakes: [StoryMistake]?) {
+         records: [GameRecord], storyMistakes: [StoryMistake]?, notes: [String: String]? = nil) {
         self.playerName = playerName
         self.totalStars = totalStars
         self.counts = counts
         self.settings = settings
         self.records = records
         self.storyMistakes = storyMistakes
+        self.notes = notes
     }
 
     private enum CodingKeys: String, CodingKey {
-        case format, version, exportedAt, playerName, totalStars, counts, settings, records, storyMistakes
+        case format, version, exportedAt, playerName, totalStars, counts, settings, records, storyMistakes, notes
     }
 
     init(from decoder: Decoder) throws {
@@ -68,6 +71,7 @@ struct SaveArchive: Codable {
         records = try c.decode([GameRecord].self, forKey: .records)
         // 旧版（中文题）的错题格式不一样，读不出来就不要了，别让整份存档导入失败
         storyMistakes = try? c.decodeIfPresent([StoryMistake].self, forKey: .storyMistakes)
+        notes = try? c.decodeIfPresent([String: String].self, forKey: .notes)
     }
 }
 
@@ -91,6 +95,8 @@ final class PlayerStore {
     private(set) var records: [GameRecord]
     /// 应用题做错过的题，最新的在前
     private(set) var storyMistakes: [StoryMistake]
+    /// 家长写的小字条（文字），比如 "reward.medal.3" → "去游乐园"
+    private(set) var notes: [String: String]
 
     init(defaults: UserDefaults = .standard, directory: URL? = nil) {
         self.defaults = defaults
@@ -102,10 +108,12 @@ final class PlayerStore {
         name = defaults.string(forKey: "playerName") ?? Self.defaultName
         totalStars = defaults.integer(forKey: "totalStars")
         counts = (defaults.dictionary(forKey: "counts") as? [String: Int]) ?? [:]
+        notes = (defaults.dictionary(forKey: "notes") as? [String: String]) ?? [:]
         records = (try? Self.decoder.decode([GameRecord].self, from: Data(contentsOf: recordsURL))) ?? []
         storyMistakes = (try? Self.decoder.decode([StoryMistake].self, from: Data(contentsOf: mistakesURL))) ?? []
         migrateStarLedger()
         migrateStoryProgress()
+        syncRewards()
     }
 
     // MARK: 名字
@@ -155,6 +163,19 @@ final class PlayerStore {
     func increment(_ key: String) {
         counts[key, default: 0] += 1
         defaults.set(counts, forKey: "counts")
+    }
+
+    // MARK: 小字条
+
+    static let maxNoteLength = 20
+
+    func note(_ key: String) -> String { notes[key] ?? "" }
+
+    /// 去掉首尾空格、最多 20 个字；空的就删掉
+    func setNote(_ key: String, _ text: String) {
+        let trimmed = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxNoteLength))
+        notes[key] = trimmed.isEmpty ? nil : trimmed
+        defaults.set(notes, forKey: "notes")
     }
 
     // MARK: 棋谱
@@ -210,7 +231,8 @@ final class PlayerStore {
             settings[key] = defaults.integer(forKey: key)
         }
         return SaveArchive(playerName: name, totalStars: totalStars, counts: counts,
-                           settings: settings, records: records, storyMistakes: storyMistakes)
+                           settings: settings, records: records, storyMistakes: storyMistakes,
+                           notes: notes.isEmpty ? nil : notes)
     }
 
     /// 用存档整个替换当前数据
@@ -220,9 +242,11 @@ final class PlayerStore {
         counts = archive.counts
         records = archive.records.sorted { $0.date > $1.date }
         storyMistakes = (archive.storyMistakes ?? []).sorted { $0.date > $1.date }
+        notes = archive.notes ?? [:]
         defaults.set(name, forKey: "playerName")
         defaults.set(totalStars, forKey: "totalStars")
         defaults.set(counts, forKey: "counts")
+        defaults.set(notes, forKey: "notes")
         for key in Self.settingKeys {
             if let v = archive.settings[key] { defaults.set(v, forKey: key) } else { defaults.removeObject(forKey: key) }
         }
@@ -230,6 +254,7 @@ final class PlayerStore {
         persistMistakes()
         migrateStarLedger()
         migrateStoryProgress()
+        syncRewards()
     }
 
     static let encoder: JSONEncoder = {

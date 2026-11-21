@@ -14,6 +14,7 @@ struct Medal: Identifiable, Hashable {
     let ribbon: UInt32
 
     /// 从低到高的奖章阶梯，间隔慢慢拉大。
+    /// 门槛以后可以调：已经庆祝过的奖章不会因为调门槛被收回去（见 PlayerStore.hasMedal）。
     static let all: [Medal] = [
         Medal(id: 1,  threshold: 5,   name: "小星芽",   emblem: "leaf.fill",       base: 0x8DB596, ribbon: 0x6FA07A),
         Medal(id: 2,  threshold: 15,  name: "小兔子",   emblem: "hare.fill",       base: 0xF4A9A0, ribbon: 0xEE7B6B),
@@ -21,12 +22,12 @@ struct Medal: Identifiable, Hashable {
         Medal(id: 4,  threshold: 50,  name: "月亮船",   emblem: "moon.stars.fill", base: 0xA897DA, ribbon: 0x8472C4),
         Medal(id: 5,  threshold: 80,  name: "小太阳",   emblem: "sun.max.fill",    base: 0xEDB34F, ribbon: 0xE08A3C),
         Medal(id: 6,  threshold: 120, name: "彩虹桥",   emblem: "rainbow",         base: 0x6FB5E0, ribbon: 0x4F96C8),
-        Medal(id: 7,  threshold: 170, name: "闪电侠",   emblem: "bolt.fill",       base: 0xF2C14B, ribbon: 0xD9982F),
-        Medal(id: 8,  threshold: 230, name: "小火龙",   emblem: "flame.fill",      base: 0xF08A4B, ribbon: 0xD0603A),
-        Medal(id: 9,  threshold: 300, name: "小公主",   emblem: "crown.fill",      base: 0xD58BC8, ribbon: 0xB567A9),
-        Medal(id: 10, threshold: 400, name: "魔法星",   emblem: "sparkles",        base: 0x5FBFB2, ribbon: 0x3FA095),
-        Medal(id: 11, threshold: 520, name: "闪亮钻石", emblem: "diamond.fill",    base: 0x7CC8E8, ribbon: 0x4C9FCB),
-        Medal(id: 12, threshold: 650, name: "冉冉冠军", emblem: "trophy.fill",     base: 0xE9B872, ribbon: 0xD0603A),
+        Medal(id: 7,  threshold: 180, name: "闪电侠",   emblem: "bolt.fill",       base: 0xF2C14B, ribbon: 0xD9982F),
+        Medal(id: 8,  threshold: 260, name: "小火龙",   emblem: "flame.fill",      base: 0xF08A4B, ribbon: 0xD0603A),
+        Medal(id: 9,  threshold: 360, name: "小公主",   emblem: "crown.fill",      base: 0xD58BC8, ribbon: 0xB567A9),
+        Medal(id: 10, threshold: 480, name: "魔法星",   emblem: "sparkles",        base: 0x5FBFB2, ribbon: 0x3FA095),
+        Medal(id: 11, threshold: 620, name: "闪亮钻石", emblem: "diamond.fill",    base: 0x7CC8E8, ribbon: 0x4C9FCB),
+        Medal(id: 12, threshold: 800, name: "冉冉冠军", emblem: "trophy.fill",     base: 0xE9B872, ribbon: 0xD0603A),
     ]
 
     /// 已经拿到的奖章
@@ -48,12 +49,22 @@ extension PlayerStore {
         return totalStars
     }
 
+    /// 这枚奖章拿到了没有：星星够了，或者以前已经庆祝过（门槛调高以后也不收回）
+    func hasMedal(_ medal: Medal) -> Bool { medalStars >= medal.threshold || medal.id <= medalsCelebrated }
+    var medalsEarned: [Medal] { Medal.all.filter(hasMedal) }
+    /// 下一枚还没拿到的
+    var nextMedal: Medal? { Medal.all.first { !hasMedal($0) } }
+
+    /// 约好的奖励（家长在「我的」里写的小字条）。key 是奖章或本领奖章的名字。
+    func medalReward(_ medal: Medal) -> String { note("reward.medal.\(medal.id)") }
+    func badgeReward(_ badge: SkillBadge) -> String { note("reward.badge.\(badge.id)") }
+
     /// 已经庆祝过几枚奖章。存在 counts 里，所以会跟着存档一起导出、导入。
     var medalsCelebrated: Int { count("medals.celebrated") }
 
     /// 还没庆祝的奖章里最高的一枚。第一次升级后已经拿到的一堆，只庆祝最高的这一枚。
     var pendingMedal: Medal? {
-        guard let top = Medal.latest(stars: medalStars), top.id > medalsCelebrated else { return nil }
+        guard let top = medalsEarned.last, top.id > medalsCelebrated else { return nil }
         return top
     }
 
