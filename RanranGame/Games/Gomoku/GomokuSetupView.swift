@@ -265,7 +265,10 @@ struct LevelShowcase: View {
                     Text("\(level.number)")
                         .font(.system(size: 58, weight: .heavy, design: .rounded))
                         .contentTransition(.numericText(value: Double(level.number)))
-                        .frame(minWidth: 72)
+                        // "10" 是两位数：不许折成两行，位置按两位数的宽度留好，换档时左右不动
+                        .lineLimit(1)
+                        .fixedSize()
+                        .frame(width: 84)
                     Text("档")
                         .font(.kid(26, weight: .bold))
                 }

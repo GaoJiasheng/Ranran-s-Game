@@ -283,9 +283,10 @@ private struct GameHeroCard: View {
             .padding(.top, 10)
             .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(fade)
         }
         .frame(width: size.width, height: size.height)
+        // 底色铺满整张卡片，插画和文字区之间不留缝
+        .background(Rectangle().fill(fade))
     }
 
     private func tallText(subtitleLines: Int, pill: Bool, titleSize: CGFloat = 46) -> some View {
