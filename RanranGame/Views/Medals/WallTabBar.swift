@@ -5,7 +5,7 @@ extension WallTab {
     var tint: Color { subject?.tint ?? Palette.honey }
 }
 
-/// 奖章墙顶上的一排页签：星星奖章 | 五子棋 | 象棋 | 围棋 | 加减乘除 | 好习惯。
+/// 奖章墙顶上的页签：星星奖章 | 每个科目一个 | 好习惯。横屏一排，竖屏两排。
 /// 每个页签下面一行小字说拿到了几枚，学会了的科目多一枚小印章。
 struct WallTabBar: View {
     @Binding var selection: WallTab
@@ -13,9 +13,23 @@ struct WallTabBar: View {
     @Namespace private var pill
 
     var body: some View {
+        let tabs = WallTab.all
+        // 一排放得下（每个页签至少 96 宽）就一排；竖屏放不下，分成上下两排
+        ViewThatFits(in: .horizontal) {
+            row(tabs, minWidth: 96)
+            VStack(spacing: 2) {
+                row(Array(tabs.prefix((tabs.count + 1) / 2)), minWidth: 0)
+                row(Array(tabs.dropFirst((tabs.count + 1) / 2)), minWidth: 0)
+            }
+        }
+        .padding(5)
+        .softCard(radius: 40)
+    }
+
+    private func row(_ tabs: [WallTab], minWidth: CGFloat) -> some View {
         let lens = store.rewards
-        HStack(spacing: 4) {
-            ForEach(WallTab.all) { tab in
+        return HStack(spacing: 4) {
+            ForEach(tabs) { tab in
                 let on = tab == selection
                 Button {
                     guard !on else { return }
@@ -31,7 +45,7 @@ struct WallTabBar: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .padding(.horizontal, 8)
-                    .frame(maxWidth: .infinity, minHeight: 62)
+                    .frame(minWidth: minWidth, maxWidth: .infinity, minHeight: 58)
                     .background {
                         if on {
                             Capsule().fill(tab.tint)
@@ -46,8 +60,6 @@ struct WallTabBar: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        .padding(5)
-        .softCard(radius: 40)
     }
 
     @ViewBuilder

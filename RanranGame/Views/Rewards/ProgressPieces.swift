@@ -90,6 +90,8 @@ struct SubjectProgressPill: View {
     let subject: Subject
     @Environment(PlayerStore.self) private var store
     var height: CGFloat = 50
+    /// 地方小的时候，学会了只写"学会啦"，不写毕业的名字
+    var compact = false
 
     var body: some View {
         let lens = store.rewards
@@ -98,7 +100,7 @@ struct SubjectProgressPill: View {
         HStack(spacing: height * 0.18) {
             if done {
                 GraduateSeal(size: height * 0.72)
-                Text(subject.graduateName)
+                Text(compact ? "学会啦" : subject.graduateName)
                     .font(.kid(height * 0.38, weight: .heavy))
                     .foregroundStyle(Color(hex: 0x9A6A1E))
             } else {

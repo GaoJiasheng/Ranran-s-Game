@@ -29,7 +29,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             GeometryReader { geo in
-                // 横屏两张大卡并排；竖屏（或窄窗口）上下叠放。卡片高度跟着屏幕走，不滚动。
+                // 卡片大小跟着屏幕走，不滚动。
                 let wide = geo.size.width > geo.size.height && geo.size.width > 900
                 let roomy = geo.size.height > 760
                 ZStack {
@@ -37,31 +37,16 @@ struct HomeView: View {
                     AdaptivePage {
                         VStack(alignment: .leading, spacing: roomy ? 28 : 20) {
                             header
-                            if roomy {
+                            if roomy && (!wide || geo.size.height > 900) {
                                 Text("我的游戏")
                                     .font(.kid(26, weight: .heavy))
                                     .foregroundStyle(Palette.inkSoft)
                                     .padding(.top, 4)
                             }
 
-                            Group {
-                                if wide {
-                                    HStack(spacing: 24) {
-                                        ForEach(GameEntry.allCases, id: \.self) { g in
-                                            GameHeroCard(game: g) { open(g) }.frame(maxWidth: .infinity)
-                                        }
-                                    }
-                                    .frame(minHeight: 280, maxHeight: 560)
-                                } else {
-                                    VStack(spacing: 20) {
-                                        ForEach(GameEntry.allCases, id: \.self) { g in
-                                            // 11 寸竖屏放四张卡，每张只有 180 左右；最小高度定得太大，底下的「今天的三颗星」会被挤出屏幕
-                                            GameHeroCard(game: g) { open(g) }.frame(minHeight: 150, maxHeight: 400)
-                                        }
-                                    }
-                                }
-                            }
-                            .frame(maxHeight: .infinity)
+                            // 八个游戏：横屏四列两排，竖屏两列四排，格子平分地方
+                            GameGrid(columns: wide ? 4 : 2, spacing: roomy ? 20 : 16) { open($0) }
+                                .frame(maxHeight: .infinity)
                             DailyStarsCard { wall = .daily }.frame(height: roomy ? 110 : 84)
                         }
                         .padding(.horizontal, 48)
@@ -163,13 +148,36 @@ struct HomeView: View {
     }
 }
 
-/// 主页上一个游戏的大卡片：左边是名字，右边是插画。
-private struct GameHeroCard: View {
-    let game: GameEntry
-    let action: () -> Void
+/// 主页上的游戏格子：每排 columns 个，平分宽和高
+private struct GameGrid: View {
+    let columns: Int
+    let spacing: CGFloat
+    let open: (GameEntry) -> Void
 
-    private var title: String {
-        switch game {
+    var body: some View {
+        let games = GameEntry.allCases
+        let rows = (games.count + columns - 1) / columns
+        VStack(spacing: spacing) {
+            ForEach(0..<rows, id: \.self) { r in
+                HStack(spacing: spacing) {
+                    ForEach(0..<columns, id: \.self) { c in
+                        let i = r * columns + c
+                        if i < games.count {
+                            GameTile(game: games[i]) { open(games[i]) }
+                        } else {
+                            Color.clear
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// 一个游戏在主页上要交代的东西
+extension GameEntry {
+    var title: String {
+        switch self {
         case .gomoku: "五子棋"
         case .xiangqi: "象棋"
         case .go: "围棋"
@@ -180,44 +188,31 @@ private struct GameHeroCard: View {
         case .story: "加减乘除"
         }
     }
-    private var subtitle: String {
-        switch game {
+
+    /// 卡片够大时才显示的一句话
+    var tagline: String {
+        switch self {
         case .gomoku: "十档难度，从小兔打到龙宝宝"
         case .xiangqi: "跟猫头鹰老师学，再挑战小伙伴"
         case .go: "从吃子棋开始，一步步学会围棋"
         case .chess: "王、后、车、象、马、兵，一个一个学"
         case .sudoku: "从四宫格的水果开始，动脑筋填一填"
         case .tangram: "七块板子，拼出小动物和小房子"
-        case .klotski: "挪一挪、让一让，帮小伙伴走到出口"
+        case .klotski: "挪一挪、让一让，帮小兔走到出口"
         case .story: "英文应用题，演一演、画一画、算一算"
         }
     }
-    private var art: String {
-        switch game {
-        case .gomoku: "card_gomoku"
-        case .xiangqi: "card_xiangqi"
-        case .go: "card_go"
-        case .chess: "card_chess"
-        case .sudoku: "card_sudoku"
-        case .tangram: "card_tangram"
-        case .klotski: "card_klotski"
+
+    var cardArt: String {
+        switch self {
         case .story: "card_math"
+        default: "card_\(rawValue)"
         }
     }
-    private var base: Color {
-        switch game {
-        case .gomoku: Color(hex: 0xF8DCCB)
-        case .xiangqi: Color(hex: 0xF9DDD2)
-        case .go: Color(hex: 0xDDEEDF)
-        case .chess: Color(hex: 0xE2DEF3)
-        case .sudoku: Color(hex: 0xF6E6C8)
-        case .tangram: Color(hex: 0xD6EDEA)
-        case .klotski: Color(hex: 0xF3DDCB)
-        case .story: Color(hex: 0xDCEBF5)
-        }
-    }
-    private var fade: Color {
-        switch game {
+
+    /// 卡片的底色（和插画的背景接得上）
+    var cardColor: Color {
+        switch self {
         case .gomoku: Color(hex: 0xFBE9DD)
         case .xiangqi: Color(hex: 0xFBE6DE)
         case .go: Color(hex: 0xEAF4EA)
@@ -228,181 +223,109 @@ private struct GameHeroCard: View {
         case .story: Color(hex: 0xEAF3F8)
         }
     }
-    private var button: Color {
-        switch game {
-        case .gomoku: Palette.coral
-        case .xiangqi: Color(hex: 0xC9624F)
-        case .go: Color(hex: 0x6FA07A)
-        case .chess: Color(hex: 0x7C74C9)
-        case .sudoku: Color(hex: 0xD9973A)
-        case .tangram: Color(hex: 0x3FA39B)
-        case .klotski: Color(hex: 0xC47A4E)
-        case .story: Color(hex: 0x5FA3C9)
+
+    var fallbackEmoji: String {
+        switch self {
+        case .gomoku, .go: "⚫️"
+        case .xiangqi, .chess: "♟️"
+        case .sudoku: "🔢"
+        case .tangram: "🔺"
+        case .klotski: "🧩"
+        case .story: "➕"
         }
     }
+}
 
-    var body: some View {
-        Button(action: action) {
-            GeometryReader { g in
-            if g.size.width < 560 {
-                tall(g.size)
-            } else {
-            ZStack(alignment: .leading) {
-                base
-                    .overlay(alignment: .trailing) {
-                        // 卡片比插画还扁（竖屏三张叠放）时，按高度放下整张插画、靠右，免得把角色的头裁掉
-                        if g.size.width / max(g.size.height, 1) > 1.5 {
-                            ArtImage(name: art, fallback: "🎲", contentMode: .fit)
-                                .frame(width: g.size.height * 1.5, height: g.size.height)
-                                .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
-                                                             .init(color: .black, location: 0.25)],
-                                                     startPoint: .leading, endPoint: .trailing))
-                        } else {
-                            ArtImage(name: art, fallback: "🎲", contentMode: .fill)
-                        }
-                    }
-                    .clipped()
-
-                LinearGradient(stops: [.init(color: fade, location: 0),
-                                       .init(color: fade.opacity(0.85), location: 0.35),
-                                       .init(color: .clear, location: 0.62)],
-                               startPoint: .leading, endPoint: .trailing)
-
-                // 卡片矮的时候依次省掉：小头像那一行 → 副标题 → 标题变小 → 学会了多少
-                ViewThatFits(in: .vertical) {
-                    content(subtitle: true, accessory: true)
-                    content(subtitle: true, accessory: false)
-                    content(subtitle: false, accessory: false)
-                    content(subtitle: false, accessory: false, compact: true)
-                    content(subtitle: false, accessory: false, compact: true, pill: false)
-                }
-                .padding(.horizontal, 40)
-                .padding(.vertical, min(24, g.size.height * 0.08))
-                // 文字只占卡片左边一部分，窄卡片上也不压到插画
-                .frame(width: min(420, g.size.width * 0.6), alignment: .leading)
-            }
-            .frame(width: g.size.width, height: g.size.height)
-            }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
-            .softCard(radius: 44, fill: .clear)
-        }
-        .buttonStyle(PressableStyle(scale: 0.97))
-    }
+/// 主页上一个游戏的卡片：整张都能点。扁的（竖屏两列）插画在右、名字在左；方的（横屏四列）插画在上、名字压在底下一条。
+private struct GameTile: View {
+    let game: GameEntry
+    let action: () -> Void
 
     /// 这张卡片对应的科目（学会了多少）
     private var subject: Subject? { Subjects.all.first { $0.entry == game } }
 
-    /// 卡片很窄（横屏三张并排）时：插画在上，文字在下。
-    /// "学会了多少"放在文字区、开始玩按钮的上面，不压插画；放不下先省副标题，最后才省它。
+    var body: some View {
+        Button(action: action) {
+            GeometryReader { g in
+                Group {
+                    if g.size.width / max(g.size.height, 1) > 1.55 {
+                        wide(g.size)
+                    } else {
+                        tall(g.size)
+                    }
+                }
+                .frame(width: g.size.width, height: g.size.height)
+                .background(Rectangle().fill(game.cardColor))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+            .softCard(radius: 36, fill: .clear)
+        }
+        .buttonStyle(PressableStyle(scale: 0.96))
+        .accessibilityLabel(game.title)
+    }
+
+    /// 插画在上面铺满，底下一条压着名字和"学会了多少"
     private func tall(_ size: CGSize) -> some View {
-        VStack(spacing: 0) {
-            ArtImage(name: art, fallback: "🎲", contentMode: .fill)
-                .frame(width: size.width, height: size.height * 0.5, alignment: .trailing)
+        let band = min(max(size.height * 0.27, 54), 86)
+        let roomy = size.height > 270
+        return ZStack(alignment: .bottom) {
+            ArtImage(name: game.cardArt, fallback: game.fallbackEmoji, contentMode: .fill)
+                .frame(width: size.width, height: size.height - band + 10, alignment: .trailing)
                 .clipped()
-                .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [fade.opacity(0), fade], startPoint: .top, endPoint: .bottom)
-                        .frame(height: size.height * 0.12)
+                .frame(maxHeight: .infinity, alignment: .top)
+            VStack(spacing: 0) {
+                LinearGradient(colors: [game.cardColor.opacity(0), game.cardColor], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 30)
+                HStack(spacing: 8) {
+                    Text(game.title)
+                        .font(.kid(min(roomy ? 38 : 30, band * 0.5), weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Spacer(minLength: 2)
+                    if let subject {
+                        SubjectProgressPill(subject: subject, height: roomy ? 42 : 34, compact: true)
+                            .fixedSize()
+                    }
                 }
-            ViewThatFits(in: .vertical) {
-                tallText(subtitleLines: 2, pill: true)
-                tallText(subtitleLines: 1, pill: true)
-                tallText(subtitleLines: 0, pill: true)
-                tallText(subtitleLines: 0, pill: true, titleSize: 36)
-                tallText(subtitleLines: 2, pill: false)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, 10)
-            .padding(.bottom, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-        .frame(width: size.width, height: size.height)
-        // 底色铺满整张卡片，插画和文字区之间不留缝
-        .background(Rectangle().fill(fade))
-    }
-
-    private func tallText(subtitleLines: Int, pill: Bool, titleSize: CGFloat = 46) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.kid(titleSize, weight: .heavy))
-                .foregroundStyle(Palette.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            if subtitleLines > 0 {
-                Text(subtitle)
-                    .font(.kid(19, weight: .semibold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .lineLimit(subtitleLines)
-                    .minimumScaleFactor(0.8)
-            }
-            Spacer(minLength: 4)
-            if pill, let subject {
-                SubjectProgressPill(subject: subject, height: 44)
-            }
-            playButton(size: 22)
-        }
-    }
-
-    private func content(subtitle showSubtitle: Bool, accessory show: Bool, compact: Bool = false, pill: Bool = true) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 8 : 14) {
-            Text(title)
-                .font(.kid(compact ? 46 : 60, weight: .heavy))
-                .foregroundStyle(Palette.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            if showSubtitle {
-                Text(subtitle)
-                    .font(.kid(22, weight: .semibold))
-                    .foregroundStyle(Palette.inkSoft)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-            }
-            if show {
-                accessory
-                    .padding(.top, 6)
-            }
-            Spacer().frame(height: compact ? 2 : 10)
-            // 开始玩 + 学会了多少，并排一行
-            HStack(spacing: 14) {
-                playButton(size: compact ? 22 : 24)
-                if pill, let subject {
-                    SubjectProgressPill(subject: subject, height: compact ? 46 : 52)
-                }
+                .padding(.horizontal, roomy ? 22 : 16)
+                .padding(.bottom, 4)
+                .frame(height: band)
+                .background(game.cardColor)
             }
         }
     }
 
-    private func playButton(size: CGFloat) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "play.fill")
-            Text("开始玩")
-        }
-        .font(.kid(size, weight: .heavy))
-        .foregroundStyle(.white)
-        .padding(.horizontal, size * 1.2)
-        .padding(.vertical, size * 0.6)
-        .background(button, in: Capsule())
-        .shadow(color: button.opacity(0.45), radius: 14, y: 8)
-        .fixedSize()
-    }
-
-    @ViewBuilder private var accessory: some View {
-        if game == .gomoku || game == .xiangqi || game == .go || game == .chess {
-            HStack(spacing: -14) {
-                ForEach(Opponent.allCases) { o in
-                    Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 54)
+    /// 插画靠右放下整张，名字和一句话在左边
+    private func wide(_ size: CGSize) -> some View {
+        let roomy = size.height > 205
+        return ZStack(alignment: .leading) {
+            ArtImage(name: game.cardArt, fallback: game.fallbackEmoji, contentMode: .fit)
+                .frame(width: size.height * 1.5, height: size.height)
+                .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.3)],
+                                     startPoint: .leading, endPoint: .trailing))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            VStack(alignment: .leading, spacing: roomy ? 10 : 8) {
+                Text(game.title)
+                    .font(.kid(min(44, size.height * 0.21), weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if roomy {
+                    Text(game.tagline)
+                        .font(.kid(17, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let subject {
+                    SubjectProgressPill(subject: subject, height: roomy ? 42 : 36, compact: !roomy)
+                        .fixedSize()
                 }
             }
-        } else if game == .story {
-            HStack(spacing: 8) {
-                ForEach(["plus", "minus", "multiply", "divide"], id: \.self) { symbol in
-                    Image(systemName: symbol)
-                        .font(.system(size: 24, weight: .heavy))
-                        .foregroundStyle(button)
-                        .frame(width: 54, height: 54)
-                        .background(Palette.paper.opacity(0.85), in: Circle())
-                }
-            }
+            .padding(.leading, 26)
+            .frame(width: max(size.width - size.height * 0.95, 150), alignment: .leading)
         }
     }
 }
