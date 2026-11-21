@@ -176,7 +176,7 @@ struct PuzzleSetupView<Thumb: View>: View {
 
     /// 选哪一组
     private var packTabs: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(Array(packs.enumerated()), id: \.element.id) { i, p in
                 let selected = i == packIndex
                 let open = store.packUnlocked(game, packs, i, unlockAll: unlockAll)
@@ -185,25 +185,28 @@ struct PuzzleSetupView<Thumb: View>: View {
                     Sound.step(i + 1)
                     withAnimation(.spring(duration: 0.35, bounce: 0.25)) { packIndex = i }
                 } label: {
-                    HStack(spacing: 8) {
-                        if !open {
-                            Image(systemName: "lock.fill").font(.system(size: 14, weight: .bold))
-                        }
+                    // 名字在上、进度在下：组多的时候（数独有五组）名字也不会被挤掉
+                    VStack(spacing: 0) {
                         Text(p.name)
-                            .font(.kid(20, weight: .heavy))
+                            .font(.kid(19, weight: .heavy))
                         if open {
-                            Text("\(store.puzzlesCleared(game, p.levels))/\(p.levels.count)")
-                                .font(.kid(15, weight: .bold))
+                            Text("\(store.puzzlesCleared(game, p.levels)) / \(p.levels.count)")
+                                .font(.kid(13, weight: .bold))
                                 .monospacedDigit()
                                 .opacity(0.75)
+                        } else {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .opacity(0.8)
+                                .frame(height: 16)
                         }
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .foregroundStyle(selected ? .white : open ? Palette.ink : Palette.inkSoft.opacity(0.7))
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 10)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .frame(height: 54)
                     .background(selected ? AnyShapeStyle(accent) : AnyShapeStyle(Palette.cream), in: Capsule())
                 }
                 .buttonStyle(PressableStyle(scale: 0.96))
