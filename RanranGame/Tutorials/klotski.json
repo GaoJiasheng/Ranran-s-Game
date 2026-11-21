@@ -1,5 +1,826 @@
 {
  "game": "klotski",
  "title": "华容道教学",
- "tracks": []
+ "tracks": [
+  {
+   "id": "basic",
+   "title": "基础",
+   "subtitle": "认识木盘，学会滑木块",
+   "art": "tutor_klotski_basic",
+   "lessons": [
+    {
+     "id": "home",
+     "title": "小兔要回家",
+     "icon": "house.fill",
+     "learned": "认识木盘、出口和四种木块",
+     "steps": [
+      {
+       "say": "这是一个木盘。小兔住在盘子里，它想从下面的门走出去，回家。",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "盘子里有好几块木块。大大的这一块，就是小兔。点一下小兔吧。",
+       "drill": "点一下小兔！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "task": {
+        "type": "pick",
+        "rule": "kind:big"
+       },
+       "hint": "小兔是最大的一块，有四个格子那么大。"
+      },
+      {
+       "say": "高高站着的木块，叫竖块。点一下竖块。",
+       "drill": "点一块高高站着的木块！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "task": {
+        "type": "pick",
+        "rule": "kind:tall"
+       },
+       "hint": "竖块是站着的，占两个格子。"
+      },
+      {
+       "say": "躺着的长木块，叫横块。点一下横块。",
+       "drill": "点一块躺着的长木块！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "task": {
+        "type": "pick",
+        "rule": "kind:wide"
+       },
+       "hint": "横块是躺着的，占两个格子。"
+      },
+      {
+       "say": "只占一个格子的，叫小方块。点一下小方块。",
+       "drill": "点一块只有一格的小方块！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "task": {
+        "type": "pick",
+        "rule": "kind:small"
+       },
+       "hint": "小方块最小，只有一个格子。"
+      },
+      {
+       "say": "出口在木盘最下面，正中间。点一下出口前面的格子。",
+       "drill": "点一下出口前面的格子！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "pick",
+        "rule": "cells",
+        "accept": [
+         "b5",
+         "c5"
+        ]
+       },
+       "hint": "出口在最下面一排，正中间。"
+      },
+      {
+       "say": "小兔走到出口，就能回家了。别的木块都出不去，只有小兔可以。我们一起来帮它吧！",
+       "board": "SBBS/.BB./V.HH/V.../.S..",
+       "marks": [
+        "door"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "slide",
+     "title": "滑一滑",
+     "icon": "arrow.left.and.right",
+     "learned": "把木块滑到想去的地方",
+     "steps": [
+      {
+       "say": "木块是用手指滑的。按住一块木块，朝想去的方向拖一拖，松开手，它就停在格子里。",
+       "board": "BB../BB../..S./..../.HH.",
+       "marks": [
+        "glow:c3"
+       ]
+      },
+      {
+       "say": "试一试，把发光的小方块往下滑一格。",
+       "drill": "照着箭头，把发光的木块滑过去！",
+       "board": "BB../BB../..S./..../.HH.",
+       "marks": [
+        "glow:c3",
+        "arrow:c3:d:1"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "move:c3:d:1"
+       },
+       "hint": "按住发光的小方块，往下拖一格，再松手。",
+       "ok": "对啦，滑一格，就是一步。"
+      },
+      {
+       "say": "木块可以滑很远。把发光的小方块一直往右滑，滑到不能再滑为止。",
+       "drill": "把发光的木块一直滑到头，滑到被挡住为止！",
+       "board": "BB../BB../S.../..../..HH",
+       "marks": [
+        "glow:a3",
+        "arrow:a3:r:3"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "far:a3:r"
+       },
+       "hint": "再往右滑远一点，一直滑到木盘的边上。",
+       "ok": "滑得再远，也只算一步。"
+      },
+      {
+       "say": "横块也可以上下滑，只要那边有空位。把发光的横块往下滑一格。",
+       "drill": "照着箭头，把发光的木块滑过去！",
+       "board": ".BB./.BB./..../HH../....",
+       "marks": [
+        "glow:a4",
+        "arrow:a4:d:1"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "move:a4:d:1"
+       },
+       "hint": "按住发光的横块，往下拖一格，再松手。"
+      },
+      {
+       "say": "竖块也一样。把发光的竖块往上滑，滑一格或者两格都可以。",
+       "drill": "照着箭头，把发光的木块滑过去！",
+       "board": "..BB/..BB/V.../V.../....",
+       "marks": [
+        "glow:a3",
+        "arrow:a3:u:2"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "move:a3:u"
+       },
+       "hint": "按住发光的竖块，往上拖。"
+      },
+      {
+       "say": "每滑一次，就算一步。闯关的时候，步数越少越好。"
+      }
+     ]
+    },
+    {
+     "id": "blocked",
+     "title": "过不去的路",
+     "icon": "nosign",
+     "learned": "木块不能跳过别的木块，也不能拐弯",
+     "steps": [
+      {
+       "say": "木块不能跳过别的木块。把发光的小方块一直往右滑，看看它会停在哪里。",
+       "drill": "把发光的木块一直滑到头，滑到被挡住为止！",
+       "board": "..BB/..BB/S.S./..../....",
+       "marks": [
+        "glow:a3",
+        "arrow:a3:r:1"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "far:a3:r"
+       },
+       "hint": "一直往右滑，直到碰到另一块木块。",
+       "ok": "看，它被挡住了，只能停在这里。"
+      },
+      {
+       "say": "木块也不能拐弯。想去斜对面的格子，要分两步：先直着滑，再直着滑。",
+       "board": "BB../BB../..../..S./....",
+       "marks": [
+        "glow:c4",
+        "ring:a5"
+       ]
+      },
+      {
+       "say": "试一试，让发光的小方块走到圈出来的格子。",
+       "drill": "让发光的木块走到圈出来的格子！",
+       "board": "BB../BB../..../..S./....",
+       "marks": [
+        "glow:c4",
+        "ring:a5"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "at:c4:a5",
+        "extra": {
+         "limit": "4"
+        }
+       },
+       "hint": "分两步走：先直着滑一次，再直着滑一次。"
+      },
+      {
+       "say": "有的木块被围住了，动不了。点一下现在动不了的木块。",
+       "drill": "点一块现在动不了的木块！",
+       "board": "VBBV/VBBV/V..V/VHHV/S..S",
+       "task": {
+        "type": "pick",
+        "rule": "stuck"
+       },
+       "hint": "动不了的木块，四面都被挡住了。"
+      },
+      {
+       "say": "再点一下，现在能动的木块。",
+       "drill": "点一块现在能动的木块！",
+       "board": "VBBV/VBBV/V..V/VHHV/S..S",
+       "task": {
+        "type": "pick",
+        "rule": "movable"
+       },
+       "hint": "能动的木块，旁边有空位。"
+      }
+     ]
+    },
+    {
+     "id": "clear",
+     "title": "挡路的先挪开",
+     "icon": "arrow.up.and.down.and.arrow.left.and.right",
+     "learned": "先把挡路的木块挪开，再走小兔",
+     "steps": [
+      {
+       "say": "现在小兔要往下走，可是下面有一块木块挡着。",
+       "board": ".BB./.BB./.S../..../....",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "点一下挡着小兔的那块木块。",
+       "drill": "点一块挡着小兔的木块！",
+       "board": ".BB./.BB./.S../..../....",
+       "task": {
+        "type": "pick",
+        "rule": "blocker"
+       },
+       "hint": "看看小兔的正下面，是哪一块木块？"
+      },
+      {
+       "say": "先把它挪开，把圈出来的路空出来。",
+       "drill": "把圈出来的路空出来！",
+       "board": ".BB./.BB./.S../..../....",
+       "marks": [
+        "ring:b3",
+        "ring:c3",
+        "ring:b4",
+        "ring:c4",
+        "ring:b5",
+        "ring:c5"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "empty:b3,c3,b4,c4,b5,c5",
+        "extra": {
+         "limit": "3"
+        }
+       },
+       "hint": "往旁边滑，别再挡在小兔的下面。"
+      },
+      {
+       "say": "路空出来了，一步就能把小兔滑到出口。试试吧！",
+       "drill": "想办法让小兔走到出口，只用一步！",
+       "board": ".BB./.BB./S.../..../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:1"
+       },
+       "hint": "小兔一直往下滑，滑到最下面。",
+       "ok": "小兔回家啦！"
+      },
+      {
+       "say": "看，先挪开挡路的，再走小兔，就这么简单。"
+      },
+      {
+       "say": "再来一个。这次小兔在角落里，要先走到中间。想一想，三步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用三步！",
+       "board": "BB../BB../.V../.V../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:3"
+       },
+       "hint": "先让小兔往旁边走一步，再让路，最后下去。"
+      }
+     ]
+    },
+    {
+     "id": "undo",
+     "title": "走错了怎么办",
+     "icon": "arrow.uturn.backward",
+     "learned": "走错了可以撤销，也可以回到开头",
+     "steps": [
+      {
+       "say": "走错了不要紧。点一下木盘下面的「撤销」，上一步就回来了。",
+       "board": ".BB./.BB./.S../..../...."
+      },
+      {
+       "say": "先随便滑一块木块，再点一下「撤销」试试。",
+       "drill": "先滑一块木块，再点撤销！",
+       "board": ".BB./.BB./.S../..../....",
+       "task": {
+        "type": "slide",
+        "rule": "undo"
+       },
+       "hint": "先滑一块木块，然后点木盘下面的撤销。"
+      },
+      {
+       "say": "看，木块又回到原来的地方了。点「回到开头」，所有的木块，都会回到最开始的样子。"
+      },
+      {
+       "say": "走了很多步，想不起来错在哪里，就点「回到开头」。现在，用三步让小兔出门，走错了就撤销。",
+       "drill": "想办法让小兔走到出口，只用三步！",
+       "board": "BB../BB../HH../..../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:3"
+       },
+       "hint": "小兔不用等别的木块，自己就能走。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "space",
+   "title": "让路的办法",
+   "subtitle": "挡路的木块怎么让开",
+   "art": "tutor_klotski_space",
+   "lessons": [
+    {
+     "id": "who",
+     "title": "先看谁挡路",
+     "icon": "eye.fill",
+     "learned": "先看清是谁挡着小兔",
+     "steps": [
+      {
+       "say": "小兔要往下走。每一次，先看一看：谁挡着路？",
+       "board": "SBBS/.BB./..../.V../.V..",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "点一下挡着小兔的木块。",
+       "drill": "点一块挡着小兔的木块！",
+       "board": "SBBS/.BB./..../.V../.V..",
+       "task": {
+        "type": "pick",
+        "rule": "blocker"
+       },
+       "hint": "小兔的正下面有一块竖块。"
+      },
+      {
+       "say": "不用管别的木块，只要把挡路的挪开。用两步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用两步！",
+       "board": "SBBS/.BB./..../.V../.V..",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:2"
+       },
+       "hint": "先把挡路的竖块滑到旁边，再让小兔下去。"
+      },
+      {
+       "say": "有时候，挡路的不止一块。看，这里有两块。点一下其中一块。",
+       "drill": "点一块挡着小兔的木块！",
+       "board": ".BB./.BB./..S./.S../....",
+       "task": {
+        "type": "pick",
+        "rule": "blocker"
+       },
+       "hint": "小兔的正下面，有两块小方块。"
+      },
+      {
+       "say": "两块都挡着路，要一块一块挪开。用三步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用三步！",
+       "board": ".BB./.BB./..S./.S../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:3"
+       },
+       "hint": "先把挡路的两块都挪开，最后再走小兔。"
+      }
+     ]
+    },
+    {
+     "id": "gaps",
+     "title": "腾出两个空位",
+     "icon": "square.dashed",
+     "learned": "给小兔腾出两个并排的空位",
+     "steps": [
+      {
+       "say": "小兔是大块，要两个并排的空位，才能钻过去。",
+       "board": ".BB./.BB./.SS./..../....",
+       "marks": [
+        "ring:b3",
+        "ring:c3"
+       ]
+      },
+      {
+       "say": "把圈出来的两个格子，都空出来。",
+       "drill": "把圈出来的格子都空出来！",
+       "board": ".BB./.BB./.SS./..../....",
+       "marks": [
+        "ring:b3",
+        "ring:c3"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "empty:b3,c3",
+        "extra": {
+         "limit": "3"
+        }
+       },
+       "hint": "两块小方块，一块往左滑，一块往右滑。"
+      },
+      {
+       "say": "空位够了，小兔可以下去了。用三步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用三步！",
+       "board": ".BB./.BB./.SS./..../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:3"
+       },
+       "hint": "先给小兔腾空位，再让它下去。"
+      },
+      {
+       "say": "横块占两个格子，让路更费劲。这时候，小兔自己也可以让一让。用四步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用四步！",
+       "board": ".BB./.BB./.HH./..../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:4"
+       },
+       "hint": "先把小兔往旁边挪，横块才有地方去。"
+      }
+     ]
+    },
+    {
+     "id": "small",
+     "title": "小方块最灵活",
+     "icon": "square.fill",
+     "learned": "木块太挤的时候，先动灵活的小方块",
+     "steps": [
+      {
+       "say": "木块太挤的时候，先看看哪些木块能动。这一盘，大块都被围住了。点一块能动的木块。",
+       "drill": "点一块现在能动的木块！",
+       "board": "VBBV/VBBV/VHHV/VSSV/S..S",
+       "task": {
+        "type": "pick",
+        "rule": "movable"
+       },
+       "hint": "能动的，都是只占一个格子的小方块。"
+      },
+      {
+       "say": "小方块最灵活，哪里有空位，它就能钻过去。把发光的小方块往下滑，滑到圈出来的格子。",
+       "drill": "让发光的木块走到圈出来的格子！",
+       "board": "VBBV/VBBV/VHHV/VSSV/S..S",
+       "marks": [
+        "glow:b4",
+        "ring:b5"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "at:b4:b5",
+        "extra": {
+         "limit": "2"
+        }
+       },
+       "hint": "发光的小方块下面有空位，往下滑一格。"
+      },
+      {
+       "say": "小方块先走开，大块才有地方挪。看，两块小方块排着队，挡着小兔。用三步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用三步！",
+       "board": ".BB./.BB./.S../.S../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:3"
+       },
+       "hint": "两块小方块，都往旁边滑开。"
+      },
+      {
+       "say": "记住：木块太挤的时候，先找能动的小方块，让它们走开，大块就有地方挪了。"
+      }
+     ]
+    },
+    {
+     "id": "ship",
+     "title": "把空位送过去",
+     "icon": "arrow.right.circle.fill",
+     "learned": "把空位送到需要的地方",
+     "steps": [
+      {
+       "say": "木块一动，空位就换了地方。想要空位在哪里，就把那里的木块挪走。",
+       "board": ".BB./.BB./..../VVVV/VVVV",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "小兔下面全被竖块占满了。把圈出来的四个格子都空出来。",
+       "drill": "把圈出来的格子都空出来！",
+       "board": ".BB./.BB./..../VVVV/VVVV",
+       "marks": [
+        "ring:b4",
+        "ring:c4",
+        "ring:b5",
+        "ring:c5"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "empty:b4,c4,b5,c5",
+        "extra": {
+         "limit": "6"
+        }
+       },
+       "hint": "先把边上的竖块滑上去，再把中间的竖块挪到边上。"
+      },
+      {
+       "say": "空位送到了，小兔就能下去了。用五步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用五步！",
+       "board": ".BB./.BB./..../VVVV/VVVV",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:5"
+       },
+       "hint": "四块竖块都要让开，最后再走小兔。"
+      },
+      {
+       "say": "再来一个。想一想，怎么把空位送到小兔旁边，让小兔走到圈出来的格子。",
+       "drill": "让小兔走到圈出来的格子！",
+       "board": "SBBS/.BB./..../..../.HH.",
+       "marks": [
+        "ring:a4"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "bunnyAt:a4",
+        "extra": {
+         "limit": "6"
+        }
+       },
+       "hint": "先让小兔往下，横块再让开，小兔才有地方去。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "plan",
+   "title": "多想几步",
+   "subtitle": "倒着想，少走弯路",
+   "art": "tutor_klotski_plan",
+   "lessons": [
+    {
+     "id": "backward",
+     "title": "倒着想",
+     "icon": "arrow.uturn.left.circle.fill",
+     "learned": "从终点倒着往回想",
+     "steps": [
+      {
+       "say": "遇到难题，可以倒着想。小兔最后要走到出口。",
+       "board": ".BB./.BB./..../HH../HH..",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "小兔走到出口的时候，会盖住下面的哪些格子？点一个。",
+       "drill": "小兔到了出口，会盖住哪些格子？点一个！",
+       "board": ".BB./.BB./..../HH../HH..",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "pick",
+        "rule": "cells",
+        "accept": [
+         "b4",
+         "c4",
+         "b5",
+         "c5"
+        ]
+       },
+       "hint": "出口在最下面一排的正中间，小兔有四个格子大。"
+      },
+      {
+       "say": "所以，出口前面的格子要空着。可是现在，下面有两块横块。倒着想一想，用五步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用五步！",
+       "board": ".BB./.BB./..../HH../HH..",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:5"
+       },
+       "hint": "小兔可以先走到右边，等横块上去了，再回来。",
+       "ok": "你倒着想了，真聪明！"
+      },
+      {
+       "say": "再来一个。先想想小兔最后要走到哪里，再往回想。用四步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用四步！",
+       "board": "BB../BB../..../.HH./....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:4"
+       },
+       "hint": "下面的横块要先让开，小兔才能去出口。"
+      }
+     ]
+    },
+    {
+     "id": "swap",
+     "title": "竖块和横块",
+     "icon": "arrow.left.arrow.right",
+     "learned": "木块不会转身，要一块一块让位",
+     "steps": [
+      {
+       "say": "竖块不会躺下，横块也不会站起来。它们想换位置，要一块一块让路。",
+       "board": "..BB/..BB/V.../V.../HH..",
+       "marks": [
+        "glow:a3",
+        "glow:a5"
+       ]
+      },
+      {
+       "say": "让发光的竖块，走到圈出来的格子。",
+       "drill": "让发光的木块走到圈出来的格子！",
+       "board": "..BB/..BB/V.../V.../HH..",
+       "marks": [
+        "glow:a3",
+        "ring:b5"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "at:a3:b5",
+        "extra": {
+         "limit": "5"
+        }
+       },
+       "hint": "横块要先让开，竖块再挪过去。"
+      },
+      {
+       "say": "再来，让发光的横块走到圈出来的格子。想一想，谁挡着它？",
+       "drill": "让发光的木块走到圈出来的格子！",
+       "board": "..BB/..BB/V.../V.../HH..",
+       "marks": [
+        "glow:a5",
+        "ring:b3"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "at:a5:b3",
+        "extra": {
+         "limit": "4"
+        }
+       },
+       "hint": "竖块要先让开，横块才能上去。"
+      },
+      {
+       "say": "看，每一块木块都有自己的路。先让开挡路的，再走自己的路。"
+      }
+     ]
+    },
+    {
+     "id": "noback",
+     "title": "不走回头路",
+     "icon": "arrow.triangle.turn.up.right.diamond.fill",
+     "learned": "每一步都要有用，不走回头路",
+     "steps": [
+      {
+       "say": "一块木块滑过去，又滑回来，就白白多走了两步。每一步都要有用，不走回头路。",
+       "board": ".BB./.BB./.HH./..../....",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "用四步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用四步！",
+       "board": ".BB./.BB./.HH./..../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:4"
+       },
+       "hint": "小兔先让一让，横块过去，小兔就能下来了。"
+      },
+      {
+       "say": "再来一个，五步。想好再走，不要走回头路。",
+       "drill": "想办法让小兔走到出口，只用五步！",
+       "board": "BB../BB../V.../V.../.HH.",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:5"
+       },
+       "hint": "先让下面的横块让开，再把竖块挪到旁边。"
+      },
+      {
+       "say": "最后一个，也是五步。",
+       "drill": "想办法让小兔走到出口，只用五步！",
+       "board": ".BB./.BB./..../.VV./SVVS",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:5"
+       },
+       "hint": "下面的竖块，一块一块往上挪，给小兔让出路。"
+      }
+     ]
+    },
+    {
+     "id": "final",
+     "title": "小兔回家",
+     "icon": "house.circle.fill",
+     "learned": "用学到的办法，帮小兔回家",
+     "steps": [
+      {
+       "say": "你已经学会所有的办法了：先看谁挡路，把挡路的挪开，给小兔腾出空位，还要倒着想一想。",
+       "board": ".BB./.BB./.HH./S.../....",
+       "marks": [
+        "door"
+       ]
+      },
+      {
+       "say": "用四步让小兔出门。",
+       "drill": "想办法让小兔走到出口，只用四步！",
+       "board": ".BB./.BB./.HH./S.../....",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:4"
+       },
+       "hint": "小兔先让一让，横块过去，小兔就能下来了。"
+      },
+      {
+       "say": "再来一个，五步。",
+       "drill": "想办法让小兔走到出口，只用五步！",
+       "board": ".BB./.BB./..../.VV./SVVS",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:5"
+       },
+       "hint": "下面的竖块，一块一块往上挪，给小兔让出路。"
+      },
+      {
+       "say": "最后一个，六步。你可以的！",
+       "drill": "想办法让小兔走到出口，只用六步！",
+       "board": "SBBS/.BB./..../..../.HH.",
+       "marks": [
+        "door"
+       ],
+       "task": {
+        "type": "slide",
+        "rule": "free:6"
+       },
+       "hint": "小兔先下去一格，再往旁边让，横块上去以后，小兔再走。"
+      },
+      {
+       "say": "小兔都回家啦！现在，去闯关吧。"
+      }
+     ]
+    }
+   ]
+  }
+ ]
 }
