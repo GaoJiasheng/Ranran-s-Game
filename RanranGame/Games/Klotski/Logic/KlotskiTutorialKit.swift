@@ -7,7 +7,9 @@ enum KlotskiLines {
     static let notThisBlock = "这一步要动发光的那块木块。"
     /// 还没滑过木块就点了「撤销」
     static let undoFirst = "先滑一块木块，再点撤销。"
-    static let all = [notThisBlock, undoFirst]
+    /// 练习的通用说法里，课文的 drill 没用到的那一句（别的几句和 drill 相同，已经在课文里录了）
+    static let freeBunny = "想办法让小兔走到出口！"
+    static let all = [notThisBlock, undoFirst, freeBunny]
 }
 
 enum KlotskiTutorial {
@@ -22,7 +24,7 @@ enum KlotskiTutorial {
             "at": "让发光的木块走到圈出来的格子！",
             "bunnyAt": "让小兔走到圈出来的格子！",
             "empty": "把圈出来的格子都空出来！",
-            "free": "想办法让小兔走到出口！",
+            "free": KlotskiLines.freeBunny,
             "undo": "先滑一块木块，再点撤销！",
             "blocker": "点一块挡着小兔的木块！",
             "movable": "点一块现在能动的木块！",

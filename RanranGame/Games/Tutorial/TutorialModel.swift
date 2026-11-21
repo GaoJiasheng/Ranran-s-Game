@@ -130,7 +130,11 @@ enum TutorLines {
     }
 
     /// 需要预先生成配音的全部固定台词
-    static var all: [String] { common + xiangqi + go + TutorialKits.all.flatMap(\.fixedLines) }
+    static var all: [String] {
+        // 后来加的游戏：固定台词、练习的通用说法、学完一组去玩的那句，都要配音
+        let kits = TutorialKits.all.flatMap { $0.fixedLines + $0.practicePrompts.values.sorted() + [$0.goPlayLine].compactMap { $0 } }
+        return common + xiangqi + go + kits
+    }
 }
 
 // MARK: - 小奖杯（金 / 银 / 铜）
