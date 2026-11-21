@@ -524,7 +524,8 @@ struct TangramLayout: Equatable {
             let c = i % cols, r = i / cols
             return CGRect(x: inner.minX + CGFloat(c) * sw, y: inner.minY + CGFloat(r) * sh, width: sw, height: sh)
         }
-        trayUnit = min(unit, min(sw, sh) / 4.2)
+        // 托盘里的板子尽量大一点，好让小手按得住：最长的边（大三角形的斜边 4 个单位）竖过来时会稍微探出格子一点，不碍事
+        trayUnit = min(unit, min(sw, sh) / 3.5)
     }
 
     func screen(_ p: TangramPoint) -> CGPoint {
