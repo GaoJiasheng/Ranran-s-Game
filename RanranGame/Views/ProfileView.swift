@@ -32,10 +32,12 @@ struct ProfileView: View {
                                     ProfileCard()
                                     MedalSummaryCard()
                                     LessonCupCard()
+                                    RewardNotesEntryCard()
                                     saveCard
                                 }
                                 .frame(width: 420)
                                 VStack(spacing: 28) {
+                                    LearningProgressCard(wide: true)
                                     StoryReportCard { practicing = $0 }
                                     recordsCard
                                 }
@@ -43,9 +45,11 @@ struct ProfileView: View {
                         } else {
                             ProfileCard()
                             MedalSummaryCard()
+                            LearningProgressCard(wide: false)
                             StoryReportCard { practicing = $0 }
                             LessonCupCard()
                             recordsCard
+                            RewardNotesEntryCard()
                             saveCard
                         }
                     }
