@@ -203,7 +203,7 @@ extension Subject {
         let title: String = switch need.count {
         case 0: "通过全部关卡"
         case 1: "通过「\(need[0].name)」的 \(levels.count) 关"
-        default: "通过「\(need[0].name)」到「\(need[need.count - 1].name)」的 \(levels.count) 关"
+        default: "通过「\(need[need.count - 1].name)」及之前的 \(levels.count) 关"
         }
         let goals: (PlayerStore) -> [SubjectGoal] = { store in
             [SubjectGoal(id: "\(id).packs", title: title,
