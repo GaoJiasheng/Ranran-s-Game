@@ -12,7 +12,8 @@ import Foundation
 //                        更低的档每盘 1 颗，每天只有前 3 盘有
 //   第一次赢下新的一档   另加 5 颗                                             <棋>.stars.first.<档>
 //   加减乘除             每道题第一次"第一下就答对"1 颗（见 StoryModel）         wp.stars.<关>
-//   今天的三颗星         学一课、算一组题、下一盘棋，三样都做了另加 3 颗        daily.stars.bonus
+//   解谜（数独、七巧板…） 每一关 1~3 颗，只记最好的一次，变好了补差额（见 PuzzleStore） <游戏>.stars.pz.<关>
+//   今天的三颗星         学一课、算一组题、玩一局，三样都做了另加 3 颗          daily.stars.bonus
 //
 // 以后加新游戏：给它起一个科目名，星星记在 "<科目>.stars.…" 上，再在 Subjects 里登记一下，
 // 奖章、毕业线、今天的三颗星就都认识它了。
@@ -67,7 +68,7 @@ enum DailyTask: String, CaseIterable, Identifiable {
     case learn
     /// 算：做完一组加减乘除（一关、练一练、错题本都算）
     case math
-    /// 下：下完一盘棋（输赢都算，和家人下也算）
+    /// 玩：下完一盘棋（输赢都算，和家人下也算），或者解谜类过了一关
     case play
 
     var id: String { rawValue }
@@ -76,7 +77,7 @@ enum DailyTask: String, CaseIterable, Identifiable {
         switch self {
         case .learn: "学一课"
         case .math:  "算一组题"
-        case .play:  "下一盘棋"
+        case .play:  "玩一局"
         }
     }
 

@@ -216,6 +216,10 @@ struct LessonScreen: View {
         switch course.game {
         case "xiangqi": XiangqiLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         case "go": GoLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "chess": ChessLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "sudoku": SudokuLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "tangram": TangramLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "klotski": KlotskiLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         default: GomokuLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         }
     }

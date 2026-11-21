@@ -85,6 +85,14 @@ enum Subjects {
                graduateName: "象棋小棋手", graduateLevel: 3),
         .board(id: "go", name: "围棋", art: "card_go", tint: Color(hex: 0x6FA07A), entry: .go,
                graduateName: "围棋小棋手", graduateLevel: 4),
+        .board(id: "chess", name: "国际象棋", art: "card_chess", tint: Color(hex: 0x7C74C9), entry: .chess,
+               graduateName: "国际象棋小棋手", graduateLevel: 3),
+        .puzzle(id: "sudoku", name: "数独", art: "card_sudoku", tint: Color(hex: 0xD9973A), entry: .sudoku,
+                graduateName: "数独小能手", packs: SudokuCatalog.packs, passPacks: SudokuCatalog.passPacks),
+        .puzzle(id: "tangram", name: "七巧板", art: "card_tangram", tint: Color(hex: 0x3FA39B), entry: .tangram,
+                graduateName: "七巧板小巧手", packs: TangramCatalog.packs, passPacks: TangramCatalog.passPacks),
+        .puzzle(id: "klotski", name: "华容道", art: "card_klotski", tint: Color(hex: 0xC47A4E), entry: .klotski,
+                graduateName: "华容道小军师", packs: KlotskiCatalog.packs, passPacks: KlotskiCatalog.passPacks),
         math,
     ]
 
@@ -176,6 +184,42 @@ extension Subject {
                               progress: { store in
                                   RewardProgress(store.topCleared(id) - range.lowerBound + 1, range.count)
                               })
+        }
+        badges.append(Subjects.graduateBadge(subject: id, name: graduateName, tint: tint, goals: goals))
+        return Subject(id: id, name: name, art: art, tint: tint, entry: entry, starPrefix: "\(id).stars.",
+                       graduateName: graduateName, goals: goals, badges: badges)
+    }
+}
+
+extension Subject {
+    /// 一种解谜游戏：关卡分成几组（PuzzlePack），可以有教学课程。
+    /// 毕业线只有一条：通过前 passPacks 组的全部关卡。
+    /// 本领奖章 = 学完每一组课 + 通过每一组关卡 + 毕业。
+    static func puzzle(id: String, name: String, art: String, tint: Color, entry: GameEntry,
+                       graduateName: String, packs: [PuzzlePack], passPacks: Int) -> Subject {
+        let course = TutorialCourse.bundled[id]
+        let need = Array(packs.prefix(max(1, passPacks)))
+        let levels = need.flatMap(\.levels)
+        let title: String = switch need.count {
+        case 0: "通过全部关卡"
+        case 1: "通过「\(need[0].name)」的 \(levels.count) 关"
+        default: "通过「\(need[0].name)」到「\(need[need.count - 1].name)」的 \(levels.count) 关"
+        }
+        let goals: (PlayerStore) -> [SubjectGoal] = { store in
+            [SubjectGoal(id: "\(id).packs", title: title,
+                         progress: RewardProgress(store.puzzlesCleared(id, levels), levels.count))]
+        }
+        var badges: [SkillBadge] = (course?.tracks ?? []).map { track in
+            SkillBadge(id: "\(id).track.\(track.id)", subject: id, kind: .track, name: track.title,
+                       how: "学完「\(track.title)」的 \(track.lessons.count) 节课", art: track.art, tint: tint,
+                       progress: { store in
+                           RewardProgress(track.lessons.filter { store.lessonDone(id, $0.id) }.count, track.lessons.count)
+                       })
+        }
+        badges += packs.map { pack in
+            SkillBadge(id: "\(id).pack.\(pack.id)", subject: id, kind: .chapter, name: pack.name,
+                       how: "通过「\(pack.name)」的 \(pack.levels.count) 关", art: pack.art, tint: tint,
+                       progress: { store in RewardProgress(store.puzzlesCleared(id, pack.levels), pack.levels.count) })
         }
         badges.append(Subjects.graduateBadge(subject: id, name: graduateName, tint: tint, goals: goals))
         return Subject(id: id, name: name, art: art, tint: tint, entry: entry, starPrefix: "\(id).stars.",

@@ -5,6 +5,10 @@ enum GameEntry: String, Hashable, CaseIterable {
     case gomoku
     case xiangqi
     case go
+    case chess
+    case sudoku
+    case tangram
+    case klotski
     case story
 }
 
@@ -78,6 +82,14 @@ struct HomeView: View {
                     XiangqiSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.go):
                     GoSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.chess):
+                    ChessSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.sudoku):
+                    SudokuSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.tangram):
+                    TangramSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.klotski):
+                    KlotskiSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.story):
                     StorySetupView().toolbar(.hidden, for: .navigationBar)
                 case .profile:
@@ -90,14 +102,10 @@ struct HomeView: View {
             withAnimation(.spring(duration: 0.7, bounce: 0.25)) { appeared = true }
             #if DEBUG
             // 调试截图用：启动参数 -route gomoku / story / profile 直接打开那一页
-            switch UserDefaults.standard.string(forKey: "route") {
-            case "gomoku":  path = [.game(.gomoku)]
-            case "xiangqi": path = [.game(.xiangqi)]
-            case "go":      path = [.game(.go)]
-            case "story":   path = [.game(.story)]
-            case "profile": path = [.profile]
-            default: break
-            }
+            // 游戏的名字就是 GameEntry 的名字：gomoku / xiangqi / go / chess / sudoku / tangram / klotski / story
+            let route = UserDefaults.standard.string(forKey: "route") ?? ""
+            if route == "profile" { path = [.profile] }
+            else if let g = GameEntry(rawValue: route) { path = [.game(g)] }
             #endif
         }
     }
@@ -165,6 +173,10 @@ private struct GameHeroCard: View {
         case .gomoku: "五子棋"
         case .xiangqi: "象棋"
         case .go: "围棋"
+        case .chess: "国际象棋"
+        case .sudoku: "数独"
+        case .tangram: "七巧板"
+        case .klotski: "华容道"
         case .story: "加减乘除"
         }
     }
@@ -173,6 +185,10 @@ private struct GameHeroCard: View {
         case .gomoku: "十档难度，从小兔打到龙宝宝"
         case .xiangqi: "跟猫头鹰老师学，再挑战小伙伴"
         case .go: "从吃子棋开始，一步步学会围棋"
+        case .chess: "王、后、车、象、马、兵，一个一个学"
+        case .sudoku: "从四宫格的水果开始，动脑筋填一填"
+        case .tangram: "七块板子，拼出小动物和小房子"
+        case .klotski: "挪一挪、让一让，帮小伙伴走到出口"
         case .story: "英文应用题，演一演、画一画、算一算"
         }
     }
@@ -181,6 +197,10 @@ private struct GameHeroCard: View {
         case .gomoku: "card_gomoku"
         case .xiangqi: "card_xiangqi"
         case .go: "card_go"
+        case .chess: "card_chess"
+        case .sudoku: "card_sudoku"
+        case .tangram: "card_tangram"
+        case .klotski: "card_klotski"
         case .story: "card_math"
         }
     }
@@ -189,6 +209,10 @@ private struct GameHeroCard: View {
         case .gomoku: Color(hex: 0xF8DCCB)
         case .xiangqi: Color(hex: 0xF9DDD2)
         case .go: Color(hex: 0xDDEEDF)
+        case .chess: Color(hex: 0xE2DEF3)
+        case .sudoku: Color(hex: 0xF6E6C8)
+        case .tangram: Color(hex: 0xD6EDEA)
+        case .klotski: Color(hex: 0xF3DDCB)
         case .story: Color(hex: 0xDCEBF5)
         }
     }
@@ -197,6 +221,10 @@ private struct GameHeroCard: View {
         case .gomoku: Color(hex: 0xFBE9DD)
         case .xiangqi: Color(hex: 0xFBE6DE)
         case .go: Color(hex: 0xEAF4EA)
+        case .chess: Color(hex: 0xEEEBF8)
+        case .sudoku: Color(hex: 0xFAF0DC)
+        case .tangram: Color(hex: 0xE6F4F2)
+        case .klotski: Color(hex: 0xF8EADD)
         case .story: Color(hex: 0xEAF3F8)
         }
     }
@@ -205,6 +233,10 @@ private struct GameHeroCard: View {
         case .gomoku: Palette.coral
         case .xiangqi: Color(hex: 0xC9624F)
         case .go: Color(hex: 0x6FA07A)
+        case .chess: Color(hex: 0x7C74C9)
+        case .sudoku: Color(hex: 0xD9973A)
+        case .tangram: Color(hex: 0x3FA39B)
+        case .klotski: Color(hex: 0xC47A4E)
         case .story: Color(hex: 0x5FA3C9)
         }
     }
@@ -355,13 +387,13 @@ private struct GameHeroCard: View {
     }
 
     @ViewBuilder private var accessory: some View {
-        if game == .gomoku || game == .xiangqi || game == .go {
+        if game == .gomoku || game == .xiangqi || game == .go || game == .chess {
             HStack(spacing: -14) {
                 ForEach(Opponent.allCases) { o in
                     Avatar(image: o.image, fallback: o.emoji, tint: o.tint, size: 54)
                 }
             }
-        } else {
+        } else if game == .story {
             HStack(spacing: 8) {
                 ForEach(["plus", "minus", "multiply", "divide"], id: \.self) { symbol in
                     Image(systemName: symbol)

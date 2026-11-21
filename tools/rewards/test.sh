@@ -5,6 +5,6 @@ ROOT=${0:A:h:h:h}
 TMP=$(mktemp -d)
 R="$ROOT/RanranGame/Core/Rewards"
 cp "$ROOT/tools/rewards/test.swift" $TMP/main.swift
-swiftc -O -o $TMP/test $TMP/main.swift "$ROOT/tools/rewards/stub.swift" "$R/RewardRules.swift" "$R/RewardStore.swift"
+swiftc -O -o $TMP/test $TMP/main.swift "$ROOT/tools/rewards/stub.swift" "$R/RewardRules.swift" "$R/RewardStore.swift" "$R/PuzzlePack.swift" "$R/PuzzleStore.swift"
 $TMP/test
 rm -rf $TMP

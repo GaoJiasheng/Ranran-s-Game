@@ -62,6 +62,8 @@ struct TutorialStep: Codable, Hashable {
     /// 练习模式里的题目说明（有配音）。练习时局面会随机镜像、旋转，所以这句话不能提方向（左右上下）和 A/B 标签。
     /// 不写就用按 task.rule 配的通用说法；没有 rule 又没写这句的题，练习模式里不出。
     var drill: String?
+    /// 各游戏自己用的其他内容（后来加的游戏放这里，不用再改这个结构）
+    var extra: [String: String]?
 }
 
 struct TutorialTask: Codable, Hashable {
@@ -73,6 +75,8 @@ struct TutorialTask: Codable, Hashable {
     var accept: [String]?
     /// 象棋：只能动这个子
     var piece: String?
+    /// 各游戏自己用的其他内容
+    var extra: [String: String]?
 }
 
 /// 老师的通用台词（都有配音）
@@ -126,7 +130,7 @@ enum TutorLines {
     }
 
     /// 需要预先生成配音的全部固定台词
-    static var all: [String] { common + xiangqi + go }
+    static var all: [String] { common + xiangqi + go + TutorialKits.all.flatMap(\.fixedLines) }
 }
 
 // MARK: - 小奖杯（金 / 银 / 铜）
@@ -302,7 +306,7 @@ extension TutorialCourse {
     ]
 
     func playLevel(after track: TutorialTrack) -> Int {
-        if let n = Self.playLevels[game]?[track.id] { return n }
+        if let n = Self.playLevels[game]?[track.id] ?? TutorialKits.find(game)?.playLevels[track.id] { return n }
         let i = tracks.firstIndex { $0.id == track.id } ?? 0
         return min(10, 1 + i * 2)
     }
@@ -313,9 +317,12 @@ extension TutorialCourse {
 
     func lesson(_ id: String) -> TutorialLesson? { lessons.first { $0.id == id } }
 
-    /// App 里自带的三门课（读一次就记住；给「我的」、复盘里的「复习这一课」用）
+    /// 有教学的游戏，按主页的顺序
+    static let games: [String] = ["gomoku", "xiangqi", "go"] + TutorialKits.all.map(\.game)
+
+    /// App 里自带的课（读一次就记住；给「我的」、奖章、复盘里的「复习这一课」用）
     static let bundled: [String: TutorialCourse] = Dictionary(uniqueKeysWithValues:
-        ["gomoku", "xiangqi", "go"].compactMap { g in load(g).map { (g, $0) } })
+        games.compactMap { g in load(g).map { (g, $0) } })
 
     /// 能进「复习」：学完的课里有能练的题
     func canReview(_ store: PlayerStore) -> Bool {

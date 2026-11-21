@@ -12,7 +12,7 @@ let manifest = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(file
 let files = Dictionary(uniqueKeysWithValues: manifest.map { ($0["text"]!, $0["file"]!) })
 let speak = Dictionary(uniqueKeysWithValues: manifest.map { ($0["text"]!, $0["speak"]!) })
 var needed: [String] = TutorLines.all
-for g in ["gomoku", "xiangqi", "go"] {
+for g in TutorialCourse.games {
     let c = loadCourse(root, g)
     for l in c.lessons {
         needed.append(TutorLines.lessonDone(l.learned))

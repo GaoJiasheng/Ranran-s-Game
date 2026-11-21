@@ -189,7 +189,7 @@ struct LessonDoneOverlay: View {
                     Sound.record()
                     await VoiceOver.shared.speak(TutorLines.trackUnlocked)
                 } else if playLevel != nil {
-                    await VoiceOver.shared.speak(TutorLines.goPlay)
+                    await VoiceOver.shared.speak(TutorialKits.find(course.game)?.goPlayLine ?? TutorLines.goPlay)
                 }
             case .practice:
                 await VoiceOver.shared.speak(TutorLines.practiceDone)
@@ -318,7 +318,7 @@ struct LessonDoneOverlay: View {
         }
         if let level = playLevel, let play = navigator.playGame {
             Button { Sound.start(); play(level) } label: {
-                Label("去下一盘", systemImage: "flag.checkered")
+                Label(TutorialKits.find(course.game)?.goPlayTitle ?? "去下一盘", systemImage: "flag.checkered")
             }
             .buttonStyle(PillButtonStyle(color: hasNext ? Palette.sage : Palette.coral, size: 22))
         }

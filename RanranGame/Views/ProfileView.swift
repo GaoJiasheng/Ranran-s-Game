@@ -78,6 +78,7 @@ struct ProfileView: View {
                 switch record.game {
                 case "xiangqi": XiangqiReplayView(record: record)
                 case "go": GoReplayView(record: record)
+                case "chess": ChessReplayView(record: record)
                 default: GomokuReplayView(record: record)
                 }
             }
@@ -145,9 +146,10 @@ struct ProfileView: View {
                     Text("五子棋").tag("gomoku")
                     Text("象棋").tag("xiangqi")
                     Text("围棋").tag("go")
+                    Text("国际象棋").tag("chess")
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 270)
+                .frame(width: 400)
                 if !records.isEmpty {
                     Text("\(records.count) 盘")
                         .font(.kid(18, weight: .bold))

@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// 「我的」里给家长看的：三门棋的教学各学到哪里、每课拿了什么小奖杯、哪几课还不太稳。
+/// 「我的」里给家长看的：每个游戏的教学各学到哪里、每课拿了什么小奖杯、哪几课还不太稳。
 struct LessonCupCard: View {
     @Environment(PlayerStore.self) private var store
-    private let courses = ["gomoku", "xiangqi", "go"].compactMap { TutorialCourse.bundled[$0] }
-
-    private static let names = ["gomoku": "五子棋", "xiangqi": "象棋", "go": "围棋"]
+    /// 还没有课的游戏不列出来
+    private let courses = TutorialCourse.games.compactMap { TutorialCourse.bundled[$0] }.filter { !$0.lessons.isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -19,7 +18,7 @@ struct LessonCupCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             ForEach(courses, id: \.game) { course in
-                CourseCupRow(course: course, name: Self.names[course.game] ?? course.title)
+                CourseCupRow(course: course, name: Subjects.find(course.game)?.name ?? course.title)
             }
         }
         .padding(28)

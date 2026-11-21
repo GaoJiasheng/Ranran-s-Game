@@ -85,6 +85,35 @@ for game in ("gomoku", "xiangqi", "go"):
             for s in lesson["steps"]:
                 for k in ("say", "hint", "ok", "after", "drill"):
                     add(s.get(k), game)
+# 后来加的游戏：课文从 Tutorials/<game>.json 来；固定台词和读音修正写在 tools/voice/extra_<game>.json 里
+#   {"lines": ["固定台词", ...], "replace": [["车", "居"], ...], "regex": [["正则", "换成"], ...]}
+# lines 要和 App 里这个游戏的 TutorialKit.fixedLines 一模一样；replace / regex 对这个游戏的每一句都生效（先 replace 后 regex）
+EXTRA_GAMES = ["chess", "sudoku", "tangram", "klotski"]
+for game in EXTRA_GAMES:
+    extra_path = os.path.join(os.path.dirname(__file__), f"extra_{game}.json")
+    extra = json.load(open(extra_path, encoding="utf-8")) if os.path.exists(extra_path) else {}
+
+    def add_extra(text, extra=extra):
+        if not text or text in items:
+            return
+        speak = text
+        for a, b in extra.get("replace", []):
+            speak = speak.replace(a, b)
+        for pat, rep in extra.get("regex", []):
+            speak = re.sub(pat, rep, speak)
+        items[text] = {"file": fname(text), "text": text, "speak": speak}
+
+    course_path = os.path.join(ROOT, "RanranGame", "Tutorials", game + ".json")
+    if os.path.exists(course_path):
+        course = json.load(open(course_path, encoding="utf-8"))
+        for track in course["tracks"]:
+            for lesson in track["lessons"]:
+                add_extra(lesson_done(lesson["learned"]))
+                for s in lesson["steps"]:
+                    for k in ("say", "hint", "ok", "after", "drill"):
+                        add_extra(s.get(k))
+    for t in extra.get("lines", []):
+        add_extra(t)
 for t in COMMON:
     add(t, "common")
 for t in COMMON_XIANGQI:

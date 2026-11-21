@@ -21,7 +21,9 @@ struct LessonSymmetry: Hashable, CustomStringConvertible {
 
     /// 这种棋、这么大的棋盘能用的全部变换（第一个是不变）
     static func all(_ game: String, size: Int) -> [LessonSymmetry] {
-        (0..<(game == "xiangqi" ? 2 : 8)).map { LessonSymmetry(game: game, size: size, kind: $0) }
+        // 后来加的游戏不用这套棋盘变换，自己在 TutorialKit.practiceTransform 里变
+        if TutorialKits.find(game) != nil { return [identity(game, size: size)] }
+        return (0..<(game == "xiangqi" ? 2 : 8)).map { LessonSymmetry(game: game, size: size, kind: $0) }
     }
 
     var description: String { "\(game)#\(kind)" }
@@ -159,6 +161,7 @@ enum PracticePrompts {
     static func generic(_ rule: String?, game: String) -> String? {
         guard let rule else { return nil }
         let head = String(rule.split(separator: ":").first ?? "")
+        if let kit = TutorialKits.find(game) { return kit.practicePrompts[rule] ?? kit.practicePrompts[head] }
         switch game {
         case "xiangqi": return xiangqi[rule] ?? xiangqi[head]
         case "go": return go[head]
@@ -233,6 +236,10 @@ enum LessonPractice {
 
     /// 一段题配上一个随机变换
     static func transformed<G: RandomNumberGenerator>(_ seg: [TutorialStep], game: String, using rng: inout G) -> [TutorialStep] {
+        if let kit = TutorialKits.find(game) {
+            let k = Int.random(in: 0..<max(1, kit.practiceVariants), using: &rng)
+            return k == 0 ? seg : (kit.practiceTransform?(seg, k) ?? seg)
+        }
         let size = seg.first?.board.map(boardSize) ?? 9
         let sym = LessonSymmetry.all(game, size: size).randomElement(using: &rng)!
         return seg.map(sym.step)
