@@ -238,6 +238,15 @@ final class GoGame {
         speechTask?.cancel()
     }
 
+    #if DEBUG
+    /// 调试截图用：直接算冉冉赢了这一盘，好看结果页（启动参数 -winDemo）
+    func debugWin() {
+        stop()
+        aiThinking = false
+        winner = humanColor
+    }
+    #endif
+
     // MARK: 内部
 
     private func play(_ i: Int) {
@@ -384,20 +393,17 @@ extension Opponent {
 extension PlayerStore {
     func goBest(_ l: GoLevel) -> Int { count("go.best.\(l.number)") }
     func goWins(_ l: GoLevel) -> Int { count("go.wins.\(l.number)") }
+    /// 这一档赢棋拿到的星星（不算第一次赢的加奖）
     func goStars(_ l: GoLevel) -> Int { count("go.stars.\(l.number)") }
-    var goStarTotal: Int { GoLevel.all.reduce(0) { $0 + goStars($1) } }
 
     var goRecommended: GoLevel {
         let cleared = GoLevel.all.last { goBest($0) > 0 }?.number ?? 0
         return GoLevel(cleared + 1)
     }
 
+    /// 记一次胜利，星星按 RewardRules 发（见 recordGomokuWin）
     @discardableResult
-    func recordGoWin(_ l: GoLevel, stars: Int) -> Bool {
-        increment("go.wins.\(l.number)")
-        earnStars(stars, key: "go.stars.\(l.number)")
-        let isRecord = stars > goBest(l)
-        if isRecord { setCount("go.best.\(l.number)", stars) }
-        return isRecord
+    func recordGoWin(_ l: GoLevel, stars: Int) -> WinResult {
+        recordWin(game: "go", level: l.number, earned: stars)
     }
 }

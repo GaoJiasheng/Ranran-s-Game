@@ -49,7 +49,7 @@ struct CupBadge: View {
 
 // MARK: - 学完一课
 
-/// 学完一课（或者练完一遍）的结算页：学会了什么、这次拿到哪个小奖杯、接下来去哪里。
+/// 学完一课（或者练完一遍）的结算页：学会了什么、这次拿到哪个小奖杯、发了几颗星星、接下来去哪里。
 struct LessonDoneOverlay: View {
     @Environment(PlayerStore.self) private var store
     @Environment(\.lessonNavigator) private var navigator
@@ -61,6 +61,7 @@ struct LessonDoneOverlay: View {
     @State private var appeared = false
     @State private var badge = false
     @State private var cupIn = false
+    @State private var starsIn = false
 
     private var course: TutorialCourse { flow.course }
     private var track: TutorialTrack? { course.track(of: flow.lesson.id) }
@@ -132,6 +133,8 @@ struct LessonDoneOverlay: View {
 
                 scoreCard
 
+                starLine
+
                 if let t = unlockedTrack {
                     HStack(spacing: 14) {
                         ArtImage(name: t.art, fallback: "🔓", contentMode: .fit)
@@ -170,12 +173,16 @@ struct LessonDoneOverlay: View {
             Sound.fanfare()
             withAnimation(.spring(duration: 0.5, bounce: 0.4)) { appeared = true }
             withAnimation(.spring(duration: 0.7, bounce: 0.55).delay(0.25)) { badge = true }
+            if !flow.mode.isLesson {
+                withAnimation(.spring(duration: 0.55, bounce: 0.55).delay(0.6)) { starsIn = true }
+            }
             switch flow.mode {
             case .lesson:
                 await VoiceOver.shared.speak(TutorLines.lessonDone(flow.lesson.learned))
                 guard !Task.isCancelled else { return }
                 if flow.cup == .gold { Sound.sparkle() } else { Sound.pop() }
                 withAnimation(.spring(duration: 0.55, bounce: 0.6)) { cupIn = true }
+                withAnimation(.spring(duration: 0.55, bounce: 0.55).delay(0.3)) { starsIn = true }
                 await VoiceOver.shared.speak(flow.cup.line)
                 guard !Task.isCancelled else { return }
                 if unlockedTrack != nil {
@@ -252,13 +259,52 @@ struct LessonDoneOverlay: View {
         .background(Palette.cream.opacity(0.85), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
+    /// 这一次发的星星："★★ +2 颗星星"；复习今天已经给过就说一声明天再来。
+    /// 上课没发星星时不在这里说，下面的小字已经告诉她拿到金杯还能再得几颗。
+    @ViewBuilder private var starLine: some View {
+        if let n = flow.starsPaid, n > 0 {
+            HStack(spacing: 10) {
+                HStack(spacing: 2) {
+                    ForEach(0..<min(n, 3), id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(LinearGradient(colors: [Palette.honey, Palette.coral],
+                                                            startPoint: .top, endPoint: .bottom))
+                            .shadow(color: Palette.honey.opacity(0.6), radius: 6)
+                    }
+                }
+                Text("+\(n) 颗星星")
+                    .font(.kid(26, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 22)
+            .padding(.vertical, 8)
+            .background(Palette.honey.opacity(0.24), in: Capsule())
+            .scaleEffect(starsIn ? 1 : 0.3)
+            .opacity(starsIn ? 1 : 0)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("得到 \(n) 颗星星")
+        } else if flow.mode == .review, flow.starsPaid == 0 {
+            Label("今天的复习星星已经拿过啦，明天再来", systemImage: "star.fill")
+                .font(.kid(19, weight: .bold))
+                .foregroundStyle(Palette.inkSoft)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .opacity(starsIn ? 1 : 0)
+        }
+    }
+
     private var caption: String {
         guard flow.taskCount > 0 else { return "认真看完了每一步" }
         let score = "一次就做对 \(flow.firstTryCount) / \(flow.taskCount) 题"
         guard flow.mode.isLesson else { return score }
         if flow.cup == .gold { return score + "，拿到金杯！" }
         let best = improved ? "，比上次更好！" : (bestCup > flow.cup ? "，最好是\(bestCup.name)" : "")
-        return score + best + "\n每一题都一次做对，就能拿金杯"
+        // 星星按最好的奖杯给：还没拿过金杯，就告诉她金杯还能再得几颗
+        let more = RewardRules.lessonStars(cup: LessonCup.gold.rawValue) - RewardRules.lessonStars(cup: bestCup.rawValue)
+        let goal = more > 0 ? "拿到金杯，还能再得 \(more) 颗星星" : "每一题都一次做对，就能拿金杯"
+        return score + best + "\n" + goal
     }
 
     @ViewBuilder

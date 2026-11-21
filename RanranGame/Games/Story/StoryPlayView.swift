@@ -137,6 +137,8 @@ struct StoryPlayView: View {
         .onDisappear { session.stop() }
         .onChange(of: session.phase) { _, phase in
             guard phase == .finished else { return }
+            // 做完一组（一关或者练一练）：「今天的三颗星」里的「算一组题」
+            store.noteDaily(.math)
             if session.kind == .mix {
                 Sound.fanfare()
                 withAnimation(.spring(duration: 0.5)) { mixDone = true }
@@ -667,7 +669,12 @@ struct StoryPlayView: View {
             store.markStoryProblemFixed(mistake.problem, level: mistake.level)
         }
         Sound.tap()
-        guard !queue.isEmpty else { dismiss(); return }
+        guard !queue.isEmpty else {
+            // 错题本里的题全练完了也算「算一组题」
+            store.noteDaily(.math)
+            dismiss()
+            return
+        }
         session.stop()
         let next = queue.removeFirst()
         let fresh = StorySession(practice: next)

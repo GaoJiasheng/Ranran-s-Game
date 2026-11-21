@@ -52,7 +52,12 @@ struct GoGameView: View {
                 }
             }
         }
-        .onAppear { game.begin() }
+        .onAppear {
+            game.begin()
+            #if DEBUG
+            if UserDefaults.standard.string(forKey: "winDemo") != nil, !game.isTwoPlayer { game.debugWin() }
+            #endif
+        }
         .onDisappear { game.stop(); resultTask?.cancel() }
         .onChange(of: game.isOver) { _, over in
             resultTask?.cancel()
@@ -184,13 +189,22 @@ struct GoGameView: View {
 
     private func handleGameOver() {
         let round = game.round
+        #if DEBUG
+        if !game.isTwoPlayer, let demo = RoundResult.demo(level: game.level?.number ?? 1) {
+            lastResult = demo
+            withAnimation(.spring(duration: 0.45)) { showResult = true }
+            return
+        }
+        #endif
+        // 下完一盘（输赢、和棋、和家人下都算）：「今天的三颗星」里的「下一盘棋」
+        store.noteDaily(.play)
         store.saveRecord(game.makeRecord(stars: game.humanWon && !game.isTwoPlayer ? game.winStars : 0))
         if let level = game.level {
             if game.humanWon, !awardedRounds.contains(round) {
                 awardedRounds.insert(round)
-                let stars = game.winStars
-                let record = store.recordGoWin(level, stars: stars)
-                lastResult = RoundResult(stars: stars, usedUndo: game.usedUndo, usedHint: game.usedHint, isRecord: record)
+                let win = store.recordGoWin(level, stars: game.winStars)
+                lastResult = RoundResult(win: win, usedUndo: game.usedUndo, usedHint: game.usedHint,
+                                         suggest: store.goRecommended.number)
                 lossStreak = 0
             } else if !game.humanWon, !countedLosses.contains(round) {
                 countedLosses.insert(round)
@@ -227,6 +241,13 @@ struct GoResultOverlay: View {
         return game.level?.previous
     }
 
+    /// 赢了之后去挑战哪一档：一般是下一档；这一档太简单了就直接去拿满星星的那一档
+    private var challenge: GoLevel? {
+        guard aiWin else { return nil }
+        if result.reward?.low == true, result.suggest > 0 { return GoLevel(result.suggest) }
+        return game.level?.next
+    }
+
     var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
@@ -241,7 +262,10 @@ struct GoResultOverlay: View {
                     .font(.kid(22, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
-                if aiWin { medals }
+                if aiWin {
+                    medals
+                    WinRewardNote(level: game.level?.number ?? 0, result: result)
+                }
                 if let easier {
                     Text("连着输了 \(lossStreak) 局，先去第 \(easier.number) 档练练手？")
                         .font(.kid(19, weight: .bold))
@@ -251,7 +275,7 @@ struct GoResultOverlay: View {
                         .background(easier.character.tint.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
                 HStack(spacing: 18) {
-                    if aiWin, let next = game.level?.next {
+                    if let next = challenge {
                         Button { Sound.tap(); onLevel(next) } label: { Label("挑战第 \(next.number) 档", systemImage: "arrow.up.right") }
                             .buttonStyle(PillButtonStyle(color: Palette.coral))
                         Button("再来一局") { Sound.tap(); onAgain() }
@@ -368,10 +392,10 @@ struct GoResultOverlay: View {
             let m = abs(s.margin)
             let by = m.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(m))" : String(format: "%.1f", m)
             let line = "黑棋 \(s.black) 子，白棋 \(s.white) 子 + 贴 7.5"
-            return line + "\n" + (s.margin > 0 ? "黑棋" : "白棋") + "赢了 \(by) 子" + (aiWin ? "，获得 \(result.stars) 颗星星" : "")
+            return line + "\n" + (s.margin > 0 ? "黑棋" : "白棋") + "赢了 \(by) 子" + (aiWin && !result.gotStars.isEmpty ? "，" + result.gotStars : "")
         }
         if let t = game.captureTarget {
-            return "先吃到 \(t) 颗子！" + (aiWin ? "获得 \(result.stars) 颗星星" : "再试一次吧")
+            return "先吃到 \(t) 颗子！" + (aiWin ? result.gotStars : "再试一次吧")
         }
         return ""
     }

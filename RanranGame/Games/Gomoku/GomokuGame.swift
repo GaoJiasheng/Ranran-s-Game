@@ -145,6 +145,15 @@ final class GomokuGame {
         speechTask?.cancel()
     }
 
+    #if DEBUG
+    /// 调试截图用：直接算冉冉赢了这一盘，好看结果页（启动参数 -winDemo）
+    func debugWin() {
+        stop()
+        aiThinking = false
+        winner = humanColor
+    }
+    #endif
+
     // MARK: - 内部
 
     private func place(_ p: Point) {

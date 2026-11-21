@@ -60,7 +60,12 @@ struct GomokuGameView: View {
                 }
             }
         }
-        .onAppear { game.begin() }
+        .onAppear {
+            game.begin()
+            #if DEBUG
+            if UserDefaults.standard.string(forKey: "winDemo") != nil, !game.isTwoPlayer { game.debugWin() }
+            #endif
+        }
         .onDisappear { game.stop(); resultTask?.cancel() }
         .onChange(of: game.isOver) { _, over in
             resultTask?.cancel()
@@ -180,13 +185,22 @@ struct GomokuGameView: View {
 
     private func handleGameOver() {
         let round = game.round
+        #if DEBUG
+        if !game.isTwoPlayer, let demo = RoundResult.demo(level: game.level?.number ?? 1) {
+            lastResult = demo
+            withAnimation(.spring(duration: 0.45)) { showResult = true }
+            return
+        }
+        #endif
+        // 下完一盘（输赢、和棋、和家人下都算）：「今天的三颗星」里的「下一盘棋」
+        store.noteDaily(.play)
         store.saveRecord(game.makeRecord(stars: game.humanWon && !game.isTwoPlayer ? game.winStars : 0))
         if let level = game.level {
             if game.humanWon, !awardedRounds.contains(round) {
                 awardedRounds.insert(round)
-                let stars = game.winStars
-                let record = store.recordGomokuWin(level, stars: stars)
-                lastResult = RoundResult(stars: stars, usedUndo: game.usedUndo, usedHint: game.usedHint, isRecord: record)
+                let win = store.recordGomokuWin(level, stars: game.winStars)
+                lastResult = RoundResult(win: win, usedUndo: game.usedUndo, usedHint: game.usedHint,
+                                         suggest: store.gomokuRecommended.number)
                 lossStreak = 0
             } else if !game.humanWon, game.winner != nil, !countedLosses.contains(round) {
                 countedLosses.insert(round)
@@ -370,12 +384,98 @@ struct ControlButton: View {
 
 // MARK: - 结果
 
-/// 一局人机对战赢下来的成绩
+/// 一局人机对战赢下来的成绩（五子棋、象棋、围棋共用）
 struct RoundResult {
+    /// 这盘本身挣到的 1~3 颗（赢 + 没悔棋 + 没用提示），结果页上亮几颗星用它
     var stars = 0
     var usedUndo = false
     var usedHint = false
     var isRecord = false
+    /// 这盘真正发了几颗：按 RewardRules，太简单的档不给全额，第一次赢下一档另加奖
+    var reward: WinReward?
+    /// 这一档太简单时，建议去哪一档拿满星星
+    var suggest = 0
+
+    init() {}
+
+    init(win: WinResult, usedUndo: Bool, usedHint: Bool, suggest: Int) {
+        stars = win.reward.earned
+        self.usedUndo = usedUndo
+        self.usedHint = usedHint
+        isRecord = win.isRecord
+        reward = win.reward
+        self.suggest = suggest
+    }
+
+    /// 副标题后面那半句「获得 N 颗星星」；一颗都没发就不说
+    var gotStars: String {
+        let n = reward?.total ?? stars
+        return n > 0 ? "获得 \(n) 颗星星" : ""
+    }
+
+    #if DEBUG
+    /// 调试截图用：启动参数 -winDemo bonus|low|none 假装赢了一盘，看结果页上三种星星的说法
+    static func demo(level: Int) -> RoundResult? {
+        let kind = UserDefaults.standard.string(forKey: "winDemo")
+        let reward: WinReward
+        switch kind {
+        case "bonus": reward = WinReward(base: 3, bonus: RewardRules.firstWinBonus, earned: 3, low: false, lowLeft: 3)
+        case "low":   reward = WinReward(base: 1, bonus: 0, earned: 3, low: true, lowLeft: 2)
+        case "none":  reward = WinReward(base: 0, bonus: 0, earned: 2, low: true, lowLeft: 0)
+        default: return nil
+        }
+        return RoundResult(win: WinResult(reward: reward, isRecord: kind == "bonus"),
+                           usedUndo: false, usedHint: reward.earned < 3, suggest: min(level + 3, 10))
+    }
+    #endif
+}
+
+/// 结果页三颗星下面的一句话：第一次赢下这一档的加奖；或者这一档对她太简单了，星星少了，该去哪一档。
+/// 等三颗星亮完再出来。五子棋、象棋、围棋共用。
+struct WinRewardNote: View {
+    let level: Int
+    let result: RoundResult
+
+    @State private var shown = false
+
+    private var note: (icon: String, text: String, tint: Color)? {
+        guard let r = result.reward else { return nil }
+        if r.bonus > 0 {
+            return ("gift.fill", "第一次赢下第 \(level) 档，再奖励 \(r.bonus) 颗星星！", Palette.coral)
+        }
+        guard r.low else { return nil }
+        if r.base > 0 {
+            return ("leaf.fill", "这一档对你来说太简单啦，只有 \(r.base) 颗星星\n去挑战第 \(result.suggest) 档能拿 3 颗！", Palette.sky)
+        }
+        return ("moon.stars.fill", "今天这一档的星星拿完啦，去挑战第 \(result.suggest) 档吧！", Palette.sky)
+    }
+
+    var body: some View {
+        if let note {
+            HStack(spacing: 12) {
+                Image(systemName: note.icon)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(note.tint)
+                Text(note.text)
+                    .font(.kid(19, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(note.tint.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .scaleEffect(shown ? 1 : 0.6)
+            .opacity(shown ? 1 : 0)
+            .task {
+                // 三颗星一颗一颗亮（0.5 秒后开始，每颗 0.3 秒），亮完再出来
+                try? await Task.sleep(for: .milliseconds(700 + 300 * result.stars))
+                guard !Task.isCancelled else { return }
+                if result.reward?.bonus ?? 0 > 0 { Sound.sparkle() }
+                withAnimation(.spring(duration: 0.5, bounce: 0.5)) { shown = true }
+            }
+        }
+    }
 }
 
 struct ResultOverlay: View {
@@ -417,7 +517,10 @@ struct ResultOverlay: View {
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
 
-                if aiWin { starMedals }
+                if aiWin {
+                    starMedals
+                    WinRewardNote(level: game.level?.number ?? 0, result: result)
+                }
 
                 if let easier {
                     suggestion(easier)
@@ -526,8 +629,15 @@ struct ResultOverlay: View {
         .background(easier.character.tint.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
+    /// 赢了之后去挑战哪一档：一般是下一档；这一档太简单了就直接去拿满星星的那一档
+    private var challenge: GomokuLevel? {
+        guard aiWin else { return nil }
+        if result.reward?.low == true, result.suggest > 0 { return GomokuLevel(result.suggest) }
+        return game.level?.next
+    }
+
     @ViewBuilder private var primaryButton: some View {
-        if aiWin, let next = game.level?.next {
+        if let next = challenge {
             Button { Sound.tap(); onLevel(next) } label: {
                 Label("挑战第 \(next.number) 档", systemImage: "arrow.up.right")
             }
@@ -544,7 +654,7 @@ struct ResultOverlay: View {
     }
 
     @ViewBuilder private var secondaryButton: some View {
-        if (aiWin && game.level?.next != nil) || easier != nil {
+        if challenge != nil || easier != nil {
             Button("再来一局") { Sound.tap(); onAgain() }
                 .buttonStyle(PillButtonStyle(color: Palette.paper, foreground: Palette.ink, size: 22))
         }
@@ -575,7 +685,7 @@ struct ResultOverlay: View {
         if game.isTwoPlayer { return "下得真精彩，再来一局吧" }
         if game.humanWon {
             let o = game.opponent?.loseLine ?? ""
-            return "\(o)  获得 \(result.stars) 颗星星"
+            return "\(o)  \(result.gotStars)"
         }
         return "差一点点！点「悔棋」或者再来一局吧"
     }

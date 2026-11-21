@@ -54,7 +54,12 @@ struct XiangqiGameView: View {
                 }
             }
         }
-        .onAppear { game.begin() }
+        .onAppear {
+            game.begin()
+            #if DEBUG
+            if UserDefaults.standard.string(forKey: "winDemo") != nil, !game.isTwoPlayer { game.debugWin() }
+            #endif
+        }
         .onDisappear { game.stop(); resultTask?.cancel() }
         .onChange(of: game.isOver) { _, over in
             resultTask?.cancel()
@@ -196,13 +201,22 @@ struct XiangqiGameView: View {
 
     private func handleGameOver() {
         let round = game.round
+        #if DEBUG
+        if !game.isTwoPlayer, let demo = RoundResult.demo(level: game.level?.number ?? 1) {
+            lastResult = demo
+            withAnimation(.spring(duration: 0.45)) { showResult = true }
+            return
+        }
+        #endif
+        // 下完一盘（输赢、和棋、和家人下都算）：「今天的三颗星」里的「下一盘棋」
+        store.noteDaily(.play)
         store.saveRecord(game.makeRecord(stars: game.humanWon && !game.isTwoPlayer ? game.winStars : 0))
         if let level = game.level {
             if game.humanWon, !awardedRounds.contains(round) {
                 awardedRounds.insert(round)
-                let stars = game.winStars
-                let record = store.recordXiangqiWin(level, stars: stars)
-                lastResult = RoundResult(stars: stars, usedUndo: game.usedUndo, usedHint: game.usedHint, isRecord: record)
+                let win = store.recordXiangqiWin(level, stars: game.winStars)
+                lastResult = RoundResult(win: win, usedUndo: game.usedUndo, usedHint: game.usedHint,
+                                         suggest: store.xiangqiRecommended.number)
                 lossStreak = 0
             } else if !game.humanWon, game.winner != nil, !countedLosses.contains(round) {
                 countedLosses.insert(round)
@@ -326,6 +340,13 @@ struct XiangqiResultOverlay: View {
         return game.level?.previous
     }
 
+    /// 赢了之后去挑战哪一档：一般是下一档；这一档太简单了就直接去拿满星星的那一档
+    private var challenge: XiangqiLevel? {
+        guard aiWin else { return nil }
+        if result.reward?.low == true, result.suggest > 0 { return XiangqiLevel(result.suggest) }
+        return game.level?.next
+    }
+
     var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
@@ -341,7 +362,10 @@ struct XiangqiResultOverlay: View {
                     .font(.kid(23, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
-                if aiWin { medals }
+                if aiWin {
+                    medals
+                    WinRewardNote(level: game.level?.number ?? 0, result: result)
+                }
                 if let easier {
                     HStack(spacing: 14) {
                         Avatar(image: easier.character.image, fallback: easier.character.emoji, tint: easier.character.tint, size: 54)
@@ -354,7 +378,7 @@ struct XiangqiResultOverlay: View {
                     .background(easier.character.tint.opacity(0.22), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
                 HStack(spacing: 18) {
-                    if aiWin, let next = game.level?.next {
+                    if let next = challenge {
                         Button { Sound.tap(); onLevel(next) } label: { Label("挑战第 \(next.number) 档", systemImage: "arrow.up.right") }
                             .buttonStyle(PillButtonStyle(color: Palette.coral))
                         Button("再来一局") { Sound.tap(); onAgain() }
@@ -472,7 +496,7 @@ struct XiangqiResultOverlay: View {
     private var subtitle: String {
         if game.isDraw { return game.drawReason + "，算平局" }
         if game.isTwoPlayer { return "下得真精彩，再来一局吧" }
-        if game.humanWon { return "\(game.opponent?.loseLine ?? "")  获得 \(result.stars) 颗星星" }
+        if game.humanWon { return "\(game.opponent?.loseLine ?? "")  \(result.gotStars)" }
         return "差一点点！点「悔棋」或者去「教学」学几招杀法"
     }
 }

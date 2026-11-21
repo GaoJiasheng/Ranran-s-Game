@@ -32,6 +32,8 @@ final class LessonFlow {
     var cupBefore: LessonCup?
     var nextTrackOpenBefore = true
     var trackDoneBefore = false
+    /// 学完时这一次发了几颗星星（上课按奖杯补差额、复习每天第一次 1 颗）；练一练、还没学完是 nil
+    var starsPaid: Int?
     /// 进入新的一步时，棋盘那边要换局面
     var onStep: (() -> Void)?
 
@@ -192,6 +194,20 @@ final class LessonFlow {
         talkTask?.cancel()
         VoiceOver.shared.stop()
     }
+
+    #if DEBUG
+    /// 调试截图用：直接学完。cup 给 1/2/3 就把前面几道题记成做错，凑出铜杯 / 银杯。
+    func debugFinish(cup: Int) {
+        let tasks = lesson.steps.indices.filter { lesson.steps[$0].task != nil }
+        switch cup {
+        case 1: missed = Set(tasks)                                       // 全做错过：铜杯
+        case 2: missed = Set(tasks.prefix(max(1, (tasks.count - 1) / 2))) // 错不到一半：银杯（至少 3 道题才有）
+        default: missed = []
+        }
+        talkTask?.cancel()
+        finished = true
+    }
+    #endif
 }
 
 /// 教学页之间跳转：再练一次、复习、学完一组去下一盘。由课程表（或者复盘里打开的一课）提供。
@@ -274,20 +290,38 @@ struct LessonScaffold<Board: View>: View {
                 }
             }
             flow.begin()
+            #if DEBUG
+            // 调试截图用：-lessonDone N 打开就直接学完，结算页上显示这次发了 N 颗星星；
+            // 再加 -lessonCup 1/2/3 选铜 / 银 / 金杯（默认金杯）
+            let d = UserDefaults.standard
+            if d.object(forKey: "lessonDone") != nil {
+                flow.debugFinish(cup: d.integer(forKey: "lessonCup"))
+            }
+            #endif
         }
         .onDisappear { flow.stop() }
         .onChange(of: flow.finished) { _, done in
             guard done else { return }
             let game = flow.course.game
+            // 学一课、练一练、复习都算「今天的三颗星」里的「学一课」
+            store.noteDaily(.learn)
             switch flow.mode {
             case .lesson:
                 store.recordLesson(game, flow.lesson.id, cup: flow.cup)
                 store.rememberOpenTracks(flow.course)
+                // 星星按这一课最好的奖杯给，杯子变好了只补差额
+                flow.starsPaid = store.payLessonStars(game: game, lesson: flow.lesson.id, cup: flow.cup.rawValue)
             case let .practice(id):
                 store.recordPractice(game, id)
             case .review:
                 store.recordReview(game)
+                flow.starsPaid = store.payReviewStar(game: game)
             }
+            #if DEBUG
+            if flow.starsPaid != nil, UserDefaults.standard.object(forKey: "lessonDone") != nil {
+                flow.starsPaid = UserDefaults.standard.integer(forKey: "lessonDone")
+            }
+            #endif
         }
     }
 

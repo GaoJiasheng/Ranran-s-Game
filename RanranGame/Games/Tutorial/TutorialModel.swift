@@ -132,7 +132,8 @@ enum TutorLines {
 // MARK: - 小奖杯（金 / 银 / 铜）
 
 /// 一课学得怎么样：铜杯 = 学完了，银杯 = 大部分题一次就做对，金杯 = 每一题都一次做对。
-/// 叫"小奖杯"，和星星、奖章墙都不是一回事，不算进星星总数。
+/// 叫"小奖杯"。拿到奖杯会发星星（铜 1、银 2、金 3，杯子变好了补差额），规矩在 RewardRules，
+/// 学完时由 LessonScaffold 调 PlayerStore.payLessonStars 发。
 enum LessonCup: Int, Comparable, CaseIterable {
     case bronze = 1, silver = 2, gold = 3
 
@@ -227,6 +228,7 @@ extension PlayerStore {
     }
 
     /// 学完一课：记一次学完，奖杯只往上换。返回这次是不是比以前的好。
+    /// 只记奖杯，不发星星；星星另外用 payLessonStars（Core/Rewards）按最好的奖杯补发。
     @discardableResult
     func recordLesson(_ game: String, _ lesson: String, cup: LessonCup) -> Bool {
         let key = "tutor.cup.\(game).\(lesson)"

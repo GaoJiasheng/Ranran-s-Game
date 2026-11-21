@@ -86,7 +86,8 @@ struct XiangqiSetupView: View {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
                 Spacer()
                 TutorialButton { showTutorial = true }
-                StarCounter(value: store.xiangqiStarTotal)
+                // 赢棋、第一次赢的加奖、上课、复习拿到的星星全都算
+                StarCounter(value: store.stars(prefix: "xiangqi.stars."))
             }
         }
     }
@@ -127,6 +128,7 @@ struct XiangqiSetupView: View {
         let showcase = LevelShowcase(level: level.info,
                                      stars: store.xiangqiStars(level),
                                      wins: store.xiangqiWins(level),
+                                     preview: store.winPreview(game: "xiangqi", level: level.number),
                                      recommended: level == store.xiangqiRecommended,
                                      row: !wide,
                                      step: { step($0) },

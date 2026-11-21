@@ -253,6 +253,15 @@ final class XiangqiGame {
         speechTask?.cancel()
     }
 
+    #if DEBUG
+    /// 调试截图用：直接算冉冉赢了这一盘，好看结果页（启动参数 -winDemo）
+    func debugWin() {
+        stop()
+        aiThinking = false
+        winner = humanSide
+    }
+    #endif
+
     // MARK: 内部
 
     private func play(_ m: XMove) {
@@ -382,20 +391,17 @@ extension Opponent {
 extension PlayerStore {
     func xiangqiBest(_ l: XiangqiLevel) -> Int { count("xiangqi.best.\(l.number)") }
     func xiangqiWins(_ l: XiangqiLevel) -> Int { count("xiangqi.wins.\(l.number)") }
+    /// 这一档赢棋拿到的星星（不算第一次赢的加奖）
     func xiangqiStars(_ l: XiangqiLevel) -> Int { count("xiangqi.stars.\(l.number)") }
-    var xiangqiStarTotal: Int { XiangqiLevel.all.reduce(0) { $0 + xiangqiStars($1) } }
 
     var xiangqiRecommended: XiangqiLevel {
         let cleared = XiangqiLevel.all.last { xiangqiBest($0) > 0 }?.number ?? 0
         return XiangqiLevel(cleared + 1)
     }
 
+    /// 记一次胜利，星星按 RewardRules 发（见 recordGomokuWin）
     @discardableResult
-    func recordXiangqiWin(_ l: XiangqiLevel, stars: Int) -> Bool {
-        increment("xiangqi.wins.\(l.number)")
-        earnStars(stars, key: "xiangqi.stars.\(l.number)")
-        let isRecord = stars > xiangqiBest(l)
-        if isRecord { setCount("xiangqi.best.\(l.number)", stars) }
-        return isRecord
+    func recordXiangqiWin(_ l: XiangqiLevel, stars: Int) -> WinResult {
+        recordWin(game: "xiangqi", level: l.number, earned: stars)
     }
 }

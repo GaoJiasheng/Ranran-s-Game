@@ -86,7 +86,8 @@ struct GoSetupView: View {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
                 Spacer()
                 TutorialButton { showTutorial = true }
-                StarCounter(value: store.goStarTotal)
+                // 赢棋、第一次赢的加奖、上课、复习拿到的星星全都算
+                StarCounter(value: store.stars(prefix: "go.stars."))
             }
         }
     }
@@ -127,6 +128,7 @@ struct GoSetupView: View {
         let showcase = LevelShowcase(level: level.info,
                                      stars: store.goStars(level),
                                      wins: store.goWins(level),
+                                     preview: store.winPreview(game: "go", level: level.number),
                                      recommended: level == store.goRecommended,
                                      row: !wide,
                                      step: { step($0) },

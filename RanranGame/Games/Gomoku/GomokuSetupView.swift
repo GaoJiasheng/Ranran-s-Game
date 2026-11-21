@@ -49,6 +49,7 @@ struct GomokuSetupView: View {
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "tutorial") { showTutorial = true }
+            if UserDefaults.standard.bool(forKey: "play") { start() }
             #endif
         }
         .navigationDestination(item: $config) { c in
@@ -81,8 +82,8 @@ struct GomokuSetupView: View {
                 RoundIconButton(systemName: "house.fill", label: "回主页") { dismiss() }
                 Spacer()
                 TutorialButton { showTutorial = true }
-                // 五子棋里拿到的星星 = 每一档的星星加起来
-                StarCounter(value: store.gomokuStarTotal)
+                // 五子棋里拿到的星星：赢棋、第一次赢的加奖、上课、复习，全都算
+                StarCounter(value: store.stars(prefix: "gomoku.stars."))
             }
         }
     }
@@ -91,6 +92,7 @@ struct GomokuSetupView: View {
         let showcase = LevelShowcase(level: LevelInfo(level),
                                      stars: store.gomokuStars(level),
                                      wins: store.gomokuWins(level),
+                                     preview: store.winPreview(game: "gomoku", level: level.number),
                                      recommended: level == store.gomokuRecommended,
                                      row: !wide,
                                      step: { step($0) },
@@ -189,6 +191,8 @@ struct LevelShowcase: View {
     /// 这一档一共拿到的星星
     let stars: Int
     let wins: Int
+    /// 现在赢这一档能拿到什么（store.winPreview）
+    let preview: WinReward
     let recommended: Bool
     /// 竖屏时头像放左边、文字放右边，给难度阶梯多留高度
     var row = false
@@ -302,10 +306,14 @@ struct LevelShowcase: View {
                 } else {
                     Text("还没有赢过这一档")
                 }
+                payTag
+                    .padding(.leading, 4)
             }
             .font(.kid(17, weight: .semibold))
             .foregroundStyle(Palette.inkSoft.opacity(0.9))
-            .frame(height: 24)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(height: 30)
 
             Button(action: start) {
                 Label("开始挑战", systemImage: "play.fill")
@@ -316,6 +324,31 @@ struct LevelShowcase: View {
             .padding(.bottom, 6)
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// 赢下这一档现在能拿到什么，跟在战绩后面的一个小牌子：
+    /// 没赢过 →「第一次赢 +5」；太简单了 →「太简单啦：1 颗」（今天拿完了是「今天拿完啦」）；其他 →「最多 3 颗」
+    private var payTag: some View {
+        let text: String, tint: Color
+        if preview.bonus > 0 {
+            text = "第一次赢 +\(preview.bonus)"; tint = Palette.coral
+        } else if preview.low {
+            text = preview.base > 0 ? "太简单啦：\(preview.base) 颗" : "今天拿完啦"; tint = Palette.inkSoft
+        } else {
+            text = "最多 \(preview.earned) 颗"; tint = Palette.honey
+        }
+        return HStack(spacing: 4) {
+            Image(systemName: preview.bonus > 0 ? "gift.fill" : "star.fill")
+                .font(.system(size: 12, weight: .bold))
+            Text(text)
+                .font(.kid(15, weight: .heavy))
+        }
+        .foregroundStyle(preview.low && preview.bonus == 0 ? Palette.inkSoft : .white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(tint.opacity(preview.low && preview.bonus == 0 ? 0.16 : 0.95), in: Capsule())
+        .fixedSize()
+        .accessibilityLabel("赢了这一档：" + text)
     }
 }
 
