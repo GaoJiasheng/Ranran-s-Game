@@ -80,11 +80,11 @@ enum Subjects {
     /// 要学会的本领，按主页的顺序
     static let all: [Subject] = [
         .board(id: "gomoku", name: "五子棋", art: "card_gomoku", tint: Palette.coral, entry: .gomoku,
-               graduateName: "五子棋小高手", graduateLevel: 5),
+               graduateName: "五子棋小高手", graduateLevel: 4),
         .board(id: "xiangqi", name: "象棋", art: "card_xiangqi", tint: Color(hex: 0xC9624F), entry: .xiangqi,
-               graduateName: "象棋小棋手", graduateLevel: 4),
+               graduateName: "象棋小棋手", graduateLevel: 3),
         .board(id: "go", name: "围棋", art: "card_go", tint: Color(hex: 0x6FA07A), entry: .go,
-               graduateName: "围棋小棋手", graduateLevel: 5),
+               graduateName: "围棋小棋手", graduateLevel: 4),
         math,
     ]
 
@@ -149,22 +149,17 @@ enum Subjects {
 
 extension Subject {
     /// 一种棋：有教学课程（Tutorials/<id>.json）和十档电脑对手的，都能这样登记。
-    /// 毕业线 = 每一课都拿到银杯以上 + 赢到第 graduateLevel 档。
+    /// 毕业线只有一条：赢下第 graduateLevel 档（或者更高的档）。会下就是会下，不要求先把课上完——
+    /// 冉冉本来就会的棋，直接去赢一盘就算通过；课程是帮她赢到那一档的路，靠星星和每组课的本领奖章来鼓励。
+    /// 现在定的档位：五子棋 4（电脑会堵四，要自己做出双杀才赢得了）、象棋 3（赢遍入门的小兔：会走、会吃、会将死）、
+    /// 围棋 4（第一盘比地盘的正式围棋，1–3 档还只是吃子棋）。
     /// 本领奖章 = 学完每一组课 + 打败每一位小伙伴 + 毕业。
     static func board(id: String, name: String, art: String, tint: Color, entry: GameEntry,
                       graduateName: String, graduateLevel: Int) -> Subject {
         let course = TutorialCourse.bundled[id]
-        let lessons = course?.lessons ?? []
         let goals: (PlayerStore) -> [SubjectGoal] = { store in
-            var out: [SubjectGoal] = []
-            if !lessons.isEmpty {
-                let good = lessons.filter { (store.lessonCup(id, $0.id) ?? .bronze) >= .silver }.count
-                out.append(SubjectGoal(id: "\(id).lessons", title: "\(lessons.count) 节课都拿到银杯或金杯",
-                                       progress: RewardProgress(good, lessons.count)))
-            }
-            out.append(SubjectGoal(id: "\(id).level", title: "赢到第 \(graduateLevel) 档",
-                                   progress: RewardProgress(store.topCleared(id), graduateLevel)))
-            return out
+            [SubjectGoal(id: "\(id).level", title: "赢下第 \(graduateLevel) 档",
+                         progress: RewardProgress(store.topCleared(id), graduateLevel))]
         }
         var badges: [SkillBadge] = (course?.tracks ?? []).map { track in
             SkillBadge(id: "\(id).track.\(track.id)", subject: id, kind: .track, name: track.title,

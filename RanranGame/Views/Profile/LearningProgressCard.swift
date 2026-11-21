@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 「学到哪了」：给家长看的目标进度。每个科目一块，全部目标做到就算「学会了」。
+/// 「学到哪了」：给家长看的目标进度。每个科目一块，棋类赢下目标档位、数学通过全部关卡就算「学会了」。
 struct LearningProgressCard: View {
     /// 宽屏时 2×2，竖屏时一列
     var wide: Bool = true
@@ -11,7 +11,7 @@ struct LearningProgressCard: View {
                 Text("学到哪了")
                     .font(.kid(28, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                Text("每个本领的小目标全部做到，就算学会了。")
+                Text("棋类赢下目标那一档就算学会，加减乘除要通过全部关卡。")
                     .font(.kid(17, weight: .semibold))
                     .foregroundStyle(Palette.inkSoft)
             }
