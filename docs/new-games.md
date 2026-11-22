@@ -77,7 +77,7 @@
 - **棋类**（国际象棋）：和象棋一模一样——十档对手（`Opponent`、`LevelShowcase`、`LevelLadder` 都是现成的），赢了调
   `store.recordWin(game:level:earned:)`（earned = 赢 + 没悔棋 + 没用提示），一盘下完（输赢、和家人下都算）调 `store.noteDaily(.play)`，
   结果页用现成的 `WinRewardNote`。照 `Games/Xiangqi/` 的做法来。
-- **解谜类**（数独、七巧板、华容道）：
+- **解谜类**（数独、七巧板、华容道、编程）：
   - 关卡分组写在 `Logic/<Game>Catalog.swift`：`packs: [PuzzlePack]`（每组最多 20 关，3–5 组，从易到难）和 `passPacks`（通过前几组算"学会了"）。
     组和关的 id 会写进存档，定了就永远不改。每组的小图叫 `pack_<game>_<组 id>`。
   - 首页直接用 `Views/Puzzle/PuzzleSetupView`（选组、关卡格子、解锁、星星、新手提示、进教学都在里面），你只给每一关的小图和点开之后的页面。

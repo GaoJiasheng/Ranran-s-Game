@@ -1,5 +1,1425 @@
 {
  "game": "coding",
  "title": "编程教学",
- "tracks": []
+ "tracks": [
+  {
+   "id": "basic",
+   "title": "指令和顺序",
+   "subtitle": "用箭头带小兔走路",
+   "art": "tutor_coding_basic",
+   "lessons": [
+    {
+     "id": "listen",
+     "title": "小兔听指令",
+     "icon": "arrow.right.square.fill",
+     "learned": "用箭头让小兔走路",
+     "steps": [
+      {
+       "say": "这是小兔的花园。小兔想吃胡萝卜，可是它要听你的指令才会走。",
+       "board": "..../BC../....",
+       "extra": {
+        "program": "",
+        "limits": "main=3 | U D L R"
+       }
+      },
+      {
+       "say": "积木盒里的箭头，点一下就排进程序里。一个箭头，小兔走一格。点往右的箭头，再点「开始」。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "..../BC../....",
+       "extra": {
+        "program": "",
+        "limits": "main=3 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R"
+        }
+       },
+       "hint": "点积木盒里往右的箭头，它会落进闪着的空位里。再点「开始」。"
+      },
+      {
+       "say": "胡萝卜远一点，就多排几个箭头。小兔要走三格才到胡萝卜。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "..../B..C/....",
+       "extra": {
+        "program": "",
+        "limits": "main=4 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R R R",
+         "claim": "size=3"
+        }
+       },
+       "hint": "排三个往右的箭头，再点「开始」。"
+      },
+      {
+       "say": "排错了也没关系：点一下程序里的积木，它就被拿掉了。这一次，胡萝卜在小兔的上面。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": ".C./.../.B.",
+       "extra": {
+        "program": "",
+        "limits": "main=3 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "U U",
+         "claim": "size=2"
+        }
+       },
+       "hint": "要用往上的箭头，排两个。"
+      }
+     ]
+    },
+    {
+     "id": "order",
+     "title": "排好队再出发",
+     "icon": "list.number",
+     "learned": "程序从第一块做到最后一块",
+     "steps": [
+      {
+       "say": "小兔会从第一块积木开始，一块一块往后做。看，它先往右，再往右，最后往下。",
+       "board": "..../B.../..C.",
+       "extra": {
+        "program": "R R D",
+        "limits": "main=3 | U D L R",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "先别跑！看着程序想一想：小兔最后会站在哪一格？点那一格。",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..../B.../...C",
+       "extra": {
+        "program": "R D R",
+        "limits": "main=3 | U D L R"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=c3"
+        }
+       },
+       "hint": "跟着积木一块一块走：先往右，再往下，再往右。"
+      },
+      {
+       "say": "这三个程序用的积木一样多，只是顺序不同。哪一个能吃到胡萝卜？",
+       "drill": "哪一个程序能过关？点一下！",
+       "board": ".#C./B.../....",
+       "extra": {
+        "limits": "main=3 | U D L R"
+       },
+       "task": {
+        "type": "choose",
+        "rule": "choose",
+        "extra": {
+         "options": "R R U|U R R|R U R",
+         "claim": "option=1"
+        }
+       },
+       "hint": "石头挡在上面，要先往右走两格，再往上。"
+      },
+      {
+       "say": "现在你来排。先想好先往哪边走，别撞到石头。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "..C./.#../B...",
+       "extra": {
+        "program": "",
+        "limits": "main=5 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R R U U",
+         "claim": "size=4"
+        }
+       },
+       "hint": "石头在中间，可以先往右走两格，再往上走两格。"
+      }
+     ]
+    },
+    {
+     "id": "turn",
+     "title": "拐个弯",
+     "icon": "arrow.turn.up.right",
+     "learned": "把几个方向接起来拐弯",
+     "steps": [
+      {
+       "say": "路不一定是直的。几个方向的箭头接起来，小兔就能拐弯。排之前，先用手指在花园里比一比路。",
+       "board": "...C/..../B...",
+       "extra": {
+        "program": "U U R R R",
+        "limits": "main=6 | U D L R",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..../..../B..C",
+       "extra": {
+        "program": "U U R R R",
+        "limits": "main=6 | U D L R"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=d1"
+        }
+       },
+       "hint": "先往上走两格，再往右走三格。"
+      },
+      {
+       "say": "你来排：胡萝卜在右上角。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "...C/..../B...",
+       "extra": {
+        "program": "",
+        "limits": "main=7 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R R R U U",
+         "claim": "size=5"
+        }
+       },
+       "hint": "往右走三格，再往上走两格。"
+      },
+      {
+       "say": "再来一个。这一次胡萝卜在下面。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "B.../...#/..C.",
+       "extra": {
+        "program": "",
+        "limits": "main=6 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "D D R R",
+         "claim": "size=4"
+        }
+       },
+       "hint": "可以先往下走两格，再往右走两格。"
+      }
+     ]
+    },
+    {
+     "id": "rock",
+     "title": "绕开石头",
+     "icon": "mountain.2.fill",
+     "learned": "绕开石头走",
+     "steps": [
+      {
+       "say": "石头走不上去。小兔要是往石头上走，就会撞到，程序也就停在那一块。",
+       "board": "..../B#C./....",
+       "extra": {
+        "program": "R R",
+        "limits": "main=3 | U D L R",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "这个程序有一块错了，小兔撞到了。看看它是在哪一块撞上去的？点出那一块。",
+       "drill": "点出程序里错的那一块！",
+       "board": "..../B.#C",
+       "extra": {
+        "program": "U R R R U",
+        "limits": "main=6 | U D L R"
+       },
+       "task": {
+        "type": "spot",
+        "rule": "spot",
+        "extra": {
+         "claim": "spot=0:4,outcome=bump,culprit=0:4"
+        }
+       },
+       "hint": "跟着积木走一遍：最后一块要往下，才回到胡萝卜那一排。"
+      },
+      {
+       "say": "你来排。石头挡在中间，从旁边绕过去。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "B..../.##../....C",
+       "extra": {
+        "program": "",
+        "limits": "main=8 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R R R D D R",
+         "claim": "size=6"
+        }
+       },
+       "hint": "可以先往右走三格，再往下走两格，最后往右一格。"
+      },
+      {
+       "say": "最后一个，小心别撞到石头。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "...C/.##./B...",
+       "extra": {
+        "program": "",
+        "limits": "main=7 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "U U R R R",
+         "claim": "size=5"
+        }
+       },
+       "hint": "先往上走到最上面那一排，再往右。"
+      }
+     ]
+    },
+    {
+     "id": "count",
+     "title": "先数再排",
+     "icon": "number.circle.fill",
+     "learned": "先数清楚每段走几格",
+     "steps": [
+      {
+       "say": "路长的时候，要先数一数每一段走几格，再排积木。",
+       "board": "...C/..../B...",
+       "extra": {
+        "program": "R R R U U",
+        "limits": "main=6 | U D L R"
+       }
+      },
+      {
+       "say": "小兔要先往右走几格，再往上走两格。往右要走几格？选一个。",
+       "drill": "要走多远才够？选一个！",
+       "board": "...C/..../B...",
+       "extra": {
+        "limits": "main=6 | U D L R"
+       },
+       "task": {
+        "type": "count",
+        "rule": "count",
+        "extra": {
+         "template": "R# U U",
+         "counts": "2|3|4",
+         "claim": "answer=3"
+        }
+       },
+       "hint": "用手指从小兔开始，一格一格比到胡萝卜的下面。"
+      },
+      {
+       "say": "两根胡萝卜：先吃近的那一根，路才短。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "C..../.B.../....C",
+       "extra": {
+        "program": "",
+        "limits": "main=9 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "L U R R R R D D",
+         "max": "8",
+         "claim": "size=8"
+        }
+       },
+       "hint": "左上角那一根近，先吃它，再去右下角。",
+       "ok": "先吃近的，路最短！"
+      },
+      {
+       "say": "这两根在同一条路上，顺路就吃掉了。",
+       "drill": "排一个程序，带小兔吃到胡萝卜！",
+       "board": "B.C../...../....C",
+       "extra": {
+        "program": "",
+        "limits": "main=8 | U D L R"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R R R R D D",
+         "claim": "size=6"
+        }
+       },
+       "hint": "往右走到头，再往下。"
+      }
+     ]
+    },
+    {
+     "id": "bug",
+     "title": "捉虫子",
+     "icon": "ladybug.fill",
+     "learned": "一步一步找到错的那一块，只改那一块",
+     "steps": [
+      {
+       "say": "程序不对，是很正常的事。程序里错的地方，叫虫子。找虫子的办法是：点「一步」，看着小兔一块一块走。",
+       "board": "...C/B#..",
+       "extra": {
+        "program": "U R R D",
+        "limits": "main=5 | U D L R"
+       }
+      },
+      {
+       "say": "这个程序走完了，可是没吃到胡萝卜。点出错的那一块。",
+       "drill": "点出程序里错的那一块！",
+       "board": "...C/B#..",
+       "extra": {
+        "program": "U R R D",
+        "limits": "main=5 | U D L R"
+       },
+       "task": {
+        "type": "spot",
+        "rule": "spot",
+        "extra": {
+         "claim": "spot=0:3,outcome=end"
+        }
+       },
+       "hint": "点「一步」走一走：走到最后一块的时候，往哪边走才对？"
+      },
+      {
+       "say": "这个程序最后一块错了。把错的那一块换掉，别的都不用动。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "B..../.##../....C",
+       "extra": {
+        "program": "R R R D D L",
+        "limits": "main=7 | U D L R"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "R R R D D R"
+        }
+       },
+       "hint": "点最后一块把它拿掉，再放一个往右的箭头。"
+      },
+      {
+       "say": "这个程序少了一块，小兔还差一步。加上一块，让它吃到胡萝卜。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "....C/B....",
+       "extra": {
+        "program": "R R R U",
+        "limits": "main=6 | U D L R"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "R R R R U"
+        }
+       },
+       "hint": "往右要走四格，程序里只有三个往右。",
+       "ok": "虫子捉到啦！"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "loop",
+   "title": "重复",
+   "subtitle": "一样的事只说一遍",
+   "art": "tutor_coding_loop",
+   "lessons": [
+    {
+     "id": "repeat",
+     "title": "一样的事说一遍",
+     "icon": "repeat",
+     "learned": "用「重复」把一样的事只说一遍",
+     "steps": [
+      {
+       "say": "小兔要往右走好多格，就要排好多个往右的箭头。有一个更省的办法：「重复」。",
+       "board": "......./B.....C",
+       "extra": {
+        "program": "6[R]",
+        "limits": "main=2 loop=1 | U D L R rep",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "「重复」积木上的数字，就是里面的积木要做几次。点那个数字，可以用加号、减号来改。",
+       "board": "......./B.....C",
+       "extra": {
+        "program": "6[R]",
+        "limits": "main=2 loop=1 | U D L R rep"
+       }
+      },
+      {
+       "say": "你来试一试：主程序里只有一格，要用「重复」。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "B....C/......",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "5[R]",
+         "need": "rep",
+         "claim": "size=2,count=5"
+        }
+       },
+       "hint": "放一个「重复」，里面放往右的箭头，再把次数改成五。"
+      },
+      {
+       "say": "要重复几次，小兔才能走到胡萝卜？选一个数字。",
+       "drill": "要几次才够？选一个！",
+       "board": "..C/.../.../.../.B.",
+       "extra": {
+        "program": "4[U] R",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "count",
+        "rule": "count",
+        "extra": {
+         "template": "#[U] R",
+         "counts": "3|4|5",
+         "claim": "answer=4"
+        }
+       },
+       "hint": "往上走到最上面那一排，要几格？"
+      }
+     ]
+    },
+    {
+     "id": "times",
+     "title": "重复几次",
+     "icon": "number.square.fill",
+     "learned": "数清楚格子，定重复几次",
+     "steps": [
+      {
+       "say": "次数要刚刚好：少一次，走不到；多一次，就走过头了。",
+       "board": "B...../....C.",
+       "extra": {
+        "program": "4[R] D",
+        "limits": "main=2 loop=1 | U D L R rep"
+       }
+      },
+      {
+       "say": "往右要重复几次，再往下一格，才能吃到胡萝卜？",
+       "drill": "要几次才够？选一个！",
+       "board": "B...../....C.",
+       "extra": {
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "count",
+        "rule": "count",
+        "extra": {
+         "template": "#[R] D",
+         "counts": "3|4|5",
+         "claim": "answer=4"
+        }
+       },
+       "hint": "胡萝卜的上面那一格，离小兔有几格？"
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "B.C/.../.../...",
+       "extra": {
+        "program": "3[D] R",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=b4"
+        }
+       },
+       "hint": "先往下走三格，再往右一格。"
+      },
+      {
+       "say": "这个程序的次数不对，改一改。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "......C/B......",
+       "extra": {
+        "program": "4[R] U",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "6[R] U",
+         "claim": "outcome=end,count=6"
+        }
+       },
+       "hint": "小兔要往右走六格，才到胡萝卜的下面。点重复上的数字改一改。"
+      }
+     ]
+    },
+    {
+     "id": "stairs",
+     "title": "重复一小段",
+     "icon": "stairs",
+     "learned": "把一小段放进「重复」",
+     "steps": [
+      {
+       "say": "上楼梯是往右、往上，往右、往上……一样的一小段一直出现。把这一小段放进「重复」里。",
+       "board": "...C/..../..../B...",
+       "extra": {
+        "program": "3[R U]",
+        "limits": "main=1 loop=2 | U D L R rep",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..../..../..../B..C",
+       "extra": {
+        "program": "3[U R]",
+        "limits": "main=1 loop=2 | U D L R rep"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=d1"
+        }
+       },
+       "hint": "往上、往右，做三次。"
+      },
+      {
+       "say": "你来排：重复里面放两块。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "....C/...../...../...../B....",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "4[R U]",
+         "need": "rep",
+         "claim": "size=3,count=4"
+        }
+       },
+       "hint": "一小段是往右、往上，放进重复里，做四次。"
+      },
+      {
+       "say": "这一次是下楼梯。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "B..../...../...../...../....C",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "4[R D]",
+         "need": "rep",
+         "claim": "size=3,count=4"
+        }
+       },
+       "hint": "一小段是往右、往下，做四次。"
+      }
+     ]
+    },
+    {
+     "id": "pattern",
+     "title": "找一样的一段",
+     "icon": "square.stack.3d.up.fill",
+     "learned": "在长长的路里找出一样的一段",
+     "steps": [
+      {
+       "say": "长长的路里，常常藏着完全一样的一段。先找出这一段，再用重复。",
+       "board": "......C/......./......./B......",
+       "extra": {
+        "program": "3[R R U]",
+        "limits": "main=1 loop=3 | U D L R rep",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "哪一个程序能吃到胡萝卜？",
+       "drill": "哪一个程序能过关？点一下！",
+       "board": "......C/......./......./B......",
+       "extra": {
+        "limits": "main=1 loop=3 | U D L R rep"
+       },
+       "task": {
+        "type": "choose",
+        "rule": "choose",
+        "extra": {
+         "options": "3[R U]|3[R R U]|3[R U U]",
+         "claim": "option=2"
+        }
+       },
+       "hint": "一小段是往右、往右、往上。"
+      },
+      {
+       "say": "你来排：找出一样的那一段。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "B....../......./......./......C",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=3 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "3[R R D]",
+         "need": "rep",
+         "claim": "size=4"
+        }
+       },
+       "hint": "一小段是往右、往右、往下，做三次。"
+      },
+      {
+       "say": "再找一个。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "..C/.../.../.../B..",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=3 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "2[U U R]",
+         "need": "rep",
+         "claim": "size=4"
+        }
+       },
+       "hint": "一小段是往上、往上、往右，做两次。"
+      }
+     ]
+    },
+    {
+     "id": "mix",
+     "title": "重复再加几步",
+     "icon": "plus.square.fill",
+     "learned": "重复前后还能接别的积木",
+     "steps": [
+      {
+       "say": "重复的前面和后面，还可以接别的积木，也可以再接一个重复。",
+       "board": "B.../..../...C",
+       "extra": {
+        "program": "3[R] 2[D]",
+        "limits": "main=2 loop=1 | U D L R rep",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..../B..C",
+       "extra": {
+        "program": "U 3[R]",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=d1"
+        }
+       },
+       "hint": "先往上一格，再往右走三格。"
+      },
+      {
+       "say": "你来排：用两个重复。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": "B.../..../...C",
+       "extra": {
+        "program": "",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "3[R] 2[D]",
+         "need": "rep",
+         "claim": "size=4"
+        }
+       },
+       "hint": "先往右走三格，再往下走两格：一个重复管一段。"
+      },
+      {
+       "say": "小兔下面是石头，先往右一步，再用重复往上。",
+       "drill": "用「重复」排一个程序，带小兔吃到胡萝卜！",
+       "board": ".C../..../..../#.../B...",
+       "extra": {
+        "program": "",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "R 4[U]",
+         "need": "rep",
+         "claim": "size=3,count=4"
+        }
+       },
+       "hint": "先放一个往右的箭头，再放重复，里面放往上，做四次。"
+      }
+     ]
+    },
+    {
+     "id": "loopbug",
+     "title": "给重复捉虫",
+     "icon": "ladybug.circle.fill",
+     "learned": "找到重复里的虫子",
+     "steps": [
+      {
+       "say": "重复里要是有虫子，每一次都会错。常见的虫子有两种：次数不对，或者里面的顺序反了。",
+       "board": "...C/..../..../B...",
+       "extra": {
+        "program": "2[R U]",
+        "limits": "main=1 loop=2 | U D L R rep"
+       }
+      },
+      {
+       "say": "这个程序，小兔还没走到。点出错的那一块。",
+       "drill": "点出程序里错的那一块！",
+       "board": "...C/..../..../B...",
+       "extra": {
+        "program": "2[R U]",
+        "limits": "main=1 loop=2 | U D L R rep"
+       },
+       "task": {
+        "type": "spot",
+        "rule": "spot",
+        "extra": {
+         "claim": "spot=0:0,outcome=end"
+        }
+       },
+       "hint": "重复的次数对不对？楼梯有三级。"
+      },
+      {
+       "say": "这个重复里的顺序反了，小兔一出发就撞到石头。改一改。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "...C/..../#.../B...",
+       "extra": {
+        "program": "3[U R]",
+        "limits": "main=1 loop=2 | U D L R rep"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "3[R U]",
+         "claim": "outcome=bump"
+        }
+       },
+       "hint": "小兔头上是石头，要先往右，再往上。把里面的两块换一换。"
+      },
+      {
+       "say": "最后一个：小兔走过头了。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "....C./B.....",
+       "extra": {
+        "program": "5[R] U",
+        "limits": "main=2 loop=1 | U D L R rep"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "4[R] U",
+         "claim": "outcome=end,count=4"
+        }
+       },
+       "hint": "多走了一格，把次数改小一点。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "func",
+   "title": "绝招",
+   "subtitle": "给一小段起个名字",
+   "art": "tutor_coding_func",
+   "lessons": [
+    {
+     "id": "star",
+     "title": "教小兔一个绝招",
+     "icon": "star.fill",
+     "learned": "用绝招把一小段起个名字",
+     "steps": [
+      {
+       "say": "绝招是你自己排的一小段。在星星绝招那一栏排好，主程序里放一个星星，小兔就会把那一整段做一遍。",
+       "board": "B..../...../..C../...../....C",
+       "extra": {
+        "program": "S S ; S=R R D D",
+        "limits": "main=2 proc=4 | U D L R S",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "B../.../..C",
+       "extra": {
+        "program": "S S ; S=R D",
+        "limits": "main=2 proc=2 | U D L R S"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=c3"
+        }
+       },
+       "hint": "星星是往右、往下。做两次星星。"
+      },
+      {
+       "say": "你来排：先在绝招那一栏排好一小段，主程序里放两个星星。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": "B..../...../..C../...../....C",
+       "extra": {
+        "program": "",
+        "limits": "main=2 proc=4 | U D L R S"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "S S ; S=R R D D",
+         "need": "S",
+         "claim": "size=6"
+        }
+       },
+       "hint": "绝招里排往右、往右、往下、往下。"
+      },
+      {
+       "say": "看，用了绝招，主程序里只要放两块。",
+       "board": "B..../...../..C../...../....C",
+       "extra": {
+        "program": "S S ; S=R R D D",
+        "limits": "main=2 proc=4 | U D L R S"
+       }
+      }
+     ]
+    },
+    {
+     "id": "reuse",
+     "title": "绝招用好几次",
+     "icon": "star.square.on.square.fill",
+     "learned": "同样的一段用好几次",
+     "steps": [
+      {
+       "say": "同一段路出现好几次的时候，绝招最省力。",
+       "board": "......./B#C#C#C",
+       "extra": {
+        "program": "S S S ; S=U R R D",
+        "limits": "main=3 proc=4 | U D L R S",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "哪一个程序能吃到全部的胡萝卜？",
+       "drill": "哪一个程序能过关？点一下！",
+       "board": "......C/....C../..C..../B......",
+       "extra": {
+        "limits": "main=3 proc=3 | U D L R S"
+       },
+       "task": {
+        "type": "choose",
+        "rule": "choose",
+        "extra": {
+         "options": "S S S ; S=R U|S S S ; S=R R U|S S S ; S=U U R",
+         "claim": "option=2"
+        }
+       },
+       "hint": "一小段是往右、往右、往上。"
+      },
+      {
+       "say": "你来排：跳过石头的那一段，排进绝招里。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": "......./B#C#C#C",
+       "extra": {
+        "program": "",
+        "limits": "main=3 proc=4 | U D L R S"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "S S S ; S=U R R D",
+         "need": "S",
+         "claim": "size=7"
+        }
+       },
+       "hint": "跳过一块石头是：往上、往右、往右、往下。"
+      },
+      {
+       "say": "再来一个。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": "B....../...C.../......C",
+       "extra": {
+        "program": "",
+        "limits": "main=2 proc=4 | U D L R S"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "S S ; S=D R R R",
+         "need": "S",
+         "claim": "size=6"
+        }
+       },
+       "hint": "一小段是往下一格，再往右三格。"
+      }
+     ]
+    },
+    {
+     "id": "nest",
+     "title": "绝招和重复",
+     "icon": "square.on.square.squareshape.controlhandles",
+     "learned": "绝招和重复一起用",
+     "steps": [
+      {
+       "say": "绝招可以放进重复里，重复也可以放进绝招里。",
+       "board": "......./B#C#C#C",
+       "extra": {
+        "program": "3[S] ; S=U R R D",
+        "limits": "main=1 loop=1 proc=4 | U D L R rep S",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "C..../...../B....",
+       "extra": {
+        "program": "S S ; S=2[R] U",
+        "limits": "main=2 loop=1 proc=2 | U D L R rep S"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=e1"
+        }
+       },
+       "hint": "星星是往右两格、往上一格。做两次。"
+      },
+      {
+       "say": "你来排：主程序里只有一格。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": "......./B#C#C#C",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=1 proc=4 | U D L R rep S"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "3[S] ; S=U R R D",
+         "need": "S",
+         "claim": "size=6"
+        }
+       },
+       "hint": "跳过石头的那一段排进绝招，再用重复做三次。"
+      },
+      {
+       "say": "这一次，绝招那一栏只有两格。在绝招里放一个重复。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": "B....../...C.../......C",
+       "extra": {
+        "program": "",
+        "limits": "main=2 loop=1 proc=2 | U D L R rep S"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "S S ; S=3[R] D",
+         "need": "S",
+         "claim": "size=5"
+        }
+       },
+       "hint": "绝招里放一个重复，往右三次，后面再放往下。"
+      }
+     ]
+    },
+    {
+     "id": "fixstar",
+     "title": "改一处，处处对",
+     "icon": "wand.and.stars",
+     "learned": "改好绝招里的一处，每一处就都对了",
+     "steps": [
+      {
+       "say": "绝招里要是有一只虫子，每一次用绝招都会错。把绝招里的那一块改对，用到它的地方就全都对了。",
+       "board": "......C/....C../.#C..../B......",
+       "extra": {
+        "program": "S S S ; S=R U U",
+        "limits": "main=3 proc=3 | U D L R S"
+       }
+      },
+      {
+       "say": "点出绝招里错的那一块。",
+       "drill": "点出程序里错的那一块！",
+       "board": "......C/....C../.#C..../B......",
+       "extra": {
+        "program": "S S S ; S=R U U",
+        "limits": "main=3 proc=3 | U D L R S"
+       },
+       "task": {
+        "type": "spot",
+        "rule": "spot",
+        "extra": {
+         "claim": "spot=1:1"
+        }
+       },
+       "hint": "一小段应该是往右、往右、往上。"
+      },
+      {
+       "say": "这个绝招有虫子，把它改对。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "B..../...../..C../...../....C",
+       "extra": {
+        "program": "S S ; S=R D D D",
+        "limits": "main=2 proc=4 | U D L R S"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "S S ; S=R R D D",
+         "claim": "outcome=bump"
+        }
+       },
+       "hint": "绝招里多往下走了一格，少往右走了一格。"
+      },
+      {
+       "say": "还有一个绝招，叫菱形。星星往右往上，菱形往右往下，两个绝招轮着用。",
+       "drill": "用绝招排一个程序，带小兔吃到胡萝卜！",
+       "board": ".C.C./B.C.C",
+       "extra": {
+        "program": "",
+        "limits": "main=4 proc=2 | U D L R S T"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "S T S T ; S=R U ; T=R D",
+         "need": "T",
+         "claim": "size=8"
+        }
+       },
+       "hint": "星星是往右、往上；菱形是往右、往下。主程序里星星、菱形、星星、菱形。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cond",
+   "title": "如果",
+   "subtitle": "一个程序管好几种情况",
+   "art": "tutor_coding_cond",
+   "lessons": [
+    {
+     "id": "blue",
+     "title": "如果踩着蓝花",
+     "icon": "camera.macro",
+     "learned": "「如果」只在踩着蓝花的时候才做",
+     "steps": [
+      {
+       "say": "「如果」积木里的东西，只在小兔踩着蓝花的时候才做；没踩着，就跳过。",
+       "board": "......C/Bb.....",
+       "extra": {
+        "program": "6[R ?b[U]]",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..../Bb.C",
+       "extra": {
+        "program": "3[R ?b[U]]",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=d1"
+        }
+       },
+       "hint": "第一步就踩到了蓝花，所以往上走了一格，后面都是往右。"
+      },
+      {
+       "say": "这一次，「如果」里面是往下。小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "B.b./...C",
+       "extra": {
+        "program": "3[R ?b[D]]",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=d2"
+        }
+       },
+       "hint": "走到蓝花上，往下一格，再往右。"
+      },
+      {
+       "say": "你来排：重复里放一个往右，再放一个「如果」。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": ".....C/B..b..",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "5[R ?b[U]]",
+         "need": "?b"
+        }
+       },
+       "hint": "重复里先放往右的箭头，再放「如果」，「如果」里放往上。"
+      }
+     ]
+    },
+    {
+     "id": "two",
+     "title": "一个程序，两个花园",
+     "icon": "square.split.2x1.fill",
+     "learned": "同一个程序，走好几个花园",
+     "steps": [
+      {
+       "say": "这一关有两个花园，蓝花不在同一个地方。点上面的页签，两个花园都看一看。用「如果」，同一个程序两个花园都能过。",
+       "board": "......C/.b...../Bb.....|......C/......./B..b...",
+       "extra": {
+        "program": "6[R ?b[U]]",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       }
+      },
+      {
+       "say": "哪一个程序，两个花园都能过？",
+       "drill": "哪一个程序能过关？点一下！",
+       "board": ".....C/Bb#...|..#..C/B...b.",
+       "extra": {
+        "limits": "main=3 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "choose",
+        "rule": "choose",
+        "extra": {
+         "options": "4[R] U R|5[R ?b[U]]|R U 4[R]",
+         "claim": "option=2"
+        }
+       },
+       "hint": "只有用了「如果」的那个，才知道什么时候往上。"
+      },
+      {
+       "say": "你来排，两个花园都要过。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": "......C/...b.../Bb.....|......C/.....b./B..b...",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "6[R ?b[U]]",
+         "need": "?b"
+        }
+       },
+       "hint": "每一次先往右，踩着蓝花就往上。"
+      },
+      {
+       "say": "再来一个：这一次，踩着蓝花往下走。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": "B.b.../....b./.....C|Bb..../...b../.....C",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 when=1 | U D L R rep ?b"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "5[R ?b[D]]",
+         "need": "?b"
+        }
+       },
+       "hint": "每一次先往右，踩着蓝花就往下。"
+      }
+     ]
+    },
+    {
+     "id": "forever",
+     "title": "一直重复",
+     "icon": "infinity",
+     "learned": "「一直重复」做到过关为止",
+     "steps": [
+      {
+       "say": "「一直重复」不用管次数：它会一直做下去，过关了才停下来。",
+       "board": "......C/B...b..|...C.../Bb.....",
+       "extra": {
+        "program": "*[R ?b[U]]",
+        "limits": "main=1 loop=2 when=1 | U D L R ?b *",
+        "run": "yes"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "....C/B.b..",
+       "extra": {
+        "program": "*[R ?b[U]]",
+        "limits": "main=1 loop=2 when=1 | U D L R ?b *"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=e1"
+        }
+       },
+       "hint": "走到蓝花上往上一格，再一直往右，吃到胡萝卜就停。"
+      },
+      {
+       "say": "你来排：两个花园一长一短，用「一直重复」。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": ".....C/B..b../......|.../..C/Bb.",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 when=1 | U D L R ?b *"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "*[R ?b[U]]",
+         "need": "*"
+        }
+       },
+       "hint": "一直重复里放往右，再放「如果」，里面放往上。"
+      },
+      {
+       "say": "这一次小兔往下走，踩着蓝花就往右。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": "B../b../.b./..C|B../.../b../.C.",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=2 when=1 | U D L R ?b *"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "*[D ?b[R]]",
+         "need": "*"
+        }
+       },
+       "hint": "一直重复里放往下，再放「如果」，里面放往右。"
+      }
+     ]
+    },
+    {
+     "id": "yellow",
+     "title": "两种花",
+     "icon": "sun.max.fill",
+     "learned": "用两个「如果」管两种花",
+     "steps": [
+      {
+       "say": "黄花也有「如果」。蓝花往上，黄花往下，把两个「如果」放在一起。",
+       "board": "......./B.b.y.C/.......",
+       "extra": {
+        "program": "*[R ?b[U] ?y[D]]",
+        "limits": "main=1 loop=3 when=1 | U D L R ?b ?y *"
+       }
+      },
+      {
+       "say": "看着程序想一想，小兔最后站在哪一格？",
+       "drill": "点一点，小兔最后会站在哪儿？",
+       "board": "..y../Bb.../....C",
+       "extra": {
+        "program": "4[R ?b[U] ?y[D]]",
+        "limits": "main=1 loop=3 when=1 | U D L R rep ?b ?y"
+       },
+       "task": {
+        "type": "predict",
+        "rule": "predict",
+        "extra": {
+         "claim": "cell=e2"
+        }
+       },
+       "hint": "踩着蓝花往上一格，踩着黄花往下一格，别的时候往右。"
+      },
+      {
+       "say": "这个程序有虫子：踩着黄花的时候走错了。改一改。",
+       "drill": "程序里有一只小虫子，把它改对！",
+       "board": "......./B..y.../.#....C|....y../B.b#..C/.......",
+       "extra": {
+        "program": "*[R ?b[U] ?y[U]]",
+        "limits": "main=1 loop=3 when=1 | U D L R ?b ?y *"
+       },
+       "task": {
+        "type": "fix",
+        "rule": "fix",
+        "extra": {
+         "answer": "*[R ?b[U] ?y[D]]"
+        }
+       },
+       "hint": "踩着黄花的时候，要往下走。"
+      },
+      {
+       "say": "最后一个，你来排：两种花，两个花园。",
+       "drill": "用「如果」排一个程序，每个花园都要过！",
+       "board": "...y#../B.b..y./.#.#..C|..#..y./By.b#.C/..b.#..",
+       "extra": {
+        "program": "",
+        "limits": "main=1 loop=3 when=1 | U D L R ?b ?y *"
+       },
+       "task": {
+        "type": "build",
+        "rule": "build",
+        "extra": {
+         "answer": "*[R ?b[U] ?y[D]]",
+         "need": "?y"
+        }
+       },
+       "hint": "一直重复里放三块：往右、蓝花往上、黄花往下。",
+       "ok": "两种花都没难住你！"
+      }
+     ]
+    }
+   ]
+  }
+ ]
 }
