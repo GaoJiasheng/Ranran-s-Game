@@ -61000,7 +61000,7 @@
     }
   },
   "vo_b5deda9331": {
-    "speak": "两个炮叠在一条线上，前面的炮当炮架，叫『虫炮』。将死它！",
+    "speak": "两个炮叠在一条线上，前面的炮裆炮架，叫『虫炮』。将死它！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -61027,16 +61027,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c96474671e1b260f63cde70518f2115af095c704fbfc91b0247feaa67123be20",
+    "sha256": "d5b84406340bb4404154bd82172e0649a7cdd49a46b2080bc5569a6be6e27922",
     "validation": {
-      "duration_seconds": 6.503375,
+      "duration_seconds": 6.472708,
       "chinese_characters": 22,
       "spoken_characters": 22,
-      "characters_per_second": 3.3829,
+      "characters_per_second": 3.3989,
       "mean_volume_db": -15.7,
-      "integrated_lufs": -16.03,
-      "true_peak_dbtp": -1.65,
-      "size_bytes": 52653
+      "integrated_lufs": -16.06,
+      "true_peak_dbtp": -1.64,
+      "size_bytes": 52461
     }
   },
   "vo_b5dffd96ba": {
