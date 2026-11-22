@@ -13,7 +13,9 @@ struct WallTabBar: View {
     @Namespace private var pill
 
     var body: some View {
-        let tabs = WallTab.all
+        // 正开着的那一页总要有页签（比如调试参数直接打开了一个收起来的科目）
+        let shown = WallTab.shown(store)
+        let tabs = WallTab.all.filter { shown.contains($0) || $0 == selection }
         // 一排放得下（每个页签至少 96 宽）就一排；竖屏放不下，分成上下两排
         ViewThatFits(in: .horizontal) {
             row(tabs, minWidth: 96)

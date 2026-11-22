@@ -33,6 +33,7 @@ struct ProfileView: View {
                                     MedalSummaryCard()
                                     LessonCupCard()
                                     RewardNotesEntryCard()
+                                    HomeGamesEntryCard()
                                     saveCard
                                 }
                                 .frame(width: 420)
@@ -50,6 +51,7 @@ struct ProfileView: View {
                             LessonCupCard()
                             recordsCard
                             RewardNotesEntryCard()
+                            HomeGamesEntryCard()
                             saveCard
                         }
                     }

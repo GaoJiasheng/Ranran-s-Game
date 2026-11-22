@@ -44,8 +44,9 @@ struct HomeView: View {
                                     .padding(.top, 4)
                             }
 
-                            // 八个游戏：横屏四列两排，竖屏两列四排，格子平分地方
-                            GameGrid(columns: wide ? 4 : 2, spacing: roomy ? 20 : 16) { open($0) }
+                            // 摆着的游戏平分地方：八个时横屏四列两排、竖屏两列四排；
+                            // 家长收起来几个以后按剩下的个数重新分排（HomeGridPlan）
+                            GameGrid(games: store.homeGames, wide: wide, spacing: roomy ? 20 : 16) { open($0) }
                                 .frame(maxHeight: .infinity)
                             DailyStarsCard { wall = .daily }.frame(height: roomy ? 110 : 84)
                         }
@@ -148,25 +149,28 @@ struct HomeView: View {
     }
 }
 
-/// 主页上的游戏格子：每排 columns 个，平分宽和高
+/// 主页上的游戏格子：一排一排平分高度，每排里的卡片平分宽度
 private struct GameGrid: View {
-    let columns: Int
+    let games: [GameEntry]
+    let wide: Bool
     let spacing: CGFloat
     let open: (GameEntry) -> Void
 
+    /// 按 HomeGridPlan 把游戏切成一排一排
+    private var rows: [[GameEntry]] {
+        var rest = games[...]
+        return HomeGridPlan.rows(count: games.count, wide: wide).map { n in
+            defer { rest = rest.dropFirst(n) }
+            return Array(rest.prefix(n))
+        }
+    }
+
     var body: some View {
-        let games = GameEntry.allCases
-        let rows = (games.count + columns - 1) / columns
         VStack(spacing: spacing) {
-            ForEach(0..<rows, id: \.self) { r in
+            ForEach(rows, id: \.self) { row in
                 HStack(spacing: spacing) {
-                    ForEach(0..<columns, id: \.self) { c in
-                        let i = r * columns + c
-                        if i < games.count {
-                            GameTile(game: games[i]) { open(games[i]) }
-                        } else {
-                            Color.clear
-                        }
+                    ForEach(row, id: \.self) { game in
+                        GameTile(game: game) { open(game) }
                     }
                 }
             }
@@ -236,7 +240,9 @@ extension GameEntry {
     }
 }
 
-/// 主页上一个游戏的卡片：整张都能点。扁的（竖屏两列）插画在右、名字在左；方的（横屏四列）插画在上、名字压在底下一条。
+/// 主页上一个游戏的卡片：整张都能点。按卡片的形状换三种排法：
+/// 扁的（竖屏两列）插画在右、名字在左；方的（横屏四列）插画在上、名字压在底下一条；
+/// 高的（只摆着几个游戏时）插画整张在上、名字和一句话在下。
 private struct GameTile: View {
     let game: GameEntry
     let action: () -> Void
@@ -247,9 +253,12 @@ private struct GameTile: View {
     var body: some View {
         Button(action: action) {
             GeometryReader { g in
+                let aspect = g.size.width / max(g.size.height, 1)
                 Group {
-                    if g.size.width / max(g.size.height, 1) > 1.55 {
+                    if aspect > 1.55 {
                         wide(g.size)
+                    } else if aspect < 1.0 {
+                        stacked(g.size)
                     } else {
                         tall(g.size)
                     }
@@ -296,9 +305,53 @@ private struct GameTile: View {
         }
     }
 
+    /// 卡片比较高：插画整张放在上面，下面是名字、一句话和"学会了多少"
+    private func stacked(_ size: CGSize) -> some View {
+        // 插画是 3:2 的；卡片特别高时让它再高一点（两边各裁掉一点），不然下面空得太多
+        let artHeight = min(max(size.width / 1.5, size.height - 250), size.width / 1.5 * 1.18, size.height * 0.68)
+        let textHeight = size.height - artHeight
+        let big = size.width > 520
+        return VStack(spacing: 0) {
+            ArtImage(name: game.cardArt, fallback: game.fallbackEmoji, contentMode: .fill)
+                .frame(width: size.width, height: artHeight)
+                .clipped()
+                .overlay(alignment: .bottom) {
+                    LinearGradient(colors: [game.cardColor.opacity(0), game.cardColor], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 36)
+                }
+            VStack(alignment: .leading, spacing: big ? 14 : 8) {
+                Text(game.title)
+                    .font(.kid(big ? 64 : min(40, size.width * 0.115), weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if textHeight > 190 {
+                    Text(game.tagline)
+                        .font(.kid(big ? 24 : 17, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let subject {
+                    SubjectProgressPill(subject: subject, height: big ? 52 : 40, compact: size.width < 330)
+                        .fixedSize()
+                        .padding(.top, 2)
+                }
+            }
+            .padding(.horizontal, big ? 36 : 22)
+            .padding(.bottom, 6)
+            .frame(width: size.width, height: textHeight, alignment: .leading)
+        }
+    }
+
     /// 插画靠右放下整张，名字和一句话在左边
     private func wide(_ size: CGSize) -> some View {
-        let roomy = size.height > 205
+        // 左边留给字的宽度。卡片不够宽时（横屏一排三个）插画会伸过来，字就只留名字和进度，名字也小一点
+        let textWidth = max(size.width - size.height * 0.95, 150)
+        let roomy = size.height > 205 && textWidth >= 230
+        // 只摆着一两个游戏时卡片很大，字跟着大一号
+        let big = size.height > 300
         return ZStack(alignment: .leading) {
             ArtImage(name: game.cardArt, fallback: game.fallbackEmoji, contentMode: .fit)
                 .frame(width: size.height * 1.5, height: size.height)
@@ -307,25 +360,25 @@ private struct GameTile: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             VStack(alignment: .leading, spacing: roomy ? 10 : 8) {
                 Text(game.title)
-                    .font(.kid(min(44, size.height * 0.21), weight: .heavy))
+                    .font(.kid(min(big ? 64 : 44, size.height * 0.21, (textWidth - 26) / 3.4), weight: .heavy))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 if roomy {
                     Text(game.tagline)
-                        .font(.kid(17, weight: .semibold))
+                        .font(.kid(big ? 22 : 17, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let subject {
-                    SubjectProgressPill(subject: subject, height: roomy ? 42 : 36, compact: !roomy)
+                    SubjectProgressPill(subject: subject, height: big ? 50 : roomy ? 42 : 36, compact: !roomy)
                         .fixedSize()
                 }
             }
-            .padding(.leading, 26)
-            .frame(width: max(size.width - size.height * 0.95, 150), alignment: .leading)
+            .padding(.leading, big ? 40 : 26)
+            .frame(width: textWidth, alignment: .leading)
         }
     }
 }

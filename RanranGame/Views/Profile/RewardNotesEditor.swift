@@ -5,7 +5,6 @@ import SwiftUI
 struct RewardNotesEntryCard: View {
     @Environment(PlayerStore.self) private var store
     @State private var showing = false
-    @State private var pressing = false
 
     private var count: Int {
         Medal.all.filter { !store.medalReward($0).isEmpty }.count
@@ -26,7 +25,7 @@ struct RewardNotesEntryCard: View {
                     .font(.kid(18, weight: .bold))
                     .foregroundStyle(Palette.ink)
                 Spacer()
-                openButton
+                ParentHoldButton(title: "编辑奖励", systemImage: "gift.fill") { showing = true }
             }
         }
         .padding(28)
@@ -39,35 +38,6 @@ struct RewardNotesEntryCard: View {
             // 调试截图用：启动参数 -rewardNotes YES 直接打开编辑页
             if UserDefaults.standard.string(forKey: "rewardNotes") == "YES" { showing = true }
             #endif
-        }
-    }
-
-    /// 长按约 1.5 秒才打开；按住时底色从左往右慢慢填满
-    private var openButton: some View {
-        VStack(spacing: 4) {
-            Label("编辑奖励", systemImage: "gift.fill")
-                .font(.kid(20, weight: .heavy))
-                .foregroundStyle(pressing ? .white : Palette.ink)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 12)
-                .background(alignment: .leading) {
-                    GeometryReader { g in
-                        Capsule().fill(Palette.coral)
-                            .frame(width: pressing ? g.size.width : 0)
-                            // 松手立刻清零，按住时线性填满
-                            .animation(pressing ? .linear(duration: 1.5) : .easeOut(duration: 0.15), value: pressing)
-                    }
-                }
-                .background(Capsule().fill(Palette.lilac.opacity(0.3)))
-                .clipShape(Capsule())
-                .contentShape(Capsule())
-                .onLongPressGesture(minimumDuration: 1.5, maximumDistance: 30) {
-                    Sound.tap()
-                    showing = true
-                } onPressingChanged: { pressing = $0 }
-            Text("家长长按打开")
-                .font(.kid(13, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
         }
     }
 }

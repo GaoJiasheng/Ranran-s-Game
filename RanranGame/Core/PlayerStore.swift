@@ -43,9 +43,12 @@ struct SaveArchive: Codable {
     var storyMistakes: [StoryMistake]? = nil
     /// 家长写的小字条，比如每枚奖章约好的奖励（旧存档里没有）
     var notes: [String: String]? = nil
+    /// 家长从主页上收起来的游戏（旧存档里没有）
+    var hiddenGames: [String]? = nil
 
     init(playerName: String, totalStars: Int, counts: [String: Int], settings: [String: Int],
-         records: [GameRecord], storyMistakes: [StoryMistake]?, notes: [String: String]? = nil) {
+         records: [GameRecord], storyMistakes: [StoryMistake]?, notes: [String: String]? = nil,
+         hiddenGames: [String]? = nil) {
         self.playerName = playerName
         self.totalStars = totalStars
         self.counts = counts
@@ -53,10 +56,12 @@ struct SaveArchive: Codable {
         self.records = records
         self.storyMistakes = storyMistakes
         self.notes = notes
+        self.hiddenGames = hiddenGames
     }
 
     private enum CodingKeys: String, CodingKey {
         case format, version, exportedAt, playerName, totalStars, counts, settings, records, storyMistakes, notes
+        case hiddenGames
     }
 
     init(from decoder: Decoder) throws {
@@ -72,6 +77,7 @@ struct SaveArchive: Codable {
         // 旧版（中文题）的错题格式不一样，读不出来就不要了，别让整份存档导入失败
         storyMistakes = try? c.decodeIfPresent([StoryMistake].self, forKey: .storyMistakes)
         notes = try? c.decodeIfPresent([String: String].self, forKey: .notes)
+        hiddenGames = try? c.decodeIfPresent([String].self, forKey: .hiddenGames)
     }
 }
 
@@ -97,6 +103,8 @@ final class PlayerStore {
     private(set) var storyMistakes: [StoryMistake]
     /// 家长写的小字条（文字），比如 "reward.medal.3" → "去游乐园"
     private(set) var notes: [String: String]
+    /// 家长从主页上收起来的游戏（GameEntry 的名字）。记"收起来的"而不是"显示的"，以后新加的游戏默认就会出现。
+    private(set) var hiddenGames: Set<String>
 
     init(defaults: UserDefaults = .standard, directory: URL? = nil) {
         self.defaults = defaults
@@ -109,6 +117,7 @@ final class PlayerStore {
         totalStars = defaults.integer(forKey: "totalStars")
         counts = (defaults.dictionary(forKey: "counts") as? [String: Int]) ?? [:]
         notes = (defaults.dictionary(forKey: "notes") as? [String: String]) ?? [:]
+        hiddenGames = Set(defaults.stringArray(forKey: "home.hidden") ?? [])
         records = (try? Self.decoder.decode([GameRecord].self, from: Data(contentsOf: recordsURL))) ?? []
         storyMistakes = (try? Self.decoder.decode([StoryMistake].self, from: Data(contentsOf: mistakesURL))) ?? []
         migrateStarLedger()
@@ -178,6 +187,17 @@ final class PlayerStore {
         defaults.set(notes, forKey: "notes")
     }
 
+    // MARK: 主页上显示哪些游戏
+
+    func isHidden(_ game: String) -> Bool { hiddenGames.contains(game) }
+
+    /// 把一个游戏从主页上收起来 / 放回去。星星、奖章、进度都不动。
+    /// （主页至少留一个，这条规矩在 Views/Home/HomeShelf.swift 里管。）
+    func setHidden(_ game: String, _ hidden: Bool) {
+        if hidden { hiddenGames.insert(game) } else { hiddenGames.remove(game) }
+        defaults.set(hiddenGames.sorted(), forKey: "home.hidden")
+    }
+
     // MARK: 棋谱
 
     /// 同一个 id 再存一次就覆盖（比如下完后悔棋又下完）
@@ -232,7 +252,8 @@ final class PlayerStore {
         }
         return SaveArchive(playerName: name, totalStars: totalStars, counts: counts,
                            settings: settings, records: records, storyMistakes: storyMistakes,
-                           notes: notes.isEmpty ? nil : notes)
+                           notes: notes.isEmpty ? nil : notes,
+                           hiddenGames: hiddenGames.isEmpty ? nil : hiddenGames.sorted())
     }
 
     /// 用存档整个替换当前数据
@@ -243,6 +264,8 @@ final class PlayerStore {
         records = archive.records.sorted { $0.date > $1.date }
         storyMistakes = (archive.storyMistakes ?? []).sorted { $0.date > $1.date }
         notes = archive.notes ?? [:]
+        hiddenGames = Set(archive.hiddenGames ?? [])
+        defaults.set(hiddenGames.sorted(), forKey: "home.hidden")
         defaults.set(name, forKey: "playerName")
         defaults.set(totalStars, forKey: "totalStars")
         defaults.set(counts, forKey: "counts")

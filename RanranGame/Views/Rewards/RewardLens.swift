@@ -14,6 +14,15 @@ struct WallTab: Identifiable, Hashable {
     /// 顶上的页签：星星奖章 + 每个科目（以后加了新科目自动多一页）
     static var all: [WallTab] { [.stars] + Subjects.everything.map(WallTab.subject) }
 
+    /// 奖章墙上现在显示的页签：家长从主页收起来的游戏，一枚奖章都还没拿到的就不占一页；拿到过的照样留着
+    static func shown(_ store: PlayerStore) -> [WallTab] {
+        let lens = store.rewards
+        return [.stars] + Subjects.everything.filter { s in
+            guard let entry = s.entry, !store.isOnHome(entry) else { return true }
+            return lens.earnedCount(in: s) > 0
+        }.map(WallTab.subject)
+    }
+
     var subject: Subject? { Subjects.find(id) }
 }
 

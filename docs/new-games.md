@@ -37,6 +37,7 @@
 这些已经写好并且指向你的占位文件，名字和参数不要改：
 
 - 主页卡片、路由：`GameEntry.chess` → `ChessSetupView()`。调试时 `-route chess` 直接进这一页。
+  「我的」里「主页上的游戏」的开关也是按 `GameEntry` 列出来的，新游戏自动多一行、默认摆在主页上。
 - 教学：`TutorialHomeView(game: "chess", accent:onPlay:)` 是课程表；打开一课时框架会创建
   `ChessLessonView(course:lesson:mode:onNextLesson:)`。`TutorialCourse.bundled["chess"]` 读 `Tutorials/chess.json`。
 - 教学接入点：`ChessTutorial.kit`（`TutorialKit`，在 `Games/Tutorial/TutorialKit.swift` 里有每一项的说明）。
