@@ -136,6 +136,8 @@ tools/chess/ sudoku/ tangram/ klotski/ coding/   每个新游戏自己的测试�
 tools/voice/             配音：build_manifest.py 收集要读的句子（含象棋多音字处理：车→jū、将→jiàng；
                          新游戏的固定台词和读音修正在 extra_<游戏>.json），
                          generate_voice.py 生成 / 更新 mp3（只重做改过的句子；--profile en 是英文）
+tools/voice/selfcheck/   配音自检：把录好的 mp3 "听"回来找读错的字（Whisper、强制对齐、声调分类器、同音字对照），
+                         做法和上一次查出来的问题见里面的 README.md
 ```
 
 ## 装到 iPad 上

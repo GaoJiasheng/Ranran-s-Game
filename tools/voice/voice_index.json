@@ -720,7 +720,7 @@
     }
   },
   "vo_017cdab26e": {
-    "speak": "抽将的时候，对方必须先解将，你就能顺手吃掉它的子。",
+    "speak": "抽江的时候，对方必须先解江，你就能顺手吃掉它的子。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -747,15 +747,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "15e55d8a937a83ee5a6e019730a77940fc06fb371d3d9a8a942c1c19bbb92bc1",
+    "sha256": "7697431696d5e17bddef9c6472ddb3cfeb87a17977e1ad8b6ee89e12a3b2ec57",
     "validation": {
-      "duration_seconds": 5.149292,
+      "duration_seconds": 5.159167,
       "chinese_characters": 22,
       "spoken_characters": 22,
-      "characters_per_second": 4.2724,
-      "mean_volume_db": -15.9,
+      "characters_per_second": 4.2643,
+      "mean_volume_db": -16.0,
       "integrated_lufs": -16.02,
-      "true_peak_dbtp": -1.81,
+      "true_peak_dbtp": -1.74,
       "size_bytes": 41901
     }
   },
@@ -10800,7 +10800,7 @@
     }
   },
   "vo_2029212e2d": {
-    "speak": "这一课学完啦！你学会了解将的三种办法：走开、挡住、吃掉。",
+    "speak": "这一课学完啦！你学会了解江的三种办法：走开、挡住、吃掉。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -10827,16 +10827,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "cc8e08b668dae4b51019829b2219fcb9fdd3fda48b15803b31332c1692a9190d",
+    "sha256": "4a0d405006b04a208258ab742c227dd66e664a82e3f7521583acc4a6170118fd",
     "validation": {
-      "duration_seconds": 6.733583,
+      "duration_seconds": 6.583333,
       "chinese_characters": 23,
       "spoken_characters": 23,
-      "characters_per_second": 3.4157,
-      "mean_volume_db": -15.7,
-      "integrated_lufs": -16.07,
-      "true_peak_dbtp": -1.59,
-      "size_bytes": 54573
+      "characters_per_second": 3.4937,
+      "mean_volume_db": -15.6,
+      "integrated_lufs": -16.05,
+      "true_peak_dbtp": -1.72,
+      "size_bytes": 53421
     }
   },
   "vo_202ab331d3": {
@@ -14960,7 +14960,7 @@
     }
   },
   "vo_2c1333127f": {
-    "speak": "占一个空着的角！",
+    "speak": "占一个控着的角！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -14987,16 +14987,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "1f9aed6a5f365dc193007d25bd013c5aa0c209ed19dc6204f3efe5858f36f85c",
+    "sha256": "6703c361ced79620c362ed2f86aee8be1ac1cf051d1605cb0a0b07318bd281a4",
     "validation": {
-      "duration_seconds": 1.474875,
+      "duration_seconds": 1.424208,
       "chinese_characters": 7,
       "spoken_characters": 7,
-      "characters_per_second": 4.7462,
-      "mean_volume_db": -15.8,
-      "integrated_lufs": -15.99,
-      "true_peak_dbtp": -2.33,
-      "size_bytes": 12525
+      "characters_per_second": 4.915,
+      "mean_volume_db": -15.7,
+      "integrated_lufs": -16.05,
+      "true_peak_dbtp": -1.95,
+      "size_bytes": 12141
     }
   },
   "vo_2c64cb7c05": {
@@ -23200,7 +23200,7 @@
     }
   },
   "vo_446e6a27db": {
-    "speak": "抽将成功！",
+    "speak": "抽江成功！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -23227,16 +23227,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c1e07c566bd286b74a899d314846fd17fef4bf269ccd40713cb7e13c09c7d968",
+    "sha256": "8e7225eca8cb02245fd0cbf079856e2affa1f1c2d6c33f6bf6296e3e50e32f4a",
     "validation": {
-      "duration_seconds": 1.071167,
+      "duration_seconds": 1.093708,
       "chinese_characters": 4,
       "spoken_characters": 4,
-      "characters_per_second": 3.7342,
-      "mean_volume_db": -16.2,
-      "integrated_lufs": -16.03,
-      "true_peak_dbtp": -1.86,
-      "size_bytes": 9261
+      "characters_per_second": 3.6573,
+      "mean_volume_db": -16.1,
+      "integrated_lufs": -15.99,
+      "true_peak_dbtp": -1.77,
+      "size_bytes": 9453
     }
   },
   "vo_4491fb1180": {
@@ -26720,7 +26720,7 @@
     }
   },
   "vo_4f0621745e": {
-    "speak": "这一课学完啦！你学会了别太早出后，别把子白白送掉。",
+    "speak": "这一课学完啦！你学会了别太早出后，别把紫白白送掉。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -26747,16 +26747,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "5c184af99cf8254f0538fe9491d99e1f880326b1627957ee46474f08ae7d0e7b",
+    "sha256": "7b9ad90be5c2a03b1d79fbee979a4f16c2bdd1eab15c294624125b31260c8bb8",
     "validation": {
-      "duration_seconds": 5.761958,
+      "duration_seconds": 5.705458,
       "chinese_characters": 22,
       "spoken_characters": 22,
-      "characters_per_second": 3.8181,
-      "mean_volume_db": -15.6,
-      "integrated_lufs": -16.0,
-      "true_peak_dbtp": -1.81,
-      "size_bytes": 46893
+      "characters_per_second": 3.856,
+      "mean_volume_db": -15.7,
+      "integrated_lufs": -16.04,
+      "true_peak_dbtp": -1.85,
+      "size_bytes": 46317
     }
   },
   "vo_4f1f5b3556": {
@@ -26880,7 +26880,7 @@
     }
   },
   "vo_4f675c5f8d": {
-    "speak": "自己来一次：让一个子跳开，抽将吃居！",
+    "speak": "自己来一次：让一个子跳开，抽江吃居！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -26907,16 +26907,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "a369f9269ee5c6c04535495afb0ae36d90a7f112eb30d77a018c4efe38ebfbf8",
+    "sha256": "8cc2efc55694fb2a400b3aade6b233ebe8ef1aa4679561870b15b853fe63be36",
     "validation": {
-      "duration_seconds": 3.843208,
+      "duration_seconds": 3.825833,
       "chinese_characters": 15,
       "spoken_characters": 15,
-      "characters_per_second": 3.903,
-      "mean_volume_db": -16.0,
-      "integrated_lufs": -16.02,
+      "characters_per_second": 3.9207,
+      "mean_volume_db": -15.9,
+      "integrated_lufs": -15.99,
       "true_peak_dbtp": -1.95,
-      "size_bytes": 31533
+      "size_bytes": 31341
     }
   },
   "vo_4f9a2d00d4": {
@@ -31680,7 +31680,7 @@
     }
   },
   "vo_5e81c0f696": {
-    "speak": "如果田字中间有棋子挡着，叫『塞象眼』，象就走不过去了。",
+    "speak": "如果田字中间有棋子挡着，叫『腮象眼』，象就走不过去了。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -31707,16 +31707,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c870c9023b06cbcceb29d16ca20b83e3201b56ddbe9fc7ec5d00491ca5f091ac",
+    "sha256": "b7da22ca16e180de1f9fd40a793cdc882c0088fcd7905f05fa4f69dc6be61b02",
     "validation": {
-      "duration_seconds": 5.296583,
+      "duration_seconds": 5.209958,
       "chinese_characters": 22,
       "spoken_characters": 22,
-      "characters_per_second": 4.1536,
+      "characters_per_second": 4.2227,
       "mean_volume_db": -15.7,
-      "integrated_lufs": -15.97,
-      "true_peak_dbtp": -1.75,
-      "size_bytes": 43053
+      "integrated_lufs": -16.0,
+      "true_peak_dbtp": -1.68,
+      "size_bytes": 42477
     }
   },
   "vo_5ea7883ba7": {
@@ -35080,7 +35080,7 @@
     }
   },
   "vo_6897ea2a78": {
-    "speak": "马跳开的时候，还能顺手吃掉一个子。抽将吃居！",
+    "speak": "马跳开的时候，还能顺手吃掉一个子。抽江吃居！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -35107,15 +35107,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "3a56545f8c1afee8713f7ff71b92991230210476860547593f9f30c00c77e2d2",
+    "sha256": "1ad488a789f7b13d837cd93cbcc86de9e85c2938ac198f6278ad17f2b515657e",
     "validation": {
-      "duration_seconds": 5.250875,
+      "duration_seconds": 5.251125,
       "chinese_characters": 19,
       "spoken_characters": 19,
-      "characters_per_second": 3.6184,
+      "characters_per_second": 3.6183,
       "mean_volume_db": -16.3,
-      "integrated_lufs": -16.08,
-      "true_peak_dbtp": -1.62,
+      "integrated_lufs": -16.07,
+      "true_peak_dbtp": -1.71,
       "size_bytes": 42669
     }
   },
@@ -35560,7 +35560,7 @@
     }
   },
   "vo_6a069518c0": {
-    "speak": "要五颗紧紧挨着、中间没有空，才算赢。A 只有四颗，C 中间空了一格。",
+    "speak": "要五颗紧紧挨着、中间没有控，才算赢。A 只有四颗，C 中间空了一格。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -35587,16 +35587,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "8b263fecba22fe3caf146f8fe23e9df06ea379576baa73812f0b3d39acc10c06",
+    "sha256": "c28547c2d6886fde65c1600a2788a3b5091d6bb5e7e40b38394c1fa564e48b76",
     "validation": {
-      "duration_seconds": 7.500792,
+      "duration_seconds": 7.539583,
       "chinese_characters": 25,
       "spoken_characters": 27,
-      "characters_per_second": 3.5996,
-      "mean_volume_db": -15.8,
-      "integrated_lufs": -16.03,
-      "true_peak_dbtp": -1.62,
-      "size_bytes": 60717
+      "characters_per_second": 3.5811,
+      "mean_volume_db": -15.9,
+      "integrated_lufs": -16.08,
+      "true_peak_dbtp": -1.77,
+      "size_bytes": 61101
     }
   },
   "vo_6a33632dc8": {
@@ -36840,7 +36840,7 @@
     }
   },
   "vo_6db117626e": {
-    "speak": "往还空着的那一边常出去。",
+    "speak": "往孩空着的那一边常出去。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -36867,16 +36867,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "f5fc1a4132c415410488dfab1d58e12045974491cd8a162bfdd44988fe7240be",
+    "sha256": "87633ab682f333607eb3d0a5b1c671e6ba7469e6c844f47e13d05ab267a7c47e",
     "validation": {
-      "duration_seconds": 2.173833,
+      "duration_seconds": 2.154333,
       "chinese_characters": 11,
       "spoken_characters": 11,
-      "characters_per_second": 5.0602,
-      "mean_volume_db": -15.6,
-      "integrated_lufs": -15.95,
-      "true_peak_dbtp": -1.85,
-      "size_bytes": 18093
+      "characters_per_second": 5.106,
+      "mean_volume_db": -15.7,
+      "integrated_lufs": -15.97,
+      "true_peak_dbtp": -2.12,
+      "size_bytes": 17901
     }
   },
   "vo_6dbad2d985": {
@@ -40520,7 +40520,7 @@
     }
   },
   "vo_783bf7eb8c": {
-    "speak": "跳开一个子，抽将吃居！",
+    "speak": "跳开一个子，抽江吃居！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -40547,16 +40547,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "372df932623fc98b2ec0e1fe36ae1a1a17f209b7fe8589e7b22a8e234acb6846",
+    "sha256": "6bd2b7949f658526d292f40296c180ca6a512c2dfdaf4deab8323d9c07e31634",
     "validation": {
-      "duration_seconds": 2.273792,
+      "duration_seconds": 2.255833,
       "chinese_characters": 9,
       "spoken_characters": 9,
-      "characters_per_second": 3.9581,
-      "mean_volume_db": -16.2,
-      "integrated_lufs": -16.0,
-      "true_peak_dbtp": -2.04,
-      "size_bytes": 18861
+      "characters_per_second": 3.9897,
+      "mean_volume_db": -16.1,
+      "integrated_lufs": -16.06,
+      "true_peak_dbtp": -1.53,
+      "size_bytes": 18669
     }
   },
   "vo_7860ee7daf": {
@@ -40680,7 +40680,7 @@
     }
   },
   "vo_788628ca10": {
-    "speak": "最后一个，你来排：两种花，两个花园。",
+    "speak": "最后一个，你来排：两肿花，两个花园。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -40707,15 +40707,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c4e4932e4010268ba59b5922435e99e70e52323d3781475d62ac02242a2d0748",
+    "sha256": "fd74e678c49068e1117c1d7821a3ed9d2bfdf2db43e957d211e08d90fd323adf",
     "validation": {
-      "duration_seconds": 3.933417,
+      "duration_seconds": 3.934083,
       "chinese_characters": 14,
       "spoken_characters": 14,
-      "characters_per_second": 3.5592,
+      "characters_per_second": 3.5586,
       "mean_volume_db": -15.7,
-      "integrated_lufs": -16.02,
-      "true_peak_dbtp": -2.05,
+      "integrated_lufs": -16.04,
+      "true_peak_dbtp": -1.97,
       "size_bytes": 32109
     }
   },
@@ -44760,7 +44760,7 @@
     }
   },
   "vo_855177878f": {
-    "speak": "白棋被逼着堵了一手，你却多出了一个活三。冲四，白赚一步！",
+    "speak": "白棋被逼着堵了一手，你却多出了一个活三。充四，白赚一步！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -44787,16 +44787,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "84ecb45ff3b13534c32c7b6dcfe05a34e823958e08d963e03c4dc020baee827a",
+    "sha256": "ab239412cc3063b4fd7191df9cd6e87fcc01df5004c6084a24cf913037f8ba4e",
     "validation": {
-      "duration_seconds": 6.2305,
+      "duration_seconds": 6.186833,
       "chinese_characters": 24,
       "spoken_characters": 24,
-      "characters_per_second": 3.852,
-      "mean_volume_db": -15.9,
+      "characters_per_second": 3.8792,
+      "mean_volume_db": -15.8,
       "integrated_lufs": -16.07,
-      "true_peak_dbtp": -1.76,
-      "size_bytes": 50541
+      "true_peak_dbtp": -1.62,
+      "size_bytes": 50157
     }
   },
   "vo_85c3d28a1b": {
@@ -45440,7 +45440,7 @@
     }
   },
   "vo_871b3adc8a": {
-    "speak": "这一课学完啦！你学会了用两个「如果」管两种花。",
+    "speak": "这一课学完啦！你学会了用两个「如果」管两肿花。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -45467,16 +45467,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "9ff0be147d0043907c34e7f4c8443a1241d85f656138543e4c9839a8a5f14c0e",
+    "sha256": "2f463c09d20edc9f7a188363433d32e210295f164ced8384469de91c156fe18b",
     "validation": {
-      "duration_seconds": 5.026958,
+      "duration_seconds": 5.055542,
       "chinese_characters": 19,
       "spoken_characters": 19,
-      "characters_per_second": 3.7796,
+      "characters_per_second": 3.7583,
       "mean_volume_db": -16.0,
-      "integrated_lufs": -16.01,
-      "true_peak_dbtp": -1.95,
-      "size_bytes": 40941
+      "integrated_lufs": -15.99,
+      "true_peak_dbtp": -1.89,
+      "size_bytes": 41133
     }
   },
   "vo_871f8fe870": {
@@ -48040,7 +48040,7 @@
     }
   },
   "vo_8e9bcf56bb": {
-    "speak": "红居被自己的马挡住了。马一跳开，居就将军，这叫『抽将』。",
+    "speak": "红居被自己的马挡住了。马一跳开，居就将军，这叫『抽江』。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -48067,16 +48067,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c76787058ded5b67247e60b98cb46e342acad21729360b0aecc35460e6ad8c17",
+    "sha256": "79cd6bff6a1ebe91ae4a7822d0b3ae36d46a21389a412e587aca84b4cea7802f",
     "validation": {
-      "duration_seconds": 6.02975,
+      "duration_seconds": 6.017208,
       "chinese_characters": 22,
       "spoken_characters": 22,
-      "characters_per_second": 3.6486,
+      "characters_per_second": 3.6562,
       "mean_volume_db": -15.6,
-      "integrated_lufs": -16.0,
-      "true_peak_dbtp": -1.53,
-      "size_bytes": 49005
+      "integrated_lufs": -16.06,
+      "true_peak_dbtp": -1.77,
+      "size_bytes": 48813
     }
   },
   "vo_8ead8fff30": {
@@ -54920,7 +54920,7 @@
     }
   },
   "vo_a1f6ed844b": {
-    "speak": "抽将吃居！黑方只能先解将。",
+    "speak": "抽江吃居！黑方只能先解江。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -54947,15 +54947,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "c2c2604251a6da1d96080717b1a0b0ca23451728ac93facd7f805d1d70fd5145",
+    "sha256": "72727817de0bf82e61ac43b551c128b77c2b3fafce92c8cecc16be66edd19553",
     "validation": {
-      "duration_seconds": 3.4035,
+      "duration_seconds": 3.400625,
       "chinese_characters": 11,
       "spoken_characters": 11,
-      "characters_per_second": 3.232,
+      "characters_per_second": 3.2347,
       "mean_volume_db": -16.6,
       "integrated_lufs": -16.12,
-      "true_peak_dbtp": -1.82,
+      "true_peak_dbtp": -1.88,
       "size_bytes": 27885
     }
   },
@@ -58200,7 +58200,7 @@
     }
   },
   "vo_ac994fe400": {
-    "speak": "两种花都没难住你！",
+    "speak": "两肿花都没难住你！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -58227,16 +58227,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "9a1949e03e6e1739c54b979aa9c6ce0f9832bf34ec16d81f844d9b04e2802724",
+    "sha256": "b4f3e55a01dd31d3faa37a5342dd96d36e10560fef453c6483ba305b784180d4",
     "validation": {
-      "duration_seconds": 1.76675,
+      "duration_seconds": 1.789208,
       "chinese_characters": 8,
       "spoken_characters": 8,
-      "characters_per_second": 4.5281,
+      "characters_per_second": 4.4713,
       "mean_volume_db": -15.9,
-      "integrated_lufs": -16.0,
-      "true_peak_dbtp": -1.9,
-      "size_bytes": 14829
+      "integrated_lufs": -16.02,
+      "true_peak_dbtp": -3.38,
+      "size_bytes": 15021
     }
   },
   "vo_acab23ec92": {
@@ -59080,7 +59080,7 @@
     }
   },
   "vo_b01475edf8": {
-    "speak": "冲四只有一头能赢。B 的两头都空着，那是活四。",
+    "speak": "冲四，只有一头能赢。B 的两头都空着，那是活四。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -59107,16 +59107,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "1647ea5da9c6c122eb9cf807a54423fd87d2c9941ddefb62b68312362235b20d",
+    "sha256": "41739dcfe13d0fc16b1b448c7dac2c6067cffa942e14b6164ce1234826c1702f",
     "validation": {
-      "duration_seconds": 5.288292,
+      "duration_seconds": 5.386542,
       "chinese_characters": 18,
       "spoken_characters": 19,
-      "characters_per_second": 3.5928,
-      "mean_volume_db": -16.0,
-      "integrated_lufs": -16.05,
-      "true_peak_dbtp": -1.85,
-      "size_bytes": 43053
+      "characters_per_second": 3.5273,
+      "mean_volume_db": -15.9,
+      "integrated_lufs": -16.0,
+      "true_peak_dbtp": -2.01,
+      "size_bytes": 43821
     }
   },
   "vo_b02d42d3f8": {
@@ -66040,7 +66040,7 @@
     }
   },
   "vo_c5824cad24": {
-    "speak": "四个空点挤成一个方块，叫『方四』。不管怎么下都只能做出一只眼，所以方四是死棋。",
+    "speak": "四个空点挤成一个方块，叫『方四』。不管怎么下，都只能做出一只眼，所以方四是死棋。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -66067,16 +66067,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "15ef48c1d35d6a1c0a4a341700210848c2a0aad959cc9cedca5bcd89195a0735",
+    "sha256": "2337da83b3cf6bd0dfca926c70e918911e9a367a3bae5c710c6fd5f4c0d7e2a8",
     "validation": {
-      "duration_seconds": 8.527417,
+      "duration_seconds": 8.6285,
       "chinese_characters": 33,
       "spoken_characters": 33,
-      "characters_per_second": 3.8699,
-      "mean_volume_db": -15.8,
-      "integrated_lufs": -16.07,
-      "true_peak_dbtp": -1.56,
-      "size_bytes": 68973
+      "characters_per_second": 3.8245,
+      "mean_volume_db": -15.7,
+      "integrated_lufs": -16.06,
+      "true_peak_dbtp": -1.63,
+      "size_bytes": 69741
     }
   },
   "vo_c59840f4af": {
@@ -66680,7 +66680,7 @@
     }
   },
   "vo_c80ec29c72": {
-    "speak": "这一课学完啦！你学会了抽将：让开一步，将军又吃子。",
+    "speak": "这一课学完啦！你学会了抽江：让开一步，将军又吃子。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -66707,16 +66707,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "a6249279657300e3033395456c65a626dea7691e5e765aa909d441c55131b33a",
+    "sha256": "bd85fa276962d98c149585f1ac0194e1b5b8cfd5430db69990d549c445e0773d",
     "validation": {
-      "duration_seconds": 5.689958,
+      "duration_seconds": 5.718625,
       "chinese_characters": 21,
       "spoken_characters": 21,
-      "characters_per_second": 3.6907,
-      "mean_volume_db": -15.9,
-      "integrated_lufs": -16.11,
-      "true_peak_dbtp": -1.85,
-      "size_bytes": 46317
+      "characters_per_second": 3.6722,
+      "mean_volume_db": -15.8,
+      "integrated_lufs": -16.05,
+      "true_peak_dbtp": -1.86,
+      "size_bytes": 46509
     }
   },
   "vo_c8156f3a2a": {
@@ -70800,7 +70800,7 @@
     }
   },
   "vo_d3aca68308": {
-    "speak": "黑方只能先解将，居白白丢了。",
+    "speak": "黑方只能先解江，居白白丢了。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -70827,7 +70827,7 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "3b912f9ac7b8afbda6ba92a5a1fa0f2eda2bce5d2d3d5189bf1d95a6b3de6a86",
+    "sha256": "b68d023cf18f319c85be84661994e8894bf812f7540c9b85702b9e4b491677c3",
     "validation": {
       "duration_seconds": 2.959292,
       "chinese_characters": 12,
@@ -70835,7 +70835,7 @@
       "characters_per_second": 4.055,
       "mean_volume_db": -15.8,
       "integrated_lufs": -16.06,
-      "true_peak_dbtp": -1.85,
+      "true_peak_dbtp": -1.73,
       "size_bytes": 24429
     }
   },
@@ -71240,7 +71240,7 @@
     }
   },
   "vo_d579888088": {
-    "speak": "这一次，马跳过去一边将军，一边捉居。被将军的时候，黑方必须先解将！",
+    "speak": "这一次，马跳过去一边将军，一边捉居。被将军的时候，黑方必须先解江！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -71267,16 +71267,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "8e5e531085fa1af7e762e03a5ff8f83d6e00f5d1c96f91a81fef1048875a66c7",
+    "sha256": "241a1ad260f55fd4dc59b09ff516447a7620a2e449810217f39b4587b69a50ef",
     "validation": {
-      "duration_seconds": 7.6315,
+      "duration_seconds": 7.669625,
       "chinese_characters": 28,
       "spoken_characters": 28,
-      "characters_per_second": 3.669,
+      "characters_per_second": 3.6508,
       "mean_volume_db": -15.9,
-      "integrated_lufs": -16.08,
-      "true_peak_dbtp": -1.65,
-      "size_bytes": 61677
+      "integrated_lufs": -16.09,
+      "true_peak_dbtp": -1.64,
+      "size_bytes": 62061
     }
   },
   "vo_d5916068e8": {
@@ -72560,7 +72560,7 @@
     }
   },
   "vo_da0a8b35d1": {
-    "speak": "解将成功！",
+    "speak": "姐江成功！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -72587,15 +72587,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "61cf51ee55e71f4db4d823f26490a80ef1d56a5d4a3ccba6e9ffa8cb94679798",
+    "sha256": "bfd3b9142536ee25fc1ea849b6b8ef55357b76aad8d4eadb702df49c7052fb33",
     "validation": {
       "duration_seconds": 1.081958,
       "chinese_characters": 4,
       "spoken_characters": 4,
       "characters_per_second": 3.697,
       "mean_volume_db": -15.7,
-      "integrated_lufs": -15.93,
-      "true_peak_dbtp": -2.64,
+      "integrated_lufs": -15.98,
+      "true_peak_dbtp": -2.82,
       "size_bytes": 9453
     }
   },
@@ -76040,7 +76040,7 @@
     }
   },
   "vo_e4afa467ef": {
-    "speak": "再占一个空着的角！",
+    "speak": "再占一个控着的角！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -76067,15 +76067,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "a97dac45276a0719d4b60b55624fceee34b0f88c4ea4ec2bfaa7934fbd535f6e",
+    "sha256": "7b3cd532d6c20c817cb652dbcba030f2b01dbe8631f81778e6f922c0db4b4867",
     "validation": {
-      "duration_seconds": 1.679792,
+      "duration_seconds": 1.670792,
       "chinese_characters": 8,
       "spoken_characters": 8,
-      "characters_per_second": 4.7625,
-      "mean_volume_db": -15.9,
-      "integrated_lufs": -15.92,
-      "true_peak_dbtp": -1.98,
+      "characters_per_second": 4.7881,
+      "mean_volume_db": -16.0,
+      "integrated_lufs": -16.01,
+      "true_peak_dbtp": -1.88,
       "size_bytes": 14061
     }
   },
@@ -81720,7 +81720,7 @@
     }
   },
   "vo_f57873ccf1": {
-    "speak": "这一课学完啦！你学会了将军、解将和将死。",
+    "speak": "这一课学完啦！你学会了将军、姐江和将死。",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -81747,16 +81747,16 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "d2362705f60ad81210bbaf33cfa9813a0940e7473398ea4a702d7170e556d3f2",
+    "sha256": "4af0826ff18a0154390c620eee9923a497f9944d1d394bdb4ccb85843cd43c20",
     "validation": {
-      "duration_seconds": 4.703625,
+      "duration_seconds": 4.640917,
       "chinese_characters": 17,
       "spoken_characters": 17,
-      "characters_per_second": 3.6142,
+      "characters_per_second": 3.6631,
       "mean_volume_db": -16.0,
-      "integrated_lufs": -16.05,
-      "true_peak_dbtp": -1.9,
-      "size_bytes": 38253
+      "integrated_lufs": -16.04,
+      "true_peak_dbtp": -1.93,
+      "size_bytes": 37869
     }
   },
   "vo_f5ae1d0154": {
@@ -84040,7 +84040,7 @@
     }
   },
   "vo_fd7a699979": {
-    "speak": "这颗白子有两口气。黑棋一直叫吃它，它往哪里逃都只有两口气，最后会被赶到边上吃掉。这叫『征子』，也叫『扭羊头』。叫吃它，一直追到吃掉为止！",
+    "speak": "这颗白子有两口气。黑棋一直叫吃它，它往哪里逃，都只有两口气，最后会被赶到边上吃掉。这叫『征子』，也叫『扭羊头』。叫吃它，一直追到吃掉为止！",
     "settings": {
       "pipeline_version": 2,
       "engine": "edge-tts",
@@ -84067,15 +84067,15 @@
       "limiter_release_ms": 50,
       "encoded_loudness_tolerance_lu": 0.75
     },
-    "sha256": "b33d62f0fccd81d1e030b46f982b678e43e2d68fe172a33327a841d0b7cab0e0",
+    "sha256": "7b1a0621f1d25c365dee762b7384c1c948892992bb7ad7a0a29f7ae26aa9c074",
     "validation": {
-      "duration_seconds": 15.517958,
+      "duration_seconds": 15.517625,
       "chinese_characters": 56,
       "spoken_characters": 56,
-      "characters_per_second": 3.6087,
+      "characters_per_second": 3.6088,
       "mean_volume_db": -16.1,
-      "integrated_lufs": -16.04,
-      "true_peak_dbtp": -1.32,
+      "integrated_lufs": -16.06,
+      "true_peak_dbtp": -1.67,
       "size_bytes": 124845
     }
   },

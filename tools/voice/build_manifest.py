@@ -45,7 +45,10 @@ def xiangqi_spoken(t):
     # 车（棋子）读 jū；卒读 zú；闷宫的闷读 mèn；重炮的重读 chóng
     # 相（棋子）读 xiàng，"互相、相同"这类词里的相读 xiāng，不换
     # 将（棋子）读 jiàng；动词"将军 / 将死 / 将一军 / 解将 / 抽将"读 jiāng（"将来、将要、即将"也是 jiāng）
-    for a, b in [("重炮", "虫炮"), ("闷宫", "焖宫")]:
+    # 配音自检（2026-11）查出来的：抽将 / 解将的将有几句被读成 jiàng，"将军、解将和将死"里的解被读成 xiè，
+    # 塞象眼的塞被读成 sè。换成同音字：江 jiāng、姐 jiě、腮 sāi
+    for a, b in [("重炮", "虫炮"), ("闷宫", "焖宫"), ("抽将", "抽江"), ("、解将和", "、姐江和"), ("解将", "解江"),
+                 ("塞象眼", "腮象眼")]:
         t = t.replace(a, b)
     t = t.replace("车", "居").replace("卒", "族")
     t = re.sub(r"(?<!互|真)相(?!同|信|连|反|邻|等|互|遇|撞|差|比|当)", "象", t)
@@ -57,8 +60,19 @@ def go_spoken(t):
     # 围棋术语：曲三 qū；刀把五 bà；数子 shǔ；子数 shù；倒扑 dào；粘 zhān
     for a, b in [("刀把五", "刀霸五"), ("曲三", "屈三"), ("数子", "属子"), ("子数", "子树"), ("倒扑", "到扑"), ("粘", "沾")]:
         t = t.replace(a, b)
+    # 配音自检查出来的："往还空着"被当成"往还"读成 huán；"下都只能""逃都只有"的都被读成 dū（加个逗号就断对了）；
+    # "占一个空着的角"的着听着像 zhuó
+    for a, b in [("往还空着", "往孩空着"), ("下都只能", "下，都只能"), ("逃都只有", "逃，都只有"), ("占一个空着的角", "占一个控着的角")]:
+        t = t.replace(a, b)
     # 长（往外长、长出去）读 cháng；成长、长大、很长这类普通词不动
     t = re.sub(r"(?<![成生很])长(?![大度短])", "常", t)
+    return t
+
+
+def gomoku_spoken(t):
+    # 配音自检查出来的：句子开头的"冲四"被读成 chòng；"冲四只有"被断成"四只"读成 zhī；"没有空"的空应该读 kòng
+    for a, b in [("。冲四，白赚一步", "。充四，白赚一步"), ("冲四只有一头", "冲四，只有一头"), ("中间没有空，", "中间没有控，")]:
+        t = t.replace(a, b)
     return t
 
 
@@ -72,7 +86,8 @@ items = {}
 def add(text, game):
     if not text or text in items:
         return
-    speak = xiangqi_spoken(text) if game == "xiangqi" else go_spoken(text) if game == "go" else text
+    speak = (xiangqi_spoken(text) if game == "xiangqi" else go_spoken(text) if game == "go"
+             else gomoku_spoken(text) if game == "gomoku" else text)
     items[text] = {"file": fname(text), "text": text, "speak": speak}
 
 
