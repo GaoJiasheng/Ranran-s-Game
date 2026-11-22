@@ -16,7 +16,8 @@ SRC=($V/stub.swift $R/Tutorial/LessonLogic.swift $R/Tutorial/TutorialModel.swift
      $R/Xiangqi/XiangqiBoard.swift $R/Xiangqi/XiangqiAI.swift $R/Gomoku/GomokuModel.swift $R/Go/GoBoard.swift
      # 后来加的游戏：教学接入点，加上每个游戏 Logic 文件夹里的全部代码（规则、关卡、判题，只用 Foundation）
      $R/Tutorial/TutorialKit.swift $ROOT/RanranGame/Core/Rewards/PuzzlePack.swift
-     $R/Chess/Logic/*.swift(N) $R/Sudoku/Logic/*.swift(N) $R/Tangram/Logic/*.swift(N) $R/Klotski/Logic/*.swift(N))
+     $R/Chess/Logic/*.swift(N) $R/Sudoku/Logic/*.swift(N) $R/Tangram/Logic/*.swift(N) $R/Klotski/Logic/*.swift(N)
+     $R/Coding/Logic/*.swift(N))
 fail=0
 for t in gomoku_xiangqi go framework voice_hash; do
   mkdir -p $TMP/$t

@@ -9,6 +9,7 @@ enum GameEntry: String, Hashable, CaseIterable {
     case sudoku
     case tangram
     case klotski
+    case coding
     case story
 }
 
@@ -76,6 +77,8 @@ struct HomeView: View {
                     TangramSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.klotski):
                     KlotskiSetupView().toolbar(.hidden, for: .navigationBar)
+                case .game(.coding):
+                    CodingSetupView().toolbar(.hidden, for: .navigationBar)
                 case .game(.story):
                     StorySetupView().toolbar(.hidden, for: .navigationBar)
                 case .profile:
@@ -88,7 +91,7 @@ struct HomeView: View {
             withAnimation(.spring(duration: 0.7, bounce: 0.25)) { appeared = true }
             #if DEBUG
             // 调试截图用：启动参数 -route gomoku / story / profile 直接打开那一页
-            // 游戏的名字就是 GameEntry 的名字：gomoku / xiangqi / go / chess / sudoku / tangram / klotski / story
+            // 游戏的名字就是 GameEntry 的名字：gomoku / xiangqi / go / chess / sudoku / tangram / klotski / coding / story
             let route = UserDefaults.standard.string(forKey: "route") ?? ""
             if route == "profile" { path = [.profile] }
             else if let g = GameEntry(rawValue: route) { path = [.game(g)] }
@@ -189,6 +192,7 @@ extension GameEntry {
         case .sudoku: "数独"
         case .tangram: "七巧板"
         case .klotski: "华容道"
+        case .coding: "编程"
         case .story: "加减乘除"
         }
     }
@@ -203,6 +207,7 @@ extension GameEntry {
         case .sudoku: "从四宫格的水果开始，动脑筋填一填"
         case .tangram: "七块板子，拼出小动物和小房子"
         case .klotski: "挪一挪、让一让，帮小兔走到出口"
+        case .coding: "给小兔排指令，带它吃到胡萝卜"
         case .story: "英文应用题，演一演、画一画、算一算"
         }
     }
@@ -224,6 +229,7 @@ extension GameEntry {
         case .sudoku: Color(hex: 0xFAF0DC)
         case .tangram: Color(hex: 0xE6F4F2)
         case .klotski: Color(hex: 0xF8EADD)
+        case .coding: Color(hex: 0xFBE8EE)
         case .story: Color(hex: 0xEAF3F8)
         }
     }
@@ -235,6 +241,7 @@ extension GameEntry {
         case .sudoku: "🔢"
         case .tangram: "🔺"
         case .klotski: "🧩"
+        case .coding: "🥕"
         case .story: "➕"
         }
     }

@@ -220,6 +220,7 @@ struct LessonScreen: View {
         case "sudoku": SudokuLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         case "tangram": TangramLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         case "klotski": KlotskiLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
+        case "coding": CodingLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         default: GomokuLessonView(course: course, lesson: route.lesson, mode: route.mode, onNextLesson: onNextLesson)
         }
     }

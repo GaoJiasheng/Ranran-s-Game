@@ -93,6 +93,8 @@ enum Subjects {
                 graduateName: "七巧板小巧手", packs: TangramCatalog.packs, passPacks: TangramCatalog.passPacks),
         .puzzle(id: "klotski", name: "华容道", art: "card_klotski", tint: Color(hex: 0xC47A4E), entry: .klotski,
                 graduateName: "华容道小军师", packs: KlotskiCatalog.packs, passPacks: KlotskiCatalog.passPacks),
+        .puzzle(id: "coding", name: "编程", art: "card_coding", tint: Color(hex: 0xD4668C), entry: .coding,
+                graduateName: "小小程序员", packs: CodingCatalog.packs, passPacks: CodingCatalog.passPacks),
         math,
     ]
 

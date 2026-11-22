@@ -88,7 +88,7 @@ for game in ("gomoku", "xiangqi", "go"):
 # 后来加的游戏：课文从 Tutorials/<game>.json 来；固定台词和读音修正写在 tools/voice/extra_<game>.json 里
 #   {"lines": ["固定台词", ...], "replace": [["车", "居"], ...], "regex": [["正则", "换成"], ...]}
 # lines 要和 App 里这个游戏的 TutorialKit.fixedLines 一模一样；replace / regex 对这个游戏的每一句都生效（先 replace 后 regex）
-EXTRA_GAMES = ["chess", "sudoku", "tangram", "klotski"]
+EXTRA_GAMES = ["chess", "sudoku", "tangram", "klotski", "coding"]
 for game in EXTRA_GAMES:
     extra_path = os.path.join(os.path.dirname(__file__), f"extra_{game}.json")
     extra = json.load(open(extra_path, encoding="utf-8")) if os.path.exists(extra_path) else {}

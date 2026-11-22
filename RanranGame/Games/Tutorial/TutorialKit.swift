@@ -1,6 +1,6 @@
 import Foundation
 
-// 后来加进来的游戏（国际象棋、数独、七巧板、华容道……）接进教学框架时要交代的东西。
+// 后来加进来的游戏（国际象棋、数独、七巧板、华容道、编程……）接进教学框架时要交代的东西。
 // 只有数据和纯函数，和界面无关——命令行校验工具（tools/tutorials/validate.sh）也编译这个文件。
 // 每个游戏在自己的 Games/<游戏>/Logic/<游戏>TutorialKit.swift 里写一个 kit，在下面的 all 里登记一行。
 
@@ -24,7 +24,8 @@ struct TutorialKit {
 }
 
 enum TutorialKits {
-    static let all: [TutorialKit] = [ChessTutorial.kit, SudokuTutorial.kit, TangramTutorial.kit, KlotskiTutorial.kit]
+    static let all: [TutorialKit] = [ChessTutorial.kit, SudokuTutorial.kit, TangramTutorial.kit, KlotskiTutorial.kit,
+                                      CodingTutorial.kit]
 
     static func find(_ game: String) -> TutorialKit? { all.first { $0.game == game } }
 }
